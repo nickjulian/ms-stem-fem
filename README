@@ -1,0 +1,34 @@
+------------------------------------------------------------------------
+This is the MS-STEM-FEM software package, implementing a multislice (MS)
+simulator of scanning transmission electron microscopy (STEM) imaging 
+and fluctuation electron microscopy (FEM) data collected in the STEM 
+mode.
+
+Copyright (C) 2017 Nicholas Huebner Julian <njulian@ucla.edu>. This 
+software is distributed under the GNU General Public License.
+
+------------------------------------------------------------------------
+The author of this code is Nicholas H. Julian, who can be emailed at 
+njulian@ucla.edu.
+
+The MS-STEM-FEM distribution includes the following files and directories:
+
+README               this file
+LICENSE              the GNU General Public License (GPL)
+src                  source files
+build                directory for local building; contains the Makefile
+
+Directories you may be required to create:
+bin                  directory to which compiled executables are saved
+lib                  location of locally compiled libraries
+include              location of locally compiled files to include
+
+MS-STEM-FEM makes use of the following libraries, which must be
+present on the system for which it is compiled:
+
+  FFTW version 3.3.6 or later compiled with MPI capabilities
+
+  NetCDF 
+
+Modification of build/Makefile may be required to ensure proper library
+inclusion and compiler selection.
