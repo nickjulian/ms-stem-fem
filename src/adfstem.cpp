@@ -607,7 +607,8 @@ int TEM_NS::adfstem(
    //
    //  - initialize \psi_{0}(x,y) 
    //    * size of \psi on local node is the same as pap (kx_local * ky)
-   //    * alpha_max functions as a bandwidth limit of the stem probe
+   //    * alpha_max functions as a reciprocal space bandwidth limit of 
+   //       the stem probe
    //
    //  evaluate in order of slice number n=0,1, ..., {
    //    - evaluate t_{n}(x,y) \psi_{n}(x,y) 
@@ -929,14 +930,15 @@ int TEM_NS::adfstem(
                   cout << "output_psi_realspace_to_netcdf() failed" 
                      << endl;
             }
+            //fftw_execute( pf_c2c_psi ); // debug
+         }
 
-            fftw_execute( pf_c2c_psi ); // debug
+         fftw_execute( pf_c2c_psi ); 
 
-            for ( ptrdiff_t i=0; i<local_alloc_size_fftw; ++i)
-            {
-               psi[i][0] = psi[i][0] / sqrtNxNy;
-               psi[i][1] = psi[i][1] / sqrtNxNy;
-            }
+         for ( ptrdiff_t i=0; i<local_alloc_size_fftw; ++i)
+         {
+            psi[i][0] = psi[i][0] / sqrtNxNy;
+            psi[i][1] = psi[i][1] / sqrtNxNy;
          }
 
          /////////////////////////////////////////////////////////////
@@ -969,16 +971,14 @@ int TEM_NS::adfstem(
             // bring psi back into realspace
             fftw_execute( pb_c2c_psi );
 
-            // TODO: limit the probe in realspace, to avoid aliasing 
-
             if ( first_probe_flag && input_flag_image_output )  // debug
                debug_output_complex_fftw_operand(
                      psi,
                      2, 
                      local_alloc_size_fftw,
                      Nx_local, Nx, Ny,
-               resolutionUnit,
-               xResolution, yResolution,
+                     resolutionUnit,
+                     xResolution, yResolution,
                      outFileName_prefix 
                        + "_probe_" + TEM_NS::to_string(sliceNumber),
                      mynode, rootnode, comm
@@ -992,34 +992,102 @@ int TEM_NS::adfstem(
                   << ", node : " << mynode << endl;
             }
 
+            // limit the probe in realspace, to prevent aliasing artifacts 
+            //  from appearing in reciprocal space
+
+            double probecutoff; probecutoff = 0.25;
+            //double probecutoff; probecutoff = 0.125;
             for ( ptrdiff_t i=0; i < Nx_local; i++)
             {
                for ( ptrdiff_t j=0; j < Ny; j++)
                {
-                  // complex multiplication of the transmission 
-                  //  function and psi
-                  // (a + ib)(c + id) = ac - bd + i(ad + bc)
-                  psi[(j + i * Ny)][0]
-                     = (
-                        (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][0] 
-                        * psi[(j + i * Ny)][0]
-                        - 
-                        (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
-                        * psi[(j + i * Ny)][1]
-                       ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
-                  // normalizing due to pf_c2c_t, pb_c2c_t, pf_c2c_psi, 
-                  //  pb_c2c_psi
-                  // NOTE: transmission_function_ms() already has a 
-                  //       factor of 1/sqrtNxNy
+                  //if (
+                  //      (pow(xx_joined[0] - xx_local[i],2) 
+                  //          + pow(yy[0] - yy[j],2)
+                  //         > pow(probecutoff * xperiod_duped,2) 
+                  //            + pow(probecutoff * yperiod_duped,2)
+                  //      )
+                  //      &&
+                  //      (pow(xx_joined[0] + xperiod_duped - xx_local[i],2) 
+                  //          + pow(yy[0] - yy[j],2)
+                  //         > pow(probecutoff * xperiod_duped,2) 
+                  //            + pow(probecutoff *yperiod_duped,2)
+                  //      )
+                  //      &&
+                  //      (pow(xx_joined[0] - xx_local[i],2) 
+                  //          + pow(yy[0] + yperiod_duped - yy[j],2)
+                  //         > pow(probecutoff * xperiod_duped,2) 
+                  //            + pow(probecutoff * yperiod_duped,2)
+                  //      )
+                  //      &&
+                  //      (pow(xx_joined[0] + xperiod_duped - xx_local[i],2) 
+                  //          + pow(yy[0] + yperiod_duped - yy[j],2)
+                  //         > pow(probecutoff * xperiod_duped,2) 
+                  //            + pow(probecutoff * yperiod_duped,2)
+                  //      )
+                  //      &&
+                  //      (pow(xx_joined[0] - xperiod_duped - xx_local[i],2) 
+                  //          + pow(yy[0] - yy[j],2)
+                  //         > pow(probecutoff * xperiod_duped,2) 
+                  //            + pow(probecutoff * yperiod_duped,2)
+                  //      )
+                  //      &&
+                  //      (pow(xx_joined[0] - xx_local[i],2) 
+                  //          + pow(yy[0] - yperiod_duped - yy[j],2)
+                  //         > pow(probecutoff * xperiod_duped,2) 
+                  //            + pow(probecutoff * yperiod_duped,2)
+                  //      )
+                  //      &&
+                  //      (pow(xx_joined[0] - xperiod_duped - xx_local[i],2) 
+                  //          + pow(yy[0] - yperiod_duped - yy[j],2)
+                  //         > pow(probecutoff * xperiod_duped,2) 
+                  //            + pow(probecutoff * yperiod_duped,2)
+                  //      )
+                  //      &&
+                  //      (pow(xx_joined[0] + xperiod_duped - xx_local[i],2) 
+                  //          + pow(yy[0] - yperiod_duped - yy[j],2)
+                  //         > pow(probecutoff * xperiod_duped,2) 
+                  //            + pow(probecutoff * yperiod_duped,2)
+                  //      )
+                  //      &&
+                  //      (pow(xx_joined[0] - xperiod_duped - xx_local[i],2) 
+                  //          + pow(yy[0] + yperiod_duped - yy[j],2)
+                  //         > pow(probecutoff * xperiod_duped,2) 
+                  //            + pow(probecutoff * yperiod_duped,2)
+                  //      )
+                  //   )
+                  //{
+                  //   psi[j + i*Ny][0] = 0.0;
+                  //   psi[j + i*Ny][1] = 0.0;
+                  //}
+                  //else
+                  //{
 
-                  psi[(j + i * Ny)][1]
-                     = (
-                        (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][0] 
-                        * psi[(j + i * Ny)][1]
-                        + 
-                        (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
-                        * psi[(j + i * Ny)][0]
-                       ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
+                     // complex multiplication of the transmission 
+                     //  function and psi
+                     // (a + ib)(c + id) = ac - bd + i(ad + bc)
+                     psi[(j + i * Ny)][0]
+                        = (
+                           (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][0] 
+                           * psi[(j + i * Ny)][0]
+                           - 
+                           (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
+                           * psi[(j + i * Ny)][1]
+                          ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
+                     // normalizing due to pf_c2c_t, pb_c2c_t, pf_c2c_psi, 
+                     //  pb_c2c_psi
+                     // NOTE: transmission_function_ms() already has a 
+                     //       factor of 1/sqrtNxNy
+
+                     psi[(j + i * Ny)][1]
+                        = (
+                           (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][0] 
+                           * psi[(j + i * Ny)][1]
+                           + 
+                           (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
+                           * psi[(j + i * Ny)][0]
+                          ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
+                  }
                }
             }
 
