@@ -961,7 +961,8 @@ int TEM_NS::adfstem(
             //       \exp[i \sigma v_{zn}(x,y)] \psi_{n}(x,y) 
             //////////////////////////////////////////////////////////
 
-            // bw_limit psi before multiplying against it in realspace
+            // bw_limit psi in reciprocal space before multiplying 
+            //  against it in realspace
             bw_limit(
                   psi,
                   Nx_local, kx_local, Ny, ky,
@@ -1087,7 +1088,7 @@ int TEM_NS::adfstem(
                            (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
                            * psi[(j + i * Ny)][0]
                           ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
-                  }
+                  //}
                }
             }
 
