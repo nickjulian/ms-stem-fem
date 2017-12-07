@@ -593,7 +593,7 @@ int TEM_NS::adfstem(
    //
    //  for each slice n {
    //    - evaluate \sigma V_{zn}(k_{x}, k_{y}) 
-   //    - transform V_{zn}(k_{x}, k_{y}) into \sigma v_{zn}(x,y) 
+   //    - transform \sigma V_{zn}(k_{x}, k_{y}) into \sigma v_{zn}(x,y) 
    //    - evaluate eqn 6.71
    //      P_{n}(k_{x}, k_{y}, \Delta z)
    //         = \exp[ -i \pi \lambda (k^{2}_{x} + k^{2}_{y}) \Delta z_{n}]
@@ -791,6 +791,8 @@ int TEM_NS::adfstem(
             }
          }
 
+         //TODO: uncomment this to see if evaluating the probe at each
+         //       STEM image point gives different results than copying it
          //if ( input_flag_aberration_correction )
          //{
          //   if ( mynode == rootnode && first_probe_flag 
@@ -889,6 +891,8 @@ int TEM_NS::adfstem(
             //         );
             //}
 
+            // TODO: uncomment if evaluating the probe rather than copying
+            //        it
             //fftw_execute( pb_c2c_psi ); // debug
 
             //for ( ptrdiff_t i=0; i<local_alloc_size_fftw; ++i)
@@ -930,6 +934,8 @@ int TEM_NS::adfstem(
                   cout << "output_psi_realspace_to_netcdf() failed" 
                      << endl;
             }
+            // TODO: uncomment if evaluating the probe rather than copying
+            //        it
             //fftw_execute( pf_c2c_psi ); // debug
          }
 
@@ -961,7 +967,8 @@ int TEM_NS::adfstem(
             //       \exp[i \sigma v_{zn}(x,y)] \psi_{n}(x,y) 
             //////////////////////////////////////////////////////////
 
-            // bw_limit psi before multiplying against it in realspace
+            // bw_limit psi in reciprocal space before multiplying 
+            //  against it in realspace
             bw_limit(
                   psi,
                   Nx_local, kx_local, Ny, ky,
@@ -994,8 +1001,7 @@ int TEM_NS::adfstem(
 
             // limit the probe in realspace, to prevent aliasing artifacts 
             //  from appearing in reciprocal space
-
-            double probecutoff; probecutoff = 0.25;
+            //double probecutoff; probecutoff = 0.25;
             //double probecutoff; probecutoff = 0.125;
             for ( ptrdiff_t i=0; i < Nx_local; i++)
             {
@@ -1087,7 +1093,7 @@ int TEM_NS::adfstem(
                            (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
                            * psi[(j + i * Ny)][0]
                           ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
-                  }
+                  //}
                }
             }
 
@@ -1120,15 +1126,6 @@ int TEM_NS::adfstem(
             // Transform psi into reciprocal space: 
             //    FT[ t_{n}(x,y) \psi_{n}(x,y) ]
             //////////////////////////////////////////////////////////
-
-            // TODO: bandwidth limit in realspace??? NO. There needs to
-            //       be a smooth transition between beam periodic beam
-            //       boundarites which moves with the beam center.
-            //bw_limit(
-            //      psi,
-            //      Nx_local, kx_local, Ny, ky,
-            //      bwcutoff_t   
-            //      );
 
             fftw_execute( pf_c2c_psi );
 
