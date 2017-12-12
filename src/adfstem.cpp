@@ -48,8 +48,8 @@ int TEM_NS::adfstem(
       const double& bwcutoff_pap,
       const double& bwcutoff_t,
       //const double& xperiod, const double& yperiod, const double& zperiod,
-      //const double& xmin,      // lowest value of x domain
-      //const double& ymin,      // lowest value of y domain
+      const double& xmin,      // lowest value of x domain
+      const double& ymin,      // lowest value of y domain
       //const double& zmin,      // lowest value of z domain
       //const double& raster_spacing,// used for both x & y raster steps
       const std::list<double>& x_p,
@@ -73,7 +73,7 @@ int TEM_NS::adfstem(
       const double& Cs5,       // fifth order spherical aberration
       const double& defocus,  // focal point distance from sample bottom
       const double& defocus_spread,
-      const double& alpha_max_sqr, // objective aperture limiting angle
+      const double& alpha_max, // objective aperture limiting angle
       const double& detector_inner_angle, // detector dimension [\AA^{-1}]
       const double& detector_outer_angle, // detector dimension [\AA^{-1}]
       const double& lambda,
@@ -91,6 +91,7 @@ int TEM_NS::adfstem(
 {
 
    const double lambda_sqr = lambda * lambda;
+   const double alpha_max_sqr = alpha_max * alpha_max;
    
    size_t resolutionUnit, resolutionUnit_recip;
    double xResolution, yResolution,             // for real space images
@@ -225,26 +226,108 @@ int TEM_NS::adfstem(
    fftw_complex* psi;
    psi = fftw_alloc_complex( local_alloc_size_fftw );
 
+   ///////////////////////////////////////////////////////////////////
+   // Instantiate the large STEM probe
+   ///////////////////////////////////////////////////////////////////
 
-   ///////////////////////////////////////////////////////////////////
-   // Instantiate the STEM probe
-   ///////////////////////////////////////////////////////////////////
-   // stem_probe_joined_re, stem_probe_joined_im : will hold cached
-   //    realspace values to be shifted and assigned to stem_probe_split
-   double* stem_probe_joined_re; 
-   stem_probe_joined_re = new double[Nx * Ny];
-   double* stem_probe_joined_im; 
-   stem_probe_joined_im = new double[Nx * Ny];
+   //////////////////////////////////////////////////////////////////
+   // Allocate local variables and domains required for the large probe 
+   const ptrdiff_t large_probe_factor = 1;
+
+   const ptrdiff_t Nx_large = large_probe_factor * Nx;
+   const ptrdiff_t Ny_large = large_probe_factor * Ny;
+   ptrdiff_t Nx_large_local;
+   ptrdiff_t local_alloc_size_fftw_large;
+   ptrdiff_t local_0_start_fftw_large;
+
+   local_alloc_size_fftw_large
+      = fftw_mpi_local_size_2d(     // fftw will be 2-D here
+            Nx_large, Ny_large,
+            MPI_COMM_WORLD,
+            &Nx_large_local,
+            &local_0_start_fftw_large );
+
+   const double xperiod_duped_large 
+                  = large_probe_factor * xperiod_duped;
+   const double yperiod_duped_large 
+                  = large_probe_factor * yperiod_duped;
+
+   double* kx_large_joined; kx_large_joined = new double[ Nx_large ];
+   double* xx_large_joined; xx_large_joined = new double[ Nx_large ];
+   double* kx_large_local; kx_large_local = new double[ Nx_large_local ];
+   double* xx_large_local; xx_large_local = new double[ Nx_large_local ];
+   double* ky_large; ky_large = new double[ Ny_large ];
+   double* yy_large; yy_large = new double[ Ny_large ];
+
+   double delta_x, delta_y, delta_kx, delta_ky;
+   delta_x = xperiod_duped_large / Nx; 
+   delta_y = yperiod_duped_large / Ny; 
+   delta_kx = 1.0/xperiod_duped_large;
+   delta_ky = 1.0/yperiod_duped_large;
+
+   //const double kxperiod_large = Nx_large / xperiod_duped; 
+   //const double kyperiod_large = Ny_large / yperiod_duped;
+   const double kxperiod_large = Nx_large / xperiod_duped_large; 
+   const double kyperiod_large = Ny_large / yperiod_duped_large;
+
+   // larger probe than used in stem
+   fftw_complex* large_probe;
+   large_probe = fftw_alloc_complex( local_alloc_size_fftw_large );
 
    // fftw plan is required to transform the cached probe into realspace
-   fftw_plan pb_c2c_stem_probe_split;
+   fftw_plan pb_c2c_large_probe_split;
 
    // c2c in-place reverse fft
-   pb_c2c_stem_probe_split = fftw_mpi_plan_dft_2d( 
-                           Nx, Ny,
-                           psi, psi,
+   pb_c2c_large_probe_split = fftw_mpi_plan_dft_2d( 
+                           Nx_large, Ny_large,
+                           large_probe, large_probe,
                            comm, FFTW_BACKWARD, FFTW_MEASURE );
+   ////////////////////////////////////////////////////////////////////
 
+   // TODO: Compensate for periodic boundary conditions on the probe
+   // TODO: Evaluate the probe on a much larger domain to reduce
+   //       boundary effects, then transform it into realspace, 
+   //       copy a subsection of the probe into a smaller domain and 
+   //       transform it back into reciprocal space.
+
+   ////////////////////////////////////////////////////////////////////
+   // evaluate and scatter large domains needed to create large probe
+   if ( mynode == rootnode )
+   {
+      // The reciprocal space domain my be restricted to 2-D, since the
+      //  Fourier projection theorem is being used.
+
+      domain_2D_periodic_recip( Nx_large, Ny_large, 
+            xperiod_duped_large, yperiod_duped_large, 
+            kxperiod_large, kyperiod_large, 
+            delta_kx, delta_ky,
+            kx_large_joined, ky_large
+            );
+
+      domain_2D_periodic( Nx_large, Ny_large, 
+            xperiod_duped_large, yperiod_duped_large, 
+            xmin, ymin, 
+            delta_x, delta_y,
+            xx_large_joined, yy_large
+            );
+   }
+
+   MPI_Scatter( xx_large_joined, Nx_large_local, MPI_DOUBLE, // 2-D
+               xx_large_local, Nx_large_local, MPI_DOUBLE,
+               rootnode, MPI_COMM_WORLD);
+   MPI_Scatter( kx_large_joined, Nx_large_local, MPI_DOUBLE, // 2-D
+               kx_large_local, Nx_large_local, MPI_DOUBLE,
+               rootnode, MPI_COMM_WORLD);
+   MPI_Bcast( ky_large, Ny_large, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   MPI_Bcast( yy_large, Ny_large, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   MPI_Bcast( kx_large_joined, Nx_large, 
+         MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   MPI_Bcast( xx_large_joined, Nx_large, 
+         MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   ////////////////////////////////////////////////////////////////////
+
+   ////////////////////////////////////////////////////////////////////
+   // evaluate the probe values in reciprocal space
    if ( input_flag_aberration_correction )
    {
       if ( mynode == rootnode 
@@ -260,17 +343,17 @@ int TEM_NS::adfstem(
             << endl << "   lambda, lambda_sqr : "
             << lambda << ", " << lambda_sqr
             << endl << "   position : ("
-            << xx_joined[0] << ", " << yy[0] << ")" 
-            << endl << "   Nx_local, Ny : "
-            << Nx_local << ", " << Ny
+            << xx_large_joined[0] << ", " << yy_large[0] << ")" 
+            << endl << "   Nx_large_local, Ny_large : "
+            << Nx_large_local << ", " << Ny_large
             << endl;
 
       probe_wavefunction_correctedtoCs5_unnormalized(
-            xx_joined[0], yy[0],
-            kx_local, Nx_local, ky, Ny, 
+            xx_large_joined[0], yy_large[0],
+            kx_large_local, Nx_large_local, ky_large, Ny_large, 
             Cs3, Cs5, defocus, alpha_max_sqr, 
             lambda, lambda_sqr,
-            psi 
+            large_probe
             );
    }
    else
@@ -286,65 +369,73 @@ int TEM_NS::adfstem(
             << endl << "   lambda, lambda_sqr : "
             << lambda << ", " << lambda_sqr
             << endl << "   position : ("
-            << xx_joined[0] << ", " << yy[0] << ")" 
-            << endl << "   Nx_local, Ny : "
-            << Nx_local << ", " << Ny
+            << xx_large_joined[0] << ", " << yy_large[0] << ")" 
+            << endl << "   Nx_large_local, Ny_large : "
+            << Nx_large_local << ", " << Ny_large
             << endl;
 
       probe_wavefunction_uncorrected_unnormalized(
-            xx_joined[0], yy[0],
-            kx_local, Nx_local, ky, Ny, 
+            xx_large_joined[0], yy_large[0],
+            kx_large_local, Nx_large_local, ky_large, Ny_large, 
             Cs3, defocus, alpha_max_sqr, 
             lambda, lambda_sqr,
-            psi 
+            large_probe
             );
    }
 
-   
-   // TODO: Compensate for periodic boundary conditions on the probe
-   // TODO: Evaluate the probe on a much larger domain to reduce
-   //       boundary effects, then transform it into realspace, 
-   //       copy a subsection of the probe into a smaller domain and 
-   //       transform it back into reciprocal space.
-
+   delete[] kx_large_joined;
+   delete[] xx_large_joined;
+   delete[] kx_large_local;
+   delete[] xx_large_local;
+   delete[] ky_large;
+   delete[] yy_large;
+   ////////////////////////////////////////////////////////////////////
 
    ///////////////////////////////////////////////////////////////////
-   // Normalize and gather the probe wavefunction onto each node
+   // do this further below ... - Normalize the probe
    ///////////////////////////////////////////////////////////////////
    // Periodic boundary conditions ensure that the probe norm
    //  is invariant with probe position.
-   if ( mynode == rootnode && input_flag_debug )
-      cout << "Calculating probe norm ... " << endl;
+   //if ( mynode == rootnode && input_flag_debug )
+   //   cout << "Calculating probe norm in reciprocal space ... " << endl;
 
-   double Ap; Ap = 0.0; // probe normalization factor
-   probe_wavefunction_norm(
-         Ap, 
-         Nx_local, Ny, 
-         psi,
-         comm
-         );
+   //double Ap; Ap = 0.0; // probe normalization factor
+   //probe_wavefunction_norm(
+   //      Ap, 
+   //      Nx_local, Ny, 
+   //      psi,
+   //      comm
+   //      );
 
-   // Gather the full realspace probe onto all nodes
+   //if ( mynode == rootnode && input_flag_debug )
+   //   cout << "Normalizing probe ..." << endl;
 
-   double* stem_probe_split_re;
-   stem_probe_split_re = new double[ local_alloc_size_fftw ];
-   double* stem_probe_split_im;
-   stem_probe_split_im = new double[ local_alloc_size_fftw ];
+   //for (ptrdiff_t i=0; i < local_alloc_size_fftw; ++i)
+   //{  // reassign probe values for MPI_Allgather while removing fftw scale
+   //   //  factor
+   //   psi[i][0] = Ap * psi[i][0];
+   //   psi[i][1] = Ap * psi[i][1];
+   //}
+   //if (mynode == rootnode ) // debug
+   //   cout << "Probe norm in reciprocal space : " << Ap << endl; // debug
 
-   if ( mynode == rootnode && input_flag_debug )
-      cout << "Normalizing probe ..." << endl;
-
-   for (ptrdiff_t i=0; i < local_alloc_size_fftw; ++i)
-   {  // reassign probe values for MPI_Allgather while removing fftw scale
-      //  factor
-      psi[i][0] = Ap * psi[i][0];
-      psi[i][1] = Ap * psi[i][1];
-   }
-
+   ///////////////////////////////////////////////////////////////////
+   // Transform the split probe into realspace
    if ( mynode == rootnode && input_flag_debug )
       cout << "Transforming probe to realspace ..." << endl;
 
-   fftw_execute( pb_c2c_stem_probe_split );
+   fftw_execute( pb_c2c_large_probe_split );
+   ///////////////////////////////////////////////////////////////////
+
+   ///////////////////////////////////////////////////////////////////
+   // Gather the large probe realspace wavefunction onto each node
+   ///////////////////////////////////////////////////////////////////
+
+   double* large_probe_split_re;
+   large_probe_split_re = new double[ local_alloc_size_fftw_large ];
+   double* large_probe_split_im;
+   large_probe_split_im = new double[ local_alloc_size_fftw_large ];
+
 
    // TODO: limit the probe in realspace, to avoid aliasing 
    //       artifacts in reciprocal space image. Since this is multiplied
@@ -428,37 +519,119 @@ int TEM_NS::adfstem(
    // TODO: the above is just a test and should be deleted
 
 
-   for (ptrdiff_t i=0; i < local_alloc_size_fftw; ++i)
+   for (ptrdiff_t i=0; i < local_alloc_size_fftw_large; ++i)
    {  // reassign probe values for MPI_Allgather while removing fftw scale
       //  factor
-      stem_probe_split_re[i] = psi[i][0] / sqrtNxNy;
-      stem_probe_split_im[i] = psi[i][1] / sqrtNxNy;
+      large_probe_split_re[i] = large_probe[i][0] / sqrtNxNy;
+      large_probe_split_im[i] = large_probe[i][1] / sqrtNxNy;
    }
 
-
    if ( mynode == rootnode && input_flag_debug )
-      cout << "Allgathering probe ..." << endl;
+      cout << "Allgathering enlarged probe ..." << endl;
+
+   double* large_probe_joined_re;
+   large_probe_joined_re = new double[Nx_large * Ny_large];
+   double* large_probe_joined_im;
+   large_probe_joined_im = new double[Nx_large * Ny_large];
+
    MPI_Allgather(
-         stem_probe_split_re,
-         local_alloc_size_fftw, MPI_DOUBLE,
+         large_probe_split_re,
+         local_alloc_size_fftw_large, MPI_DOUBLE,
+         large_probe_joined_re,
+         local_alloc_size_fftw_large, MPI_DOUBLE,
+         comm);
+
+   MPI_Allgather(
+         large_probe_split_im,
+         local_alloc_size_fftw_large, MPI_DOUBLE,
+         large_probe_joined_im,
+         local_alloc_size_fftw_large, MPI_DOUBLE,
+         comm);
+
+   delete[] large_probe_split_re;
+   delete[] large_probe_split_im;
+
+   ///////////////////////////////////////////////////////////////////
+   // Copy a reduced portion of large probe onto the wavefunction
+   ///////////////////////////////////////////////////////////////////
+
+   // stem_probe_joined_re, stem_probe_joined_im : will hold cached
+   //    realspace values to be shifted and assigned to stem_probe_split
+   double* stem_probe_joined_re; 
+   stem_probe_joined_re = new double[Nx * Ny];
+   double* stem_probe_joined_im; 
+   stem_probe_joined_im = new double[Nx * Ny];
+
+   for ( ptrdiff_t i=0; i<Nx/2; ++i)
+   {
+      for ( ptrdiff_t j=0; j < Ny/2; ++j)
+      {
+         stem_probe_joined_re[j + i*Ny] 
+            = large_probe_joined_re[j + i*Ny_large];
+         stem_probe_joined_im[j + i*Ny] 
+            = large_probe_joined_im[j + i*Ny_large];
+      }
+      for ( ptrdiff_t j=Ny/2; j < Ny; ++j)
+      {
+         stem_probe_joined_re[j + i*Ny] 
+            = large_probe_joined_re[(Ny_large - Ny + j) + i*Ny_large];
+         stem_probe_joined_im[j + i*Ny] 
+            = large_probe_joined_im[(Ny_large - Ny + j) + i*Ny_large];
+      }
+   }
+   for ( ptrdiff_t i=Nx/2; i<Nx; ++i)
+   {
+      for ( ptrdiff_t j=0; j < Ny/2; ++j)
+      {
+         stem_probe_joined_re[j + i*Ny] 
+            = large_probe_joined_re[j + (Nx_large - Nx + i)*Ny_large];
+         stem_probe_joined_im[j + i*Ny] 
+            = large_probe_joined_im[j + (Nx_large - Nx + i)*Ny_large];
+      }
+      for ( ptrdiff_t j=Ny/2; j < Ny; ++j)
+      {
+         stem_probe_joined_re[j + i*Ny] 
+            = large_probe_joined_re[
+                  (Ny_large - Ny + j) + (Nx_large - Nx + i)*Ny_large
+               ];
+         stem_probe_joined_im[j + i*Ny] 
+            = large_probe_joined_im[
+                  (Ny_large - Ny + j) + (Nx_large - Nx + i)*Ny_large
+               ];
+      }
+   }
+
+   delete[] large_probe_joined_re;
+   delete[] large_probe_joined_im;
+
+   fftw_destroy_plan( pb_c2c_large_probe_split );
+   fftw_free( large_probe );
+
+   ///////////////////////////////////////////////////////////////////
+   // Normalize the probe in real space
+   ///////////////////////////////////////////////////////////////////
+   // Periodic boundary conditions ensure that the probe norm
+   //  is invariant with probe position.
+   if ( mynode == rootnode && input_flag_debug )
+      cout << "Calculating probe norm in real space ... " << endl;
+
+   double Ap; Ap = 0.0; // probe normalization factor
+   probe_wavefunction_norm(
+         Ap, 
+         Nx_local, Ny, 
+         //psi,
          stem_probe_joined_re,
-         local_alloc_size_fftw, MPI_DOUBLE,
-         comm);
-
-   MPI_Allgather(
-         stem_probe_split_im,
-         local_alloc_size_fftw, MPI_DOUBLE,
          stem_probe_joined_im,
-         local_alloc_size_fftw, MPI_DOUBLE,
-         comm);
+         comm
+         );
+   if (mynode == rootnode ) // debug
+      cout << "Probe norm in real space : " << Ap << endl;//debug
+   for ( ptrdiff_t i=0; i< Nx * Ny; ++i)
+   {
+      stem_probe_joined_re[i] = Ap * stem_probe_joined_re[i];
+      stem_probe_joined_im[i] = Ap * stem_probe_joined_im[i];
+   }
 
-   delete stem_probe_split_re;
-   delete stem_probe_split_im;
-   fftw_destroy_plan( pb_c2c_stem_probe_split );
-
-
-   double half_delta_x = 0.5 * (xx_joined[1] - xx_joined[0]);
-   double half_delta_y = 0.5 * (yy[1] - yy[0]);
 
    ///////////////////////////////////////////////////////////////////
    // Instantiate the first and second moment of diffracted intensity
@@ -650,6 +823,10 @@ int TEM_NS::adfstem(
    size_t number_of_raster_points //= N_pixels_x * N_pixels_y;
                             = x_p.size() * y_p.size();
 
+   double half_delta_x = 0.5 * (xx_joined[1] - xx_joined[0]);
+   double half_delta_y = 0.5 * (yy[1] - yy[0]);
+
+
    for( std::list<double>::const_iterator 
          x_itr = x_p.begin();
          x_itr != x_p.end(); 
@@ -702,8 +879,6 @@ int TEM_NS::adfstem(
          // The following assumes that xx_joined[0] == min(xx_joined[]),
          //  and that the probe is centered somewhere on the sample
          //       *x_itr \in [xx_joined[0], xx_joined[Nx - 1]
-         //double half_delta_x = 0.5 * (xx_joined[1] - xx_joined[0]);
-         //double half_delta_y = 0.5 * (yy[1] - yy[0]);
 
          for (size_t i=0; i < Nx; ++i)
          {
@@ -946,6 +1121,26 @@ int TEM_NS::adfstem(
             psi[i][0] = psi[i][0] / sqrtNxNy;
             psi[i][1] = psi[i][1] / sqrtNxNy;
          }
+         // Bandwidth limit the probe again to elliminate any extra
+         //  frequencies that might have been introduced by the FFT
+         //bw_limit(
+         //      psi,
+         //      Nx_local, kx_local, Ny, ky,
+         //      bwcutoff_t   
+         //      );
+         //debug
+         diffraction_scale_factor = 1.0e+0;
+         output_diffraction(
+               psi,
+               diffraction_scale_factor,
+               local_alloc_size_fftw,
+               Nx_local, Nx, Ny,
+               resolutionUnit_recip,
+               xResolution_recip, yResolution_recip,
+               outFileName_prefix + "_initial_probe_recip_",
+               mynode, rootnode, comm
+               );
+         //end debug
 
          /////////////////////////////////////////////////////////////
          // Propagate the probe through the slices
@@ -969,11 +1164,11 @@ int TEM_NS::adfstem(
 
             // bw_limit psi in reciprocal space before multiplying 
             //  against it in realspace
-            bw_limit(
-                  psi,
-                  Nx_local, kx_local, Ny, ky,
-                  bwcutoff_t   // TODO: this is a problem
-                  );
+            //bw_limit(
+            //      psi,
+            //      Nx_local, kx_local, Ny, ky,
+            //      bwcutoff_t   // TODO: this is a problem
+            //      );
 
             // bring psi back into realspace
             fftw_execute( pb_c2c_psi );
@@ -1177,6 +1372,12 @@ int TEM_NS::adfstem(
             //      //<< ", node : " << mynode 
             //      << endl;// debug
             //}
+
+            bw_limit(
+                  psi,
+                  Nx_local, kx_local, Ny, ky,
+                  bwcutoff_t   
+                  );
 
             // TODO: double check that propagate() bandwidth limits psi
             // // .... it appears to.

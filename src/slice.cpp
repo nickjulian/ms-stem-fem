@@ -952,15 +952,15 @@ int TEM_NS::assign_atoms_to_slices_z_auto(
          //cout << "node " << mynode << ", ";
          cout << " thickness    : " << (*sliceList_itr)->thickness<< endl;
          //cout << "node " << mynode << ", ";
-         cout << " scatterer zs : " ;
-         for ( vector< const scatterer* >::iterator 
-                  scattererVec_itr = ((*sliceList_itr)->scatterers)->begin();
-                scattererVec_itr != ((*sliceList_itr)->scatterers)->end();
-                ++scattererVec_itr )
-         {
-            cout << (*scattererVec_itr)->q[2] << ", " ;
-         }
-         cout << endl << endl;
+         //cout << " scatterer zs : " ;
+         //for ( vector< const scatterer* >::iterator 
+         //         scattererVec_itr = ((*sliceList_itr)->scatterers)->begin();
+         //       scattererVec_itr != ((*sliceList_itr)->scatterers)->end();
+         //       ++scattererVec_itr )
+         //{
+         //   cout << (*scattererVec_itr)->q[2] << ", " ;
+         //}
+         //cout << endl << endl;
       }
    }
    // end debug
@@ -1316,7 +1316,7 @@ int TEM_NS::slice::update_propagator(
    
    for ( ptrdiff_t i=0; i<Nx; ++i)  
    {  
-      if ( kxdomain[i] < bwcutoff_t ) 
+      if ( kxdomain[i] < bwcutoff_t && kxdomain[i] > -1.0* bwcutoff_t) 
       // computing over this domain is split across nodes
       {
          trig_operand 
@@ -1336,7 +1336,7 @@ int TEM_NS::slice::update_propagator(
    {  
       // NOTE: computing this domain is duplicated accross nodes
       // TODO: maybe split this computation across nodes and broadcast it?
-      if ( kydomain[j] < bwcutoff_t ) 
+      if ( kydomain[j] < bwcutoff_t && kydomain[j] > -1.0* bwcutoff_t) 
       {
          trig_operand = PI * lambda * thickness * pow( kydomain[j], 2) ;
          propagator_y_re[j] = cos( trig_operand );
@@ -1521,34 +1521,34 @@ int TEM_NS::slice::update_transmission_function(
    //   kx_joined[i + idx_local_start_x] == kx_split[i]
    //   and thus
    //   pap_joined_x[i + idx_local_start_x] == pap_split_x[i]
-   //size_t idx_local_start_x; 
-   //while ( idx < Nx_joined )
-   //{
-   //   // NOTE: comparing reciprocal space domains to determine real space
-   //   //  splitting location ...
-   //   if ( kx_joined[idx] == kx_split[0] )
-   //   {
-   //      idx_local_start_x = idx;
-   //      break;
-   //   }
-   //   else 
-   //      ++idx;
-   //}
-   //if ( idx == Nx_joined )
-   //{
-   //   cout << "Error : update_transmission_function() failed;" 
-   //      << " could not identify appropriate idx_local_start" << endl;
-   //   return EXIT_FAILURE;
-   //}
-   //if ( idx_local_start_x != local_0_start_fftw )
-   //{
-   //   cout << "Error : idx_local_start_x != local_0_start_fftw"
-   //      << endl << " idx_local_start_x: " << idx_local_start_x << endl
-   //      << endl << " local_0_start_fftw: " << local_0_start_fftw << endl
-   //      << " Shifting of cached projected atomic potentials and probes"
-   //      << " will be erroneous." << endl;
-   //   return( EXIT_FAILURE );
-   //}
+   size_t idx_local_start_x; 
+   while ( idx < Nx_joined )
+   {
+      // NOTE: comparing reciprocal space domains to determine real space
+      //  splitting location ...
+      if ( kx_joined[idx] == kx_split[0] )
+      {
+         idx_local_start_x = idx;
+         break;
+      }
+      else 
+         ++idx;
+   }
+   if ( idx == Nx_joined )
+   {
+      cout << "Error : update_transmission_function() failed;" 
+         << " could not identify appropriate idx_local_start" << endl;
+      return EXIT_FAILURE;
+   }
+   if ( idx_local_start_x != local_0_start_fftw )
+   {
+      cout << "Error : idx_local_start_x != local_0_start_fftw"
+         << endl << " idx_local_start_x: " << idx_local_start_x << endl
+         << endl << " local_0_start_fftw: " << local_0_start_fftw << endl
+         << " Shifting of cached projected atomic potentials and probes"
+         << " will be erroneous." << endl;
+      return( EXIT_FAILURE );
+   }
    // end debug
 
    //cout << "node " << mynode << ", idx_local_start_x : "  // debug
@@ -1563,9 +1563,6 @@ int TEM_NS::slice::update_transmission_function(
           scatterer_ptr_itr != scatterers->end();
           ++scatterer_ptr_itr )
    {
-      // TODO : figure out how to shift by (*scatterer_ptr_itr)->q[0]
-      //         and (*scatterer_ptr_itr)->q[1]
-
       // Identify apropriate idx_shift_x idx_shift_y using kx_joined and 
       //  ky.
 
@@ -1622,10 +1619,10 @@ int TEM_NS::slice::update_transmission_function(
          //   idx_local_start_x = -i;
 
          // enforce periodic boundary condition, x direction
-         //if ( i + idx_local_start_x < idx_shift_x )
-         if ( i + local_0_start_fftw < idx_shift_x )
-            idx_x = i + Nx_joined + local_0_start_fftw - idx_shift_x;
-            //idx_x = i + Nx_joined + idx_local_start_x - idx_shift_x;
+         if ( i + idx_local_start_x < idx_shift_x )
+         //if ( i + local_0_start_fftw < idx_shift_x )
+            //idx_x = i + Nx_joined + local_0_start_fftw - idx_shift_x;
+            idx_x = i + Nx_joined + idx_local_start_x - idx_shift_x;
          else
             idx_x = i + local_0_start_fftw - idx_shift_x;
             //idx_x = i + idx_local_start_x - idx_shift_x;

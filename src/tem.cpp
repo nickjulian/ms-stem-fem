@@ -1688,7 +1688,7 @@ int main( int argc, char* argv[])
                   lambda, Cs3
                   );
 
-         alpha_max_sqr = alpha_max * alpha_max;
+         //alpha_max_sqr = alpha_max * alpha_max;
 
          // TODO: insert units [radians] [angstrom]
          if ( mynode == rootnode && input_flag_debug )
@@ -1722,6 +1722,7 @@ int main( int argc, char* argv[])
                slicesOfScatterers,        // atom properties
                bwcutoff_pap,
                bwcutoff_t,
+               xmin, ymin,
                x_p, y_p,
                xperiod, yperiod,
                xperiod_duped, yperiod_duped,
@@ -1732,7 +1733,7 @@ int main( int argc, char* argv[])
                Cs3, Cs5,               // spherical aberration
                defocus,                
                defocus_spread,   // TODO : implement adfstem with defocus_spread
-               alpha_max_sqr,
+               alpha_max,
                detector_inner_angle, detector_outer_angle,
                lambda, 
                outFileName_prefix + "_adfstem_uncorr",
@@ -1762,7 +1763,7 @@ int main( int argc, char* argv[])
          else
             Cs3_corr = Cs3;
 
-         alpha_max_sqr = alpha_max * alpha_max;
+         //alpha_max_sqr = alpha_max * alpha_max;
 
          // TODO: insert units [radians] [angstrom]
          if ( mynode == rootnode && input_flag_debug )
@@ -1797,6 +1798,7 @@ int main( int argc, char* argv[])
                slicesOfScatterers,        // atom properties
                bwcutoff_pap,
                bwcutoff_t,
+               xmin, ymin,
                x_p, y_p,
                xperiod, yperiod,
                xperiod_duped, yperiod_duped,
@@ -1807,7 +1809,7 @@ int main( int argc, char* argv[])
                Cs3_corr, Cs5,               // spherical aberration
                defocus,                
                defocus_spread,   // TODO : implement adfstem with defocus_spread
-               alpha_max_sqr,
+               alpha_max,
                detector_inner_angle, detector_outer_angle,
                lambda, 
                outFileName_prefix + "_adfstem_corr",
