@@ -88,6 +88,9 @@ class scatterer_pap
                Nx_joined, Ny,
                projected_atomic_potential_local_split,
                projected_atomic_potential_local_split,
+               //comm, FFTW_BACKWARD, FFTW_ESTIMATE
+               //comm, FFTW_BACKWARD, FFTW_PATIENT
+               //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE
                comm, FFTW_BACKWARD, FFTW_MEASURE
                );
 

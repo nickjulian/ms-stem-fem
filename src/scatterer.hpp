@@ -65,7 +65,7 @@ class scatterer
       // CONSTRUCTORS
       scatterer( double* const q_in,  const unsigned int& Z_in,
             const scatterer_pap_LUT& pap_lut
-            )// TODO
+            )
       { // use scatterer( q, Z ) : pap( <address of pap from LUT> )
          q = q_in;
          Z = Z_in;

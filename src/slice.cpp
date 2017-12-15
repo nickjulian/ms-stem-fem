@@ -1309,7 +1309,6 @@ int TEM_NS::slice::update_propagator(
    //  bwcutoff_t + bwcutoff_propagator + bwcutoff_psi 
    //    < 2 * k_max
 
-   // TODO: bandwidth limit the propagator
 
    //      k_sqr =  pow(kxdomain[i], 2) + pow(kydomain[j], 2);
    //      if ( k_sqr < bwcutoff_t_sqr ) 
@@ -1453,7 +1452,8 @@ int TEM_NS::slice::update_transmission_function(
             const double* const ky, // reciprocal space y-domain
             const double* const yy,  // real space y-domain
             const ptrdiff_t& Ny,
-            const double& sqrtNxNy,
+            const double& NxNy,
+            //const double& sqrtNxNy,
             const unsigned int& input_flag_pap_tif,
             const string& outFileName,//debug
             const size_t& sliceNumber,//debug
@@ -1478,6 +1478,9 @@ int TEM_NS::slice::update_transmission_function(
    pf_c2c_psi = fftw_mpi_plan_dft_2d( // c2c in-place fft,
                            Nx_joined, Ny, 
                            exp_i_sigma_v, exp_i_sigma_v,
+                           //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
+                           //comm, FFTW_BACKWARD, FFTW_PATIENT );
+                           //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
                            comm, FFTW_FORWARD, FFTW_MEASURE );
 
 
@@ -1485,6 +1488,9 @@ int TEM_NS::slice::update_transmission_function(
    pb_c2c_psi = fftw_mpi_plan_dft_2d( 
                            Nx_joined, Ny, 
                            exp_i_sigma_v, exp_i_sigma_v,
+                           //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
+                           //comm, FFTW_BACKWARD, FFTW_PATIENT );
+                           //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
                            comm, FFTW_BACKWARD, FFTW_MEASURE );
 
 
@@ -1717,20 +1723,33 @@ int TEM_NS::slice::update_transmission_function(
    //  projected atomic potential 
    /////////////////////////////////////////////////////////////
    double exp_neg_pap_im;
+   double sigma_v_re;
 
    for ( ptrdiff_t i=0; i<Nx_split; ++i)
       for ( ptrdiff_t j=0; j<Ny; ++j)
       {
+         // TODO: double check that you don't need to divide by sqrtNxNy
+         //  This factor may have already been removed in 
+         //   scatterer_pap.hpp near line 180 in variable 
+         //   projected_atomic_potential_local_split
          exp_neg_pap_im
-            = exp( -(exp_i_sigma_v[j + i * Ny][1])  / sqrtNxNy);
+            //= exp( -(exp_i_sigma_v[j + i * Ny][1]) / sqrtNxNy);
+            = exp( -(exp_i_sigma_v[j + i * Ny][1]));//  / sqrtNxNy);
+         sigma_v_re
+            //= exp_i_sigma_v[j + i * Ny][0] / sqrtNxNy;
+            = exp_i_sigma_v[j + i * Ny][0];//  / sqrtNxNy);
 
          exp_i_sigma_v[j + i * Ny][0]
             = exp_neg_pap_im 
-               * cos( (exp_i_sigma_v[j + i * Ny][0]) / sqrtNxNy);
+               //* cos( sigma_v_re / sqrtNxNy);
+               * cos( sigma_v_re );// / sqrtNxNy);
+               //* cos( (exp_i_sigma_v[j + i * Ny][0]));// / sqrtNxNy );
 
          exp_i_sigma_v[j + i * Ny][1]
             = exp_neg_pap_im 
-               * sin( (exp_i_sigma_v[j + i * Ny][0]) / sqrtNxNy );
+               //* sin( sigma_v_re / sqrtNxNy );
+               * sin( sigma_v_re );// / sqrtNxNy );
+               //* sin( (exp_i_sigma_v[j + i * Ny][0]));// / sqrtNxNy );
       }
 
    /////////////////////////////////////////////////////////////
@@ -1747,11 +1766,13 @@ int TEM_NS::slice::update_transmission_function(
 
    fftw_execute( pb_c2c_psi );
 
-   // Remove factor of sqrt(Nx*Ny) caused by fftw
+   // Remove factor of Nx*Ny caused by fftw
    for ( ptrdiff_t i=0; i<local_alloc_size_fftw; ++i)
    {
-      exp_i_sigma_v[i][0] = exp_i_sigma_v[i][0] / sqrtNxNy;
-      exp_i_sigma_v[i][1] = exp_i_sigma_v[i][1] / sqrtNxNy;
+      //exp_i_sigma_v[i][0] = exp_i_sigma_v[i][0] / sqrtNxNy;
+      //exp_i_sigma_v[i][1] = exp_i_sigma_v[i][1] / sqrtNxNy;
+      exp_i_sigma_v[i][0] = exp_i_sigma_v[i][0] / NxNy;
+      exp_i_sigma_v[i][1] = exp_i_sigma_v[i][1] / NxNy;
    }
 
    /////////////////////////////////////////////////////////////

@@ -281,6 +281,9 @@ int TEM_NS::adfstem(
    pb_c2c_large_probe_split = fftw_mpi_plan_dft_2d( 
                            Nx_large, Ny_large,
                            large_probe, large_probe,
+                           //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
+                           //comm, FFTW_BACKWARD, FFTW_PATIENT );
+                           //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
                            comm, FFTW_BACKWARD, FFTW_MEASURE );
    ////////////////////////////////////////////////////////////////////
 
@@ -862,6 +865,9 @@ int TEM_NS::adfstem(
          pf_c2c_psi = fftw_mpi_plan_dft_2d( // c2c in-place fft,
                                  Nx, Ny, 
                                  psi, psi, 
+                                 //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
+                                 //comm, FFTW_BACKWARD, FFTW_PATIENT );
+                                 //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
                                  comm, FFTW_FORWARD, FFTW_MEASURE );
 
 
@@ -869,6 +875,9 @@ int TEM_NS::adfstem(
          pb_c2c_psi = fftw_mpi_plan_dft_2d( 
                                  Nx, Ny,
                                  psi, psi, 
+                                 //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
+                                 //comm, FFTW_BACKWARD, FFTW_PATIENT );
+                                 //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
                                  comm, FFTW_BACKWARD, FFTW_MEASURE );
 
          //////////////////////////////////////////////////////////////
@@ -1114,6 +1123,7 @@ int TEM_NS::adfstem(
             //fftw_execute( pf_c2c_psi ); // debug
          }
 
+         // transform translated beam into reciprocal space for slice loop
          fftw_execute( pf_c2c_psi ); 
 
          for ( ptrdiff_t i=0; i<local_alloc_size_fftw; ++i)
@@ -1173,18 +1183,20 @@ int TEM_NS::adfstem(
             // bring psi back into realspace
             fftw_execute( pb_c2c_psi );
 
-            if ( first_probe_flag && input_flag_image_output )  // debug
-               debug_output_complex_fftw_operand(
-                     psi,
-                     2, 
-                     local_alloc_size_fftw,
-                     Nx_local, Nx, Ny,
-                     resolutionUnit,
-                     xResolution, yResolution,
-                     outFileName_prefix 
-                       + "_probe_" + TEM_NS::to_string(sliceNumber),
-                     mynode, rootnode, comm
-                     );
+            //TODO: make a flag for this output since it's sometimes nice,
+            //       but usually a waste of disk space
+            //if ( first_probe_flag && input_flag_image_output )  // debug
+            //   debug_output_complex_fftw_operand(
+            //         psi,
+            //         2, 
+            //         local_alloc_size_fftw,
+            //         Nx_local, Nx, Ny,
+            //         resolutionUnit,
+            //         xResolution, yResolution,
+            //         outFileName_prefix 
+            //           + "_probe_" + TEM_NS::to_string(sliceNumber),
+            //         mynode, rootnode, comm
+            //         );
 
             if ( mynode == rootnode && input_flag_debug )
             {
@@ -1501,7 +1513,51 @@ int TEM_NS::adfstem(
 
             // scale factor for logarithmic scaling of diffraction images
             
-            diffraction_scale_factor = 1.0e+40;//1e-20;
+            diffraction_scale_factor = 1.0e-5;
+            output_diffraction(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix + "_first_diffraction_",
+                  mynode, rootnode, comm
+                  );
+            diffraction_scale_factor = 1.0e-1;
+            output_diffraction(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix + "_first_diffraction_",
+                  mynode, rootnode, comm
+                  );
+            diffraction_scale_factor = 1.0e0;
+            output_diffraction(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix + "_first_diffraction_",
+                  mynode, rootnode, comm
+                  );
+            diffraction_scale_factor = 1.0e10;
+            output_diffraction(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix + "_first_diffraction_",
+                  mynode, rootnode, comm
+                  );
+            diffraction_scale_factor = 1.0e+20;//1e-20;
             output_diffraction(
                   psi,
                   diffraction_scale_factor,
@@ -1777,7 +1833,6 @@ int TEM_NS::adfstem(
       // where I() and I^{2}() are diffracted_wave_mag_sum and 
       // diffracted_wave_mag_sqr_sum, respectively.
 
-      // TODO:
       // * save diffracted_wave_mag_sum and 
       //    diffracted_wave_mag_sqr_sum as images
       // * calculate the averages of diffracted_wave_mag_sum and
