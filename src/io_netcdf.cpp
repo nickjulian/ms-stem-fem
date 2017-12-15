@@ -69,7 +69,7 @@ int TEM_NS::output_variance_to_netcdf(
    //  describe the domain values, units, and perhaps other attributes
    NcDim* kxDimension = dataFile.add_dim("k", Nx);
    NcVar* kxVariable = dataFile.add_var("k", ncDouble, kxDimension);
-   kxVariable->add_att("units", "1/\305");
+   kxVariable->add_att("units", "\305^-1");
 
    // Values which are functions of a domain each require an NcVar 
    //  specifying the NcDim elements of their domain
@@ -131,7 +131,7 @@ int TEM_NS::output_variance_to_netcdf(
    //  describe the domain values, units, and perhaps other attributes
    NcDim* kxDimension = dataFile.add_dim("k", Nr);
    NcVar* kxVariable = dataFile.add_var("k", ncDouble, kxDimension);
-   kxVariable->add_att("units", "1/Angstrom");
+   kxVariable->add_att("units", "\305^-1");
 
    // Values which are functions of a domain each require an NcVar 
    //  specifying the NcDim elements of their domain

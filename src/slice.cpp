@@ -952,15 +952,15 @@ int TEM_NS::assign_atoms_to_slices_z_auto(
          //cout << "node " << mynode << ", ";
          cout << " thickness    : " << (*sliceList_itr)->thickness<< endl;
          //cout << "node " << mynode << ", ";
-         cout << " scatterer zs : " ;
-         for ( vector< const scatterer* >::iterator 
-                  scattererVec_itr = ((*sliceList_itr)->scatterers)->begin();
-                scattererVec_itr != ((*sliceList_itr)->scatterers)->end();
-                ++scattererVec_itr )
-         {
-            cout << (*scattererVec_itr)->q[2] << ", " ;
-         }
-         cout << endl << endl;
+         //cout << " scatterer zs : " ;
+         //for ( vector< const scatterer* >::iterator 
+         //         scattererVec_itr = ((*sliceList_itr)->scatterers)->begin();
+         //       scattererVec_itr != ((*sliceList_itr)->scatterers)->end();
+         //       ++scattererVec_itr )
+         //{
+         //   cout << (*scattererVec_itr)->q[2] << ", " ;
+         //}
+         //cout << endl << endl;
       }
    }
    // end debug
@@ -1309,14 +1309,13 @@ int TEM_NS::slice::update_propagator(
    //  bwcutoff_t + bwcutoff_propagator + bwcutoff_psi 
    //    < 2 * k_max
 
-   // TODO: bandwidth limit the propagator
 
    //      k_sqr =  pow(kxdomain[i], 2) + pow(kydomain[j], 2);
    //      if ( k_sqr < bwcutoff_t_sqr ) 
    
    for ( ptrdiff_t i=0; i<Nx; ++i)  
    {  
-      if ( kxdomain[i] < bwcutoff_t ) 
+      if ( kxdomain[i] < bwcutoff_t && kxdomain[i] > -1.0* bwcutoff_t) 
       // computing over this domain is split across nodes
       {
          trig_operand 
@@ -1336,7 +1335,7 @@ int TEM_NS::slice::update_propagator(
    {  
       // NOTE: computing this domain is duplicated accross nodes
       // TODO: maybe split this computation across nodes and broadcast it?
-      if ( kydomain[j] < bwcutoff_t ) 
+      if ( kydomain[j] < bwcutoff_t && kydomain[j] > -1.0* bwcutoff_t) 
       {
          trig_operand = PI * lambda * thickness * pow( kydomain[j], 2) ;
          propagator_y_re[j] = cos( trig_operand );
@@ -1453,7 +1452,8 @@ int TEM_NS::slice::update_transmission_function(
             const double* const ky, // reciprocal space y-domain
             const double* const yy,  // real space y-domain
             const ptrdiff_t& Ny,
-            const double& sqrtNxNy,
+            const double& NxNy,
+            //const double& sqrtNxNy,
             const unsigned int& input_flag_pap_tif,
             const string& outFileName,//debug
             const size_t& sliceNumber,//debug
@@ -1478,6 +1478,9 @@ int TEM_NS::slice::update_transmission_function(
    pf_c2c_psi = fftw_mpi_plan_dft_2d( // c2c in-place fft,
                            Nx_joined, Ny, 
                            exp_i_sigma_v, exp_i_sigma_v,
+                           //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
+                           //comm, FFTW_BACKWARD, FFTW_PATIENT );
+                           //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
                            comm, FFTW_FORWARD, FFTW_MEASURE );
 
 
@@ -1485,6 +1488,9 @@ int TEM_NS::slice::update_transmission_function(
    pb_c2c_psi = fftw_mpi_plan_dft_2d( 
                            Nx_joined, Ny, 
                            exp_i_sigma_v, exp_i_sigma_v,
+                           //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
+                           //comm, FFTW_BACKWARD, FFTW_PATIENT );
+                           //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
                            comm, FFTW_BACKWARD, FFTW_MEASURE );
 
 
@@ -1521,34 +1527,34 @@ int TEM_NS::slice::update_transmission_function(
    //   kx_joined[i + idx_local_start_x] == kx_split[i]
    //   and thus
    //   pap_joined_x[i + idx_local_start_x] == pap_split_x[i]
-   //size_t idx_local_start_x; 
-   //while ( idx < Nx_joined )
-   //{
-   //   // NOTE: comparing reciprocal space domains to determine real space
-   //   //  splitting location ...
-   //   if ( kx_joined[idx] == kx_split[0] )
-   //   {
-   //      idx_local_start_x = idx;
-   //      break;
-   //   }
-   //   else 
-   //      ++idx;
-   //}
-   //if ( idx == Nx_joined )
-   //{
-   //   cout << "Error : update_transmission_function() failed;" 
-   //      << " could not identify appropriate idx_local_start" << endl;
-   //   return EXIT_FAILURE;
-   //}
-   //if ( idx_local_start_x != local_0_start_fftw )
-   //{
-   //   cout << "Error : idx_local_start_x != local_0_start_fftw"
-   //      << endl << " idx_local_start_x: " << idx_local_start_x << endl
-   //      << endl << " local_0_start_fftw: " << local_0_start_fftw << endl
-   //      << " Shifting of cached projected atomic potentials and probes"
-   //      << " will be erroneous." << endl;
-   //   return( EXIT_FAILURE );
-   //}
+   size_t idx_local_start_x; 
+   while ( idx < Nx_joined )
+   {
+      // NOTE: comparing reciprocal space domains to determine real space
+      //  splitting location ...
+      if ( kx_joined[idx] == kx_split[0] )
+      {
+         idx_local_start_x = idx;
+         break;
+      }
+      else 
+         ++idx;
+   }
+   if ( idx == Nx_joined )
+   {
+      cout << "Error : update_transmission_function() failed;" 
+         << " could not identify appropriate idx_local_start" << endl;
+      return EXIT_FAILURE;
+   }
+   if ( idx_local_start_x != local_0_start_fftw )
+   {
+      cout << "Error : idx_local_start_x != local_0_start_fftw"
+         << endl << " idx_local_start_x: " << idx_local_start_x << endl
+         << endl << " local_0_start_fftw: " << local_0_start_fftw << endl
+         << " Shifting of cached projected atomic potentials and probes"
+         << " will be erroneous." << endl;
+      return( EXIT_FAILURE );
+   }
    // end debug
 
    //cout << "node " << mynode << ", idx_local_start_x : "  // debug
@@ -1563,9 +1569,6 @@ int TEM_NS::slice::update_transmission_function(
           scatterer_ptr_itr != scatterers->end();
           ++scatterer_ptr_itr )
    {
-      // TODO : figure out how to shift by (*scatterer_ptr_itr)->q[0]
-      //         and (*scatterer_ptr_itr)->q[1]
-
       // Identify apropriate idx_shift_x idx_shift_y using kx_joined and 
       //  ky.
 
@@ -1622,10 +1625,10 @@ int TEM_NS::slice::update_transmission_function(
          //   idx_local_start_x = -i;
 
          // enforce periodic boundary condition, x direction
-         //if ( i + idx_local_start_x < idx_shift_x )
-         if ( i + local_0_start_fftw < idx_shift_x )
-            idx_x = i + Nx_joined + local_0_start_fftw - idx_shift_x;
-            //idx_x = i + Nx_joined + idx_local_start_x - idx_shift_x;
+         if ( i + idx_local_start_x < idx_shift_x )
+         //if ( i + local_0_start_fftw < idx_shift_x )
+            //idx_x = i + Nx_joined + local_0_start_fftw - idx_shift_x;
+            idx_x = i + Nx_joined + idx_local_start_x - idx_shift_x;
          else
             idx_x = i + local_0_start_fftw - idx_shift_x;
             //idx_x = i + idx_local_start_x - idx_shift_x;
@@ -1720,20 +1723,33 @@ int TEM_NS::slice::update_transmission_function(
    //  projected atomic potential 
    /////////////////////////////////////////////////////////////
    double exp_neg_pap_im;
+   double sigma_v_re;
 
    for ( ptrdiff_t i=0; i<Nx_split; ++i)
       for ( ptrdiff_t j=0; j<Ny; ++j)
       {
+         // TODO: double check that you don't need to divide by sqrtNxNy
+         //  This factor may have already been removed in 
+         //   scatterer_pap.hpp near line 180 in variable 
+         //   projected_atomic_potential_local_split
          exp_neg_pap_im
-            = exp( -(exp_i_sigma_v[j + i * Ny][1])  / sqrtNxNy);
+            //= exp( -(exp_i_sigma_v[j + i * Ny][1]) / sqrtNxNy);
+            = exp( -(exp_i_sigma_v[j + i * Ny][1]));//  / sqrtNxNy);
+         sigma_v_re
+            //= exp_i_sigma_v[j + i * Ny][0] / sqrtNxNy;
+            = exp_i_sigma_v[j + i * Ny][0];//  / sqrtNxNy);
 
          exp_i_sigma_v[j + i * Ny][0]
             = exp_neg_pap_im 
-               * cos( (exp_i_sigma_v[j + i * Ny][0]) / sqrtNxNy);
+               //* cos( sigma_v_re / sqrtNxNy);
+               * cos( sigma_v_re );// / sqrtNxNy);
+               //* cos( (exp_i_sigma_v[j + i * Ny][0]));// / sqrtNxNy );
 
          exp_i_sigma_v[j + i * Ny][1]
             = exp_neg_pap_im 
-               * sin( (exp_i_sigma_v[j + i * Ny][0]) / sqrtNxNy );
+               //* sin( sigma_v_re / sqrtNxNy );
+               * sin( sigma_v_re );// / sqrtNxNy );
+               //* sin( (exp_i_sigma_v[j + i * Ny][0]));// / sqrtNxNy );
       }
 
    /////////////////////////////////////////////////////////////
@@ -1750,11 +1766,13 @@ int TEM_NS::slice::update_transmission_function(
 
    fftw_execute( pb_c2c_psi );
 
-   // Remove factor of sqrt(Nx*Ny) caused by fftw
+   // Remove factor of Nx*Ny caused by fftw
    for ( ptrdiff_t i=0; i<local_alloc_size_fftw; ++i)
    {
-      exp_i_sigma_v[i][0] = exp_i_sigma_v[i][0] / sqrtNxNy;
-      exp_i_sigma_v[i][1] = exp_i_sigma_v[i][1] / sqrtNxNy;
+      //exp_i_sigma_v[i][0] = exp_i_sigma_v[i][0] / sqrtNxNy;
+      //exp_i_sigma_v[i][1] = exp_i_sigma_v[i][1] / sqrtNxNy;
+      exp_i_sigma_v[i][0] = exp_i_sigma_v[i][0] / NxNy;
+      exp_i_sigma_v[i][1] = exp_i_sigma_v[i][1] / NxNy;
    }
 
    /////////////////////////////////////////////////////////////

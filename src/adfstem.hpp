@@ -75,8 +75,8 @@ int adfstem(
       const double& bwcutoff_pap,
       const double& bwcutoff_t,
       //const double& xperiod, const double& yperiod, const double& zperiod,
-      //const double& xmin,      // lowest value of x domain
-      //const double& ymin,      // lowest value of y domain
+      const double& xmin,      // lowest value of x domain
+      const double& ymin,      // lowest value of y domain
       //const double& zmin,      // lowest value of z domain
       //const double& raster_spacing, // \AA units, x & y raster spacing
       const std::list<double>& x_p,
@@ -100,7 +100,7 @@ int adfstem(
       const double& Cs5,       // fifth order spherical aberration
       const double& defocus,  // focal point distance from sample bottom
       const double& defocus_spread,
-      const double& alpha_max_sqr, // objective aperture limiting angle
+      const double& alpha_max, // objective aperture limiting angle
       const double& detector_inner_angle, // detector dimension [\AA^{-1}]
       const double& detector_outer_angle, // detector dimension [\AA^{-1}]
       const double& lambda,

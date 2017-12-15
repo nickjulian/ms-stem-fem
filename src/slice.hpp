@@ -128,7 +128,8 @@ class slice
             const double* const ky, // reciprocal space y-domain
             const double* const yy,  // real space y-domain
             const ptrdiff_t& Ny,
-            const double& sqrtNxNy,
+            const double& NxNy,
+            //const double& sqrtNxNy,
             const unsigned int& input_flag_pap_tif,
             const string& outFileName,//debug
             const size_t& sliceNumber,//debug

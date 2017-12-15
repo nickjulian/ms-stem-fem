@@ -284,6 +284,36 @@ int TEM_NS::probe_wavefunction_norm(
    return EXIT_SUCCESS;
 }
 
+int TEM_NS::probe_wavefunction_norm(
+      double& Ap,
+      const ptrdiff_t& Nx,
+      const ptrdiff_t& Ny,
+      const double* const psi_re,
+      const double* const psi_im,
+      //const int& mynode,
+      //const int& rootnode,
+      //const int& totalnodes,
+      MPI_Comm comm
+      )
+{
+   const ptrdiff_t NxNy = Nx * Ny;
+   Ap = 0.0;
+   double Ap_local; Ap_local = 0.0;
+
+   for ( ptrdiff_t i=0; i< NxNy; ++i )
+   {
+      Ap_local += psi_re[i] * psi_re[i] + psi_im[i] * psi_im[i];
+   }
+
+   MPI_Allreduce( &Ap_local, &Ap, 1, MPI_DOUBLE, MPI_SUM, comm);
+
+   //cout << "Ap_local : " << setprecision(5) << Ap_local << endl; // debug
+
+   Ap = 1.0 / sqrt( Ap );
+
+   return EXIT_SUCCESS;
+}
+
 
 //int TEM_NS::parallel_probe_wavefunction_uncorrected_unnormalized(
 //      const double& x_p,   // x component of \vec{x}_{p}

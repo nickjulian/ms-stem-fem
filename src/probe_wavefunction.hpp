@@ -127,6 +127,23 @@ int probe_wavefunction_norm(
       MPI_Comm comm
       );
 
+int probe_wavefunction_norm(
+      // Precondition: 
+      //    - psi contains the values of eq 5.47 in reciprocal space, 
+      //       lacking the factor A_{p}, as evaluated over kx and ky domain.
+      // Postcondition: 
+      //    - Ap contains the normalizing factor A_{p} from eq 5.47
+      double& Ap,
+      const ptrdiff_t& Nx,
+      const ptrdiff_t& Ny,
+      const double* const psi_re,
+      const double* const psi_im,
+      //const int& mynode,
+      //const int& rootnode,
+      //const int& totalnodes,
+      MPI_Comm comm
+      );
+
 //int parallel_probe_wavefunction_uncorrected_unnormalized(
 //      // Postcondition:
 //      //    - psi contains a disc of values 1.0, with 0.0 elsewhere,
