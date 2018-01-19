@@ -47,6 +47,7 @@ int TEM_NS::adfstem(
       //const size_t& total_population,
       const double& bwcutoff_pap,
       const double& bwcutoff_t,
+      const double& azimuthal_binning_size_factor,
       //const double& xperiod, const double& yperiod, const double& zperiod,
       const double& xmin,      // lowest value of x domain
       const double& ymin,      // lowest value of y domain
@@ -691,9 +692,9 @@ int TEM_NS::adfstem(
       // TODO: determine a good separation between binning boundaries,
       //        delta_k. The current value is just a guess.
       //if ( kx_local[1] - kx_local[0] > ky[1] - ky[0] ) 
-      delta_k =   // 4.0 * sqrt( 2);
-         //2.0 * sqrt( 
-         4.0 * sqrt( 
+
+      delta_k =   
+         azimuthal_binning_size_factor * sqrt( 
             (kx_local[1] - kx_local[0]) * (kx_local[1] - kx_local[0])
              + (ky[1] - ky[0]) * (ky[1] - ky[0])
             );

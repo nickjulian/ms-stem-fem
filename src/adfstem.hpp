@@ -74,6 +74,7 @@ int adfstem(
       //const size_t& total_population,
       const double& bwcutoff_pap,
       const double& bwcutoff_t,
+      const double& azimuthal_binning_size_factor,
       //const double& xperiod, const double& yperiod, const double& zperiod,
       const double& xmin,      // lowest value of x domain
       const double& ymin,      // lowest value of y domain
