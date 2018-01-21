@@ -21,8 +21,8 @@ LIBS_FFTW = -lfftw3_mpi -lfftw3
 LIBS = -L$(ROOT)/lib -L/usr/lib64 $(LIBS_NETCDF) $(LIBS_FFTW) -ltiff -lm 
 #############################
 
-OBJS = func.o projected_atomic_potential.o write_tif.o scherzer.o bw_limit.o lenses.o tem_io.o probe_wavefunction.o adfstem.o slice.o variance.o io_netcdf.o
-SRCS = $(ROOT)/src/func.cpp $(ROOT)/src/projected_atomic_potential.cpp $(ROOT)/src/write_tif.cpp $(ROOT)/src/scherzer.cpp $(ROOT)/src/bw_limit.cpp  $(ROOT)/src/lenses.cpp $(ROOT)/src/tem_io.cpp $(ROOT)/src/slice.cpp $(ROOT)/src/probe_wavefunction.cpp $(ROOT)/src/adfstem.cpp $(ROOT)/src/variance.cpp $(ROOT)/src/io_netcdf.cpp
+OBJS = func.o projected_atomic_potential.o write_tif.o scherzer.o bw_limit.o lenses.o tem_io.o probe_wavefunction.o adfstem.o slice.o variance.o io_netcdf.o io_txt.o
+SRCS = $(ROOT)/src/func.cpp $(ROOT)/src/projected_atomic_potential.cpp $(ROOT)/src/write_tif.cpp $(ROOT)/src/scherzer.cpp $(ROOT)/src/bw_limit.cpp  $(ROOT)/src/lenses.cpp $(ROOT)/src/tem_io.cpp $(ROOT)/src/slice.cpp $(ROOT)/src/probe_wavefunction.cpp $(ROOT)/src/adfstem.cpp $(ROOT)/src/variance.cpp $(ROOT)/src/io_netcdf.cpp $(ROOT)/src/io_txt.cpp
 
 MSSTEMFEM = $(ROOT)/bin/ms-stem-fem.x
 

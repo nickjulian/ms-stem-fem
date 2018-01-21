@@ -30,7 +30,6 @@
 #include <iostream>
 
 #include "variance.hpp"
-#include "io_netcdf.hpp"
 
 //using namespace std;
 using std::sqrt;
@@ -499,8 +498,9 @@ int TEM_NS::variance_1D_STEM(
       const double* const diffracted_wave_radial_intensity_sum,
       const double* const diffracted_wave_radial_intensity_sqr_sum,
       //const size_t& number_of_bins,
-      const std::vector<double>& binning_boundaries, // for netcdf output
-      const size_t number_of_raster_points,
+      const std::vector<double>& binning_boundaries, // for output
+      const size_t& number_of_raster_points,
+      const unsigned int& input_flag_netcdf_variance,
       const string& outFilePrefix,
       double* variance
       )
@@ -546,28 +546,56 @@ int TEM_NS::variance_1D_STEM(
    }
 
    // debug
-   output_variance_to_netcdf(
-      diffracted_wave_radial_intensity_sqr_sum,
-      binning_boundaries,
-      outFilePrefix + "_radial_intensity_sqr_sum"
-      );
-   output_variance_to_netcdf(
-      diffracted_wave_radial_intensity_sum,
-      binning_boundaries,
-      outFilePrefix + "_radial_intensity_sum"
-      );
+   if( input_flag_netcdf_variance )
+   {
+      output_variance_to_netcdf(
+         diffracted_wave_radial_intensity_sqr_sum,
+         binning_boundaries,
+         outFilePrefix + "_radial_intensity_sqr_sum"
+         );
+      output_variance_to_netcdf(
+         diffracted_wave_radial_intensity_sum,
+         binning_boundaries,
+         outFilePrefix + "_radial_intensity_sum"
+         );
+   } else {
+      output_variance_to_txt(
+         diffracted_wave_radial_intensity_sqr_sum,
+         binning_boundaries,
+         outFilePrefix + "_radial_intensity_sqr_sum"
+         );
+      output_variance_to_txt(
+         diffracted_wave_radial_intensity_sum,
+         binning_boundaries,
+         outFilePrefix + "_radial_intensity_sum"
+         );
+   }
    //end debug
 
-   // write the variance to a netcdf file
-   if ( 
-         output_variance_to_netcdf(
-            variance,
-            binning_boundaries,
-            outFilePrefix + "_radial_intensity_variance"
-         ) != EXIT_SUCCESS)
+   // write the variance to a file
+   if( input_flag_netcdf_variance )
    {
-      cout << " failed to write variance data to netCDF file : " 
-         << outFilePrefix << endl;
+      if ( 
+            output_variance_to_netcdf(
+               variance,
+               binning_boundaries,
+               outFilePrefix + "_radial_intensity_variance"
+            ) != EXIT_SUCCESS)
+      {
+         cout << " failed to write variance data to netCDF file : " 
+            << outFilePrefix << endl;
+      }
+   } else {
+      if ( 
+         output_variance_to_txt(
+               variance,
+               binning_boundaries,
+               outFilePrefix + "_radial_intensity_variance"
+            ) != EXIT_SUCCESS)
+      {
+         cout << " failed to write variance data to a txt file : " 
+            << outFilePrefix << endl;
+      }
    }
 }
 

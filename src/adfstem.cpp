@@ -39,7 +39,8 @@ int TEM_NS::adfstem(
       const unsigned int& input_flag_aberration_correction,
       const unsigned int& input_flag_complex_realspace_sum,
       const unsigned int& input_flag_image_output,
-      const unsigned int& input_flag_netcdf_output,
+      const unsigned int& input_flag_netcdf_images,
+      const unsigned int& input_flag_netcdf_variance,
       const unsigned int& input_flag_debug,
       // parameters taken from simulation of system evolution:
       //const std::list< slice* >& slicesOfScatterers,
@@ -359,6 +360,9 @@ int TEM_NS::adfstem(
             lambda, lambda_sqr,
             large_probe
             );
+
+      if ( input_flag_debug )
+         cout << "Evaluated probe ..." << endl;// debug
    }
    else
    {
@@ -385,6 +389,9 @@ int TEM_NS::adfstem(
             lambda, lambda_sqr,
             large_probe
             );
+
+      if ( input_flag_debug )
+         cout << "Evaluated probe ..." << endl;// debug
    }
 
    delete[] kx_large_joined;
@@ -1055,7 +1062,9 @@ int TEM_NS::adfstem(
          // TODO : consider elliminating the following block
          if( //first_probe_flag 
              //  && 
-               (input_flag_image_output || input_flag_netcdf_output))
+               input_flag_debug 
+               &&
+               (input_flag_image_output || input_flag_netcdf_images))
          {
             //if ( mynode == rootnode && input_flag_debug 
             //      && input_flag_image_output )
@@ -1103,7 +1112,7 @@ int TEM_NS::adfstem(
                   mynode, rootnode, comm);
             }
 
-            if ( input_flag_netcdf_output )
+            if ( input_flag_netcdf_images )
             {
                if ( mynode == rootnode && input_flag_debug)
                   cout << "saving initial probe to netCDF" << endl;
@@ -1139,19 +1148,20 @@ int TEM_NS::adfstem(
          //      Nx_local, kx_local, Ny, ky,
          //      bwcutoff_t   
          //      );
-         //debug
-         diffraction_scale_factor = 1.0e+0;
-         output_diffraction(
-               psi,
-               diffraction_scale_factor,
-               local_alloc_size_fftw,
-               Nx_local, Nx, Ny,
-               resolutionUnit_recip,
-               xResolution_recip, yResolution_recip,
-               outFileName_prefix + "_initial_probe_recip_",
-               mynode, rootnode, comm
-               );
-         //end debug
+         if ( input_flag_image_output && input_flag_debug )
+         {
+            diffraction_scale_factor = 1.0e+0;
+            output_diffraction(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix + "_initial_probe_recip_",
+                  mynode, rootnode, comm
+                  );
+         }
 
          /////////////////////////////////////////////////////////////
          // Propagate the probe through the slices
@@ -1490,10 +1500,10 @@ int TEM_NS::adfstem(
               << *x_itr << ", " << *y_itr << ")" << endl;
 
          if ( first_probe_flag 
-               && (input_flag_image_output || input_flag_netcdf_output) )
+               && (input_flag_image_output || input_flag_netcdf_images) )
          {
             if ( mynode == rootnode && input_flag_debug 
-                  && input_flag_netcdf_output )
+                  && input_flag_netcdf_images )
             {
                cout << "writing first diffraction to netcdf" << endl;
                if( output_psi_reciprocalspace_to_netcdf(
@@ -1920,7 +1930,7 @@ int TEM_NS::adfstem(
                );
 
       }
-      if ( input_flag_complex_realspace_sum && input_flag_netcdf_output)
+      if ( input_flag_complex_realspace_sum && input_flag_netcdf_images)
         if(
            output_psi_reciprocalspace_to_netcdf(
                  diffracted_wave_fftw_complex_sum,
@@ -2067,6 +2077,7 @@ int TEM_NS::adfstem(
                   diffracted_wave_radial_intensity_sqr_sum,
                   binning_boundaries,
                   number_of_raster_points,
+                  input_flag_netcdf_variance,
                   outFileName_prefix,
                   ftem_variance
                   )

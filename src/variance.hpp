@@ -45,6 +45,8 @@
 #include "indexed_vector_magnitude_sqr.hpp"
 #include "func.hpp"
 #include "radial_discretization.hpp"
+#include "io_netcdf.hpp"
+#include "io_txt.hpp"
 
 
 namespace TEM_NS
@@ -54,7 +56,8 @@ namespace TEM_NS
          const double* const diffracted_wave_radial_intensity_sum,
          const double* const diffracted_wave_radial_intensity_sqr_sum,
          const std::vector<double>& binning_boundaries,
-         const size_t number_of_raster_points,
+         const size_t& number_of_raster_points,
+         const unsigned int& input_flag_netcdf_variance,
          const string& outFilePrefix,
          double* variance
          );

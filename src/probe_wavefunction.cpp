@@ -131,7 +131,7 @@ int TEM_NS::probe_wavefunction_uncorrected_unnormalized(
             psi[j + i * Ny][1] = 0.0;
          }
       }
-   cout << "Evaluated probe ..." << endl;// debug
+   //cout << "Evaluated probe ..." << endl;// debug
 
    return EXIT_SUCCESS;
 }

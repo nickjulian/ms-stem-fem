@@ -66,7 +66,8 @@ int adfstem(
       const unsigned int& input_flag_aberration_correction,
       const unsigned int& input_flag_complex_realspace_sum,
       const unsigned int& input_flag_image_output,
-      const unsigned int& input_flag_netcdf_output,
+      const unsigned int& input_flag_netcdf_images,
+      const unsigned int& input_flag_netcdf_variance,
       const unsigned int& input_flag_debug,
       // parameters taken from simulation of system evolution:
       //const std::list< slice* >& slicesOfScatterers,
