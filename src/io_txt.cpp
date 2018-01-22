@@ -52,7 +52,7 @@ int TEM_NS::output_variance_to_txt(
 
    // open the output file
    std::ofstream outputFile;
-   outputFile.open( outFileName, std::ios::out);
+   outputFile.open( outFileName.c_str(), std::ios::out);
    if ( outputFile.is_open() && outputFile.good()) {
 
       //outputFile.setf( std::scientific, std::ios::floatfield);
