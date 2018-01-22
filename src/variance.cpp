@@ -509,10 +509,10 @@ int TEM_NS::variance_1D_STEM(
 {
    size_t number_of_bins; number_of_bins = binning_boundaries.size() - 1;
    // debug
-   cout << "variance_1D_STEM() number_of_raster_points : " 
-      << number_of_raster_points
-      << ", number_of_bins : " << number_of_bins
-      << endl;
+   //cout << "variance_1D_STEM() number_of_raster_points : " 
+   //   << number_of_raster_points
+   //   << ", number_of_bins : " << number_of_bins
+   //   << endl;
    // end debug
 
    for ( size_t idx=0; idx < number_of_bins; ++idx)

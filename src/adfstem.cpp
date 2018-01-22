@@ -738,6 +738,7 @@ int TEM_NS::adfstem(
          {
             diffracted_wave_radial_intensity_sqr_sum[ii] = 0.0;
             diffracted_wave_radial_intensity_sum[ii] = 0.0;
+            diffracted_wave_radial_intensity_sum_tmp[ii] = 0.0;
          }
       }
  
