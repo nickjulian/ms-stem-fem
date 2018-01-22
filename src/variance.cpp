@@ -225,7 +225,8 @@ int TEM_NS::integrate_out_theta_fftw(
       }
 
       // implement averaging within the current bin
-      data1D_local[ii] = data1D_local[ii] / bin_element_count;
+      if ( bin_element_count != 0)
+         data1D_local[ii] = data1D_local[ii] / bin_element_count;
 
       ++ii;
       //lower_bound = upper_bound;// debug lower_bound isn't useful otherwise
@@ -441,7 +442,8 @@ int TEM_NS::integrate_out_theta_double(
       }
 
       // implement averaging within the current bin
-      data1D_local[ii] = data1D_local[ii] / bin_element_count;
+      if ( bin_element_count != 0)
+         data1D_local[ii] = data1D_local[ii] / bin_element_count;
 
       ++ii;
       //lower_bound = upper_bound;// debug lower_bound isn't useful otherwise
