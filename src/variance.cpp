@@ -68,6 +68,7 @@ int TEM_NS::integrate_out_theta_fftw(
       const double* const kx_local, const size_t& Nx_local,
       const double* const ky, const size_t& Ny,
       const std::vector<double>& binning_boundaries,// bin boundaries
+      int* bin_counts,
       double* data1D_local // output, 
              // having binning_boundaries.size() - 1 allocated elements
       )
@@ -76,6 +77,7 @@ int TEM_NS::integrate_out_theta_fftw(
    // // - data1D_local has been allocated to have 
    // //    number_of_bins == bwcutoff_t / delta_k  
    // //       == binning_boundaries.size() - 1
+   // //       == number of elements of bin_counts[]
    // //    elements
    // - binning boundaries do not exceed the maximum or minimum of the
    //    domain kx, ky of the data to be binned, but the non-zero data may 
@@ -140,7 +142,10 @@ int TEM_NS::integrate_out_theta_fftw(
 
    // zero the data1D_local[]
    for ( size_t i=0; i < binning_boundaries.size() - 1; ++i) 
+   {
       data1D_local[i] = 0.0;
+      bin_counts[i] = 0;
+   }
 
    // - starting with the lowest bin (upper/lower boundary pair), iterate 
    //    through the sorted indexed_vector_magnitude elements, if 
@@ -153,7 +158,7 @@ int TEM_NS::integrate_out_theta_fftw(
          mag_itr = indexed_magnitudes.begin(); // the values to be binned
 
    size_t number_of_points_binned = 0;
-   double bin_element_count; // number of elements encountered in one bin
+   //double bin_element_count; // number of elements encountered in one bin
 
    //double lower_bound = binning_boundaries.front();
    double upper_bound;
@@ -200,7 +205,7 @@ int TEM_NS::integrate_out_theta_fftw(
          break;
       }
 
-      bin_element_count = 0;
+      //bin_element_count = 0;
 
       for ( ; 
             mag_itr->v_mag_sqr <= (upper_bound  * upper_bound)
@@ -220,13 +225,10 @@ int TEM_NS::integrate_out_theta_fftw(
          data1D_local[ii] 
             += sqrt( (tmp_re * tmp_re) + (tmp_im * tmp_im) );
          ++number_of_points_binned; // debug
-         ++bin_element_count; 
+         bin_counts[ii] += 1;
+         //++bin_element_count; 
 
       }
-
-      // implement averaging within the current bin
-      if ( bin_element_count != 0)
-         data1D_local[ii] = data1D_local[ii] / bin_element_count;
 
       ++ii;
       //lower_bound = upper_bound;// debug lower_bound isn't useful otherwise

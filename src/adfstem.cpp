@@ -661,6 +661,10 @@ int TEM_NS::adfstem(
    double* ftem_variance;
 
    unsigned int number_of_bins;  // azimuthal integration subintervals
+
+   int* bin_counts_local;  // not size_t since MPI datatype required
+   int* bin_counts_aggregated;
+
    double delta_k;   // length of aziumthal integration subintervals
    std::vector<double> binning_boundaries;
 
@@ -721,9 +725,12 @@ int TEM_NS::adfstem(
       // 1-D variance curve variables allocated after number_of_bins
       diffracted_wave_radial_intensity_sum_local
          = new double[ number_of_bins ];
+      bin_counts_local = new int[number_of_bins];
+
       for ( ptrdiff_t ii=0; ii < number_of_bins; ++ii )
       {
          diffracted_wave_radial_intensity_sum_local[ii] = 0.0;
+         bin_counts_local[ii] = 0;
       }
 
       if ( mynode == rootnode )
@@ -734,11 +741,13 @@ int TEM_NS::adfstem(
             = new double[ number_of_bins ];
          diffracted_wave_radial_intensity_sum_tmp // temporary storage
             = new double[ number_of_bins ];       // to allow squaring
+         bin_counts_aggregated = new int[ number_of_bins ];
          for ( ptrdiff_t ii=0; ii < number_of_bins; ++ii )
          {
             diffracted_wave_radial_intensity_sqr_sum[ii] = 0.0;
             diffracted_wave_radial_intensity_sum[ii] = 0.0;
             diffracted_wave_radial_intensity_sum_tmp[ii] = 0.0;
+            bin_counts_aggregated[ii] = 0;
          }
       }
  
@@ -1630,6 +1639,7 @@ int TEM_NS::adfstem(
                   kx_local, Nx_local,
                   ky, Ny,
                   binning_boundaries, 
+                  bin_counts_local,
                   diffracted_wave_radial_intensity_sum_local
                   );
 
@@ -1638,6 +1648,11 @@ int TEM_NS::adfstem(
             //if ( mynode == rootnode )
             //   for (unsigned int ii=0; ii < number_of_bins; ++ii)
             //      diffracted_wave_radial_intensity_sum_tmp[ii] =0.0;
+            if ( number_of_bins != binning_boundaries.size() - 1)//debug
+            {//debug
+               cerr << "Error - number_of_bins != binning_boundaries.size() - 1" << endl;//debug
+               // TODO: make a function to release memory for a clean exit
+            }//debug
 
             MPI_Reduce(
                   diffracted_wave_radial_intensity_sum_local, // local
@@ -1647,16 +1662,29 @@ int TEM_NS::adfstem(
                   rootnode, comm
                   );
 
+            MPI_Reduce(
+                  bin_counts_local, // local
+                  bin_counts_aggregated, //rootnode
+                  number_of_bins,
+                  MPI_INT, MPI_SUM,
+                  rootnode, comm
+                  );
+
             if ( mynode == rootnode )
             {
                for ( unsigned int i=0; i<number_of_bins; ++i)
                {
+                  // division by bin_counts_aggregated implements 
+                  //  azimuthal averaging 
                   diffracted_wave_radial_intensity_sum[i]
-                     += diffracted_wave_radial_intensity_sum_tmp[i];
+                     += diffracted_wave_radial_intensity_sum_tmp[i] 
+                        / bin_counts_aggregated[i];
 
                   diffracted_wave_radial_intensity_sqr_sum[i]
-                     += diffracted_wave_radial_intensity_sum_tmp[i]
-                        * diffracted_wave_radial_intensity_sum_tmp[i];
+                     += (diffracted_wave_radial_intensity_sum_tmp[i]
+                        * diffracted_wave_radial_intensity_sum_tmp[i])
+                           / (bin_counts_aggregated[i] 
+                                 * bin_counts_aggregated[i]);
                }
             }
          } // end of input_flag_fem dependent block
@@ -2289,8 +2317,10 @@ int TEM_NS::adfstem(
       }
 
       // 1-D variance
+      delete[] bin_counts_local;
       if ( mynode == rootnode )
       {
+         delete[] bin_counts_aggregated;
          delete[] diffracted_wave_radial_intensity_sqr_sum;
          delete[] diffracted_wave_radial_intensity_sum;
          delete[] diffracted_wave_radial_intensity_sum_tmp;

@@ -100,6 +100,7 @@ namespace TEM_NS
          const double* const kx_local, const size_t& Nx_local,
          const double* const ky, const size_t& Ny,
          const std::vector<double>& binning_boundaries,
+         int* bin_counts,
          double* f_of_k_magnitudes//,  // 1-D data output
          );
 
