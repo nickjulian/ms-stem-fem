@@ -67,6 +67,7 @@ namespace TEM_NS
          const double* const data2D_avgs_local,      // denominator
          // average of intensity^{2} over beam position raster
          const double* const data2D_sqr_avgs_local,  // numerator
+         double* diffracted_wave_mag_variance_2D,     // output
          const unsigned int number_of_raster_points,
          //const std::vector<double>& binning_boundaries,
          const double* const kx_local, const size_t& Nx_local,
@@ -109,6 +110,7 @@ namespace TEM_NS
          const double* const kx_local, const size_t& Nx_local,
          const double* const ky, const size_t& Ny,
          const std::vector<double>& binning_boundaries,
+         int* bin_counts,
          double* f_of_k_magnitudes//,  // 1-D data output
          );
 

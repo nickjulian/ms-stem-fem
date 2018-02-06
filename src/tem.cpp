@@ -74,7 +74,7 @@ using namespace TEM_NS;
 //int threads_ok; // global by request of fftw.org/doc/ ... section 6.11
 
 // TODO: separate scherzer conditionals for defocus, alphamax, and Cs3
-#define PRINT_USAGE cout << "Usage: " << argv[0] << " <options>" << endl << "OPTIONS : " << endl << "   -m <Nx> <Ny> <VV>" << endl << "   [--scherzer_defocus] calculate and use scherzer focus conditions" << endl << "   [--scherzer_alphamax] calculate and use scherzer focus conditions" << endl << "   [--scherzer_cs3] calculate and use scherzer Cs3 conditions" << endl << "   [--defocus <defocus>] (if not using --scherzer)" << endl << "   [--alphamax <alpha max>] (if not using --scherzer)" << endl << "   [--spread <defocus spread> <condenser_illumination_angle>] (only if using aberration correction)" << endl << "   [--cs3 <third order spherical aberration>] (ignored if using --scherzer with aberration correction)" << endl << "   [--cs5 <fifth order spherical aberration>] (only if using aberration correction)" << endl << "   [--rasterspacing <raster_spacing>] (Angstroms; default is 1.5 for STEM or 10 for STEM-FEM)" << endl << "   [--dupe <dupe_x> <dupe_y> <dupe_z>] (Periodically instantiate the given scatterers dupe_x, dupe_y, and dupe_z times in respective directions; fem only)" << endl << "   -a <lammps or xyz style position input file>" << endl << "   -o <output file prefix>" << endl << "   --paptif (output images of projected atomic potentials)"<< endl << "   [--adfstemcorrfem] simulate fluctuation microscopy using aberration corrected adfstem mode" << endl << "   [--adfstemuncorrfem] simulate fluctuation microscopy using adfstem mode without aberration correction" << endl << "   [--adfstemcorr] simulate aberration corrected adfstem" << endl << "   [--adfstemuncorr] simulate adfstem mode without aberration correction" << endl << "   [--bfctemcorr] simulate bright field TEM with aberration correction" << endl << "   [--bfctemuncorr] simulate bright field TEM without aberration correction" << endl << "   [--dr <azimuthal_binning_size_factor>] prefactor of sqrt(dx^2+dy^2) in bin size" << endl << "   [--minslice <minSliceThickness> minimum slice thickness in Angstroms, default is 1] " << endl << "   [--images] generate and save images" << endl << "   [--netcdfimages] save images as netcdf files" << endl << "   [--netcdfvariance] save 1-D variance as netcdf files" << endl << "   [--debug] enable verbose debug output to files and stdout"<< endl ;
+#define PRINT_USAGE cout << "Usage: " << argv[0] << " <options>" << endl << "OPTIONS : " << endl << "   -m <Nx> <Ny> <VV>" << endl << "   [--scherzer_defocus] calculate and use scherzer focus conditions" << endl << "   [--scherzer_alphamax] calculate and use scherzer focus conditions" << endl << "   [--scherzer_cs3] calculate and use scherzer Cs3 conditions" << endl << "   [--defocus <defocus>] (if not using --scherzer)" << endl << "   [--alphamax <alpha max>] (if not using --scherzer)" << endl << "   [--spread <defocus spread> <condenser_illumination_angle>] (only if using aberration correction)" << endl << "   [--cs3 <third order spherical aberration>] (ignored if using --scherzer with aberration correction)" << endl << "   [--cs5 <fifth order spherical aberration>] (only if using aberration correction)" << endl << "   [--rasterspacing <raster_spacing>] (Angstroms; default is 1.5 for STEM or 10 for STEM-FEM)" << endl << "   [--dupe <dupe_x> <dupe_y> <dupe_z>] (Periodically instantiate the given scatterers dupe_x, dupe_y, and dupe_z times in respective directions; fem only)" << endl << "   -a <lammps or xyz style position input file>" << endl << "   -o <output file prefix>" << endl << "   --paptif (output images of projected atomic potentials)"<< endl << "   [--adfstemcorrfem] simulate fluctuation microscopy using aberration corrected adfstem mode" << endl << "   [--adfstemuncorrfem] simulate fluctuation microscopy using adfstem mode without aberration correction" << endl << "   [--adfstemcorr] simulate aberration corrected adfstem" << endl << "   [--adfstemuncorr] simulate adfstem mode without aberration correction" << endl << "   [--bfctemcorr] simulate bright field TEM with aberration correction" << endl << "   [--bfctemuncorr] simulate bright field TEM without aberration correction" << endl << "   [--dr <azimuthal_binning_size_factor>] prefactor of sqrt(dx^2+dy^2) in bin size" << endl << "   [--minslice <minSliceThickness> minimum slice thickness in Angstroms, default is 1] " << endl << "   [--images] generate and save images" << endl << "   [--netcdfimages] save images as netcdf files" << endl << "   [--netcdfvariance] save 1-D variance as netcdf files" << endl << "   [--D1]" << endl << "   [--D2]" << endl << "   [--D3]" << endl << "   [--D4]" << endl << "   [--GT17]" << endl << "   [--debug] enable verbose debug output to files and stdout" << endl ;
 
 
 int main( int argc, char* argv[])
@@ -179,6 +179,11 @@ int main( int argc, char* argv[])
    unsigned int input_flag_bfctem_corrected = 0;         // 
    unsigned int input_flag_bfctem_uncorrected = 0;       // 
    unsigned int input_flag_fem = 0;
+   unsigned int input_flag_gt17 = 0;
+   unsigned int input_flag_d1 = 0;
+   unsigned int input_flag_d2 = 0;
+   unsigned int input_flag_d3 = 0;
+   unsigned int input_flag_d4 = 0;
    unsigned int input_flag_scherzer_defocus = 0;
    unsigned int input_flag_scherzer_alphamax = 0;
    unsigned int input_flag_scherzer_cs3 = 0;
@@ -467,6 +472,26 @@ int main( int argc, char* argv[])
          input_flag_adfstem_corrected = 1;
          input_flag_fem = 1;
       }
+      else if ( args[idx] == "--GT17" )
+      {
+         input_flag_gt17 = 1;
+      }
+      else if ( args[idx] == "--D1" )
+      {
+         input_flag_d1 = 1;
+      }
+      else if ( args[idx] == "--D2" )
+      {
+         input_flag_d2 = 1;
+      }
+      else if ( args[idx] == "--D3" )
+      {
+         input_flag_d3 = 1;
+      }
+      else if ( args[idx] == "--D4" )
+      {
+         input_flag_d4 = 1;
+      }
       else if ( args[idx] == "--adfstemcorr" )
       {
          input_flag_adfstem_corrected = 1;
@@ -535,6 +560,12 @@ int main( int argc, char* argv[])
          failflag = 1;
       }
    }
+      if ( (! input_flag_gt17 ) 
+            && (! input_flag_d1 ) && (! input_flag_d2 ) 
+            && (! input_flag_d3 ) && (! input_flag_d4 ) )
+      {
+         input_flag_d1 = 1; // default variance calculation mode
+      }
 
       // debug
       if( mynode == rootnode  && input_flag_debug )
@@ -564,6 +595,16 @@ int main( int argc, char* argv[])
          input_flag_bfctem_uncorrected  << endl <<
          "input_flag_fem  " << 
          input_flag_fem  << endl <<
+         "input_flag_gt17 " << 
+         input_flag_gt17  << endl <<
+         "input_flag_d1 " << 
+         input_flag_d1  << endl <<
+         "input_flag_d2 " << 
+         input_flag_d2  << endl <<
+         "input_flag_d3 " << 
+         input_flag_d3  << endl <<
+         "input_flag_d4 " << 
+         input_flag_d4  << endl <<
          "input_flag_scherzer_defocus " << 
          input_flag_scherzer_defocus << endl <<
          "input_flag_scherzer_alphamax " << 
@@ -1742,6 +1783,8 @@ int main( int argc, char* argv[])
 
          adfstem(
                input_flag_fem,
+               input_flag_gt17,
+               input_flag_d1, input_flag_d2, input_flag_d3, input_flag_d4,
                0,                         // aberration correction?
                0, // calculate using complex average over real space?
                input_flag_image_output,
@@ -1820,6 +1863,8 @@ int main( int argc, char* argv[])
 
          adfstem(
                input_flag_fem,
+               input_flag_gt17,
+               input_flag_d1, input_flag_d2, input_flag_d3, input_flag_d4,
                1, // aberration correction?
                0, // calculate using complex average over real space?
                input_flag_image_output,

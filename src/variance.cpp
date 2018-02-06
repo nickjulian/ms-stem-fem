@@ -279,14 +279,13 @@ int TEM_NS::integrate_out_theta_fftw(
 }
 
 
-// TODO: change the name to portray that it averages instead of integrates
 int TEM_NS::integrate_out_theta_double( 
       // integrate to make f( \vec{k} ) into f( | \vec{k} | )
-      //const double** const psi,// data to be binned,[][0] real,[][1] im
       const double* const psi,//data to be integrated azimuthally
       const double* const kx_local, const size_t& Nx_local,
       const double* const ky, const size_t& Ny,
       const std::vector<double>& binning_boundaries,// bin boundaries
+      int* bin_counts,
       double* data1D_local // output, 
              // having binning_boundaries.size() - 1 allocated elements
       )
@@ -295,9 +294,10 @@ int TEM_NS::integrate_out_theta_double(
    // // - data1D_local has been allocated to have 
    // //    number_of_bins == bwcutoff_t / delta_k  
    // //       == binning_boundaries.size() - 1
+   // //       == number of elements of bin_counts[]
    // //    elements
    // - binning boundaries do not exceed the maximum or minimum of the
-   //    domain kx, ky of the data to be binned, but the non-zero data may 
+   //    domain kx, ky of the data to be binned, but the non-zero data may
    //    lie entirely within the bounds of the binning
    
    // Plan:
@@ -307,19 +307,15 @@ int TEM_NS::integrate_out_theta_double(
    // - sort them by their magnitude member (v_mag_sqr)
    // - starting with the lowest bin (upper/lower boundary pair), iterate 
    //    through the sorted indexed_vector_magnitude elements, if 
-   //    their v_mag_sqr exceeds the bin's upper boundary, move to the next
-   //    bin.
+   //    their v_mag_sqr exceeds the bin's upper boundary, move to the 
+   //    next bin.
    //    If v_mag_sqr is between the upper and lower boundaries 
    //    (squared) then increment data1D_local[i] by psi[j+i*Ny] 
-
-   // TODO: Revision: established FTEM methods average azimuthally instead 
-   //       of integrate azimuthally, so this function must be changed.
-
    vector<indexed_vector_magnitude_sqr> indexed_magnitudes;
+
    for ( ptrdiff_t i=0; i<Nx_local; ++i)
       for ( ptrdiff_t j=0; j<Ny; ++j)
-      {
-         //if ( kx[i] * kx[i] + ky[j] * ky[j] == 16.0 ) // debug
+      { //if ( kx[i] * kx[i] + ky[j] * ky[j] == 16.0 ) // debug
          //{ // debug
          //   cout << "kx[" << i << "]^2 + ky[" << j << "]^2 == 16 == " 
          //      << kx[i] << "^2 + " << ky[j] << "^2 " << endl;
@@ -362,7 +358,10 @@ int TEM_NS::integrate_out_theta_double(
 
    // zero the data1D_local[]
    for ( size_t i=0; i < binning_boundaries.size() - 1; ++i) 
+   {
       data1D_local[i] = 0.0;
+      bin_counts[i] = 0;
+   }
 
    // - starting with the lowest bin (upper/lower boundary pair), iterate 
    //    through the sorted indexed_vector_magnitude elements, if 
@@ -375,14 +374,11 @@ int TEM_NS::integrate_out_theta_double(
          mag_itr = indexed_magnitudes.begin(); // the values to be binned
 
    size_t number_of_points_binned = 0;
-   double bin_element_count;
+   //double bin_element_count; // number of elements encountered in one bin
 
    //double lower_bound = binning_boundaries.front();
    double upper_bound;
    size_t ii=0; // index of bin ( data1D_local[ii] )
-
-   double tmp_re, tmp_im;
-
 
    for ( std::vector<double>::const_iterator
         binning_boundary_itr = ++(binning_boundaries.begin());
@@ -423,7 +419,7 @@ int TEM_NS::integrate_out_theta_double(
          break;
       }
 
-      bin_element_count = 0.0; 
+      //bin_element_count = 0;
 
       for ( ; 
             mag_itr->v_mag_sqr <= (upper_bound  * upper_bound)
@@ -437,18 +433,14 @@ int TEM_NS::integrate_out_theta_double(
          //   << upper_bound * upper_bound // debug
          //   << ", " << lower_bound * lower_bound << endl;  // debug
 
+
+         data1D_local[ii] 
+            += psi[ (mag_itr->j) + Ny * (mag_itr->i) ];
          ++number_of_points_binned; // debug
-         ++bin_element_count;
-
-         data1D_local[ii] += psi[ (mag_itr->j) + Ny * (mag_itr->i) ];
+         bin_counts[ii] += 1;
+         //++bin_element_count; 
       }
-
-      // implement averaging within the current bin
-      if ( bin_element_count != 0)
-         data1D_local[ii] = data1D_local[ii] / bin_element_count;
-
       ++ii;
-      //lower_bound = upper_bound;// debug lower_bound isn't useful otherwise
    }
 
 //   // Calculate the mean and standard deviation of the incremental 
@@ -494,8 +486,6 @@ int TEM_NS::integrate_out_theta_double(
 
    return EXIT_SUCCESS;
 }
-
-
 
 
 int TEM_NS::variance_1D_STEM( 
@@ -603,10 +593,11 @@ int TEM_NS::variance_1D_STEM(
    }
 }
 
-// TODO: rewrite varianc_2D_STEM() to work within revised adfstem()
+// TODO: rewrite variance_2D_STEM() to work within revised adfstem()
 int TEM_NS::variance_2D_STEM( 
       const double* const data2D_avgs_local,       // denominator
       const double* const data2D_sqr_avgs_local,   // numerator
+      double* diffracted_wave_mag_variance_2D,     // output
       const unsigned int number_of_raster_points,
       //const std::vector<double>& binning_boundaries,// bin boundaries
       const double* const kx_local, const size_t& Nx_local, 
@@ -624,7 +615,8 @@ int TEM_NS::variance_2D_STEM(
       )
 {
    //  data2D_avgs_local : average over raster position of intensity
-   //  data2D_sqr_avgs_local : average over raster position of intensity^{2}
+   //  data2D_sqr_avgs_local : average over raster position of 
+   //                           intensity^{2}
 
 
    // NOTE: The following is not appropriate for V(|k|), only for 
@@ -659,8 +651,8 @@ int TEM_NS::variance_2D_STEM(
    // This function is only used for creating a 2-D image of the
    //  variance of diffraction.
    ///////////////////////////////////////////////////////////////////
-   double* diffracted_wave_mag_variance_2D;
-   diffracted_wave_mag_variance_2D = new double[ Nx_local * Ny ];
+   //double* diffracted_wave_mag_variance_2D;
+   //diffracted_wave_mag_variance_2D = new double[ Nx_local * Ny ];
 
    //debug  check the input to see if the numerator < denominator
    for ( ptrdiff_t i=0; i< Nx_local * Ny; ++i)
@@ -708,6 +700,8 @@ int TEM_NS::variance_2D_STEM(
             << endl; // debug
 
    } // end debug
+   
+   // TODO: the following output is probably excessive
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0e-40,
@@ -817,6 +811,9 @@ int TEM_NS::variance_2D_STEM(
       outFilePrefix + "_variance2D",
       mynode, rootnode, comm
       );
+   // TODO: output data as netcdf and elliminate most of the above
+   //        image creations
+
    //delete[] diffracted_wave_mag_variance_1D_local; 
    delete[] diffracted_wave_mag_variance_2D;
    ///////////////////////////////////////////////////////////////////
@@ -837,7 +834,7 @@ int TEM_NS::variance_2D_STEM(
    ////
    ////
    ////double* diffracted_wave_mag_variance_1D_local;
-   ////diffracted_wave_mag_variance_1D_local = new double[ number_of_bins ];
+   ////diffracted_wave_mag_variance_1D_local = new double[number_of_bins];
    //double* data1D_sqr_avgs_local = new double[number_of_bins];
    //double* data1D_avgs_local = new double[number_of_bins];
    //double* data1D_sqr_avgs_reduced;
