@@ -53,6 +53,66 @@ using std::transform;
 
 namespace TEM_NS
 {
+   struct input_flags
+   {
+      unsigned int m = 0;// microscope parameters
+      //unsigned int pf = 0;// simulation parameter file given
+      unsigned int o = 0;// output file name prefix
+      unsigned int a = 0;// atom position and species input file
+      unsigned int defocus = 0;   // defocus
+      unsigned int spread = 0;  // defocus spread 
+      unsigned int adfstem_corrected = 0;        // 
+      unsigned int adfstem_uncorrected = 0;      // 
+      unsigned int bfctem_corrected = 0;         // 
+      unsigned int bfctem_uncorrected = 0;       // 
+      unsigned int fem = 0;
+      unsigned int gt17 = 0;
+      unsigned int d1 = 0;
+      unsigned int d2 = 0;
+      unsigned int d3 = 0;
+      unsigned int d4 = 0;
+      unsigned int scherzer_defocus = 0;
+      unsigned int scherzer_alphamax = 0;
+      unsigned int scherzer_cs3 = 0;
+      unsigned int cs3 = 0;
+      unsigned int cs5 = 0;
+      unsigned int alpha_max = 0;
+      unsigned int aberration_correction = 0;
+      unsigned int raster_spacing = 0;
+      unsigned int pap_tif = 0;
+      unsigned int dupe = 0;
+      unsigned int image_output = 0;
+      unsigned int netcdf_images = 0;
+      unsigned int netcdf_variance = 0;
+      unsigned int nx = 0;
+      unsigned int ny = 0;
+      unsigned int microscope_voltage = 0;
+      unsigned int debug = 0;
+   };
+
+   int read_parameter_file(
+      // sufficiency and conflicts of the input should be checked by caller
+         const string& parameter_filename, 
+         string& model_file,
+         input_flags& flags,
+         string& output_prefix,
+         ptrdiff_t& Nx,
+         ptrdiff_t& Ny,
+         double& VV,
+         double& defocus,
+         double& alpha_max,
+         double& defocus_spread,
+         double& condenser_illumination_angle,
+         double& Cs3,
+         double& Cs5,
+         double& raster_spacing,
+         double& azimuthal_binning_size_factor,
+         double& minSliceThickness,
+         const int& mynode,
+         const int& rootnode,
+         MPI_Comm comm
+      );
+
    int read_position_lammps_file( 
    // Precondition: 
    // - input is expected to be the same format as a lammps position

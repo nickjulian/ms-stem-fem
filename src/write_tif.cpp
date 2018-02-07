@@ -271,61 +271,61 @@ int TEM_NS::output_diffraction_with_renormalization(
    }
 
    // debug printing real and imaginary parts separately
-   double* psi_re;
-   double* psi_im;
-   double max_psi_re;
-   double min_psi_re;
-   double max_psi_re_joined;
-   double min_psi_re_joined;
-   double max_psi_im;
-   double min_psi_im;
-   double max_psi_im_joined;
-   double min_psi_im_joined;
-   psi_re = new double[ local_alloc_size_fftw ];
-   psi_im = new double[ local_alloc_size_fftw ];
-   if ( local_alloc_size_fftw > 0 )
-   {
-      //if ( mynode == rootnode ) psi_re[0] = 0.0;
-      //else
-      psi_re[0] //  = 0.0;
-         = log(
-               1.0 + ( scale_factor * ( psi[0][0] ) / NxNy )
-            );
-      max_psi_re = psi_re[0];
-      min_psi_re = max_psi_re;
-      psi_im[0] //  = 0.0;
-         = log(
-               1.0 + ( scale_factor * ( psi[0][1] ) / NxNy )
-            );
-      max_psi_im = psi_im[0];
-      min_psi_im = max_psi_im;
-   }
+   //double* psi_re;
+   //double* psi_im;
+   //double max_psi_re;
+   //double min_psi_re;
+   //double max_psi_re_joined;
+   //double min_psi_re_joined;
+   //double max_psi_im;
+   //double min_psi_im;
+   //double max_psi_im_joined;
+   //double min_psi_im_joined;
+   //psi_re = new double[ local_alloc_size_fftw ];
+   //psi_im = new double[ local_alloc_size_fftw ];
+   //if ( local_alloc_size_fftw > 0 )
+   //{
+   //   //if ( mynode == rootnode ) psi_re[0] = 0.0;
+   //   //else
+   //   psi_re[0] //  = 0.0;
+   //      = log(
+   //            1.0 + ( scale_factor * ( psi[0][0] ) / NxNy )
+   //         );
+   //   max_psi_re = psi_re[0];
+   //   min_psi_re = max_psi_re;
+   //   psi_im[0] //  = 0.0;
+   //      = log(
+   //            1.0 + ( scale_factor * ( psi[0][1] ) / NxNy )
+   //         );
+   //   max_psi_im = psi_im[0];
+   //   min_psi_im = max_psi_im;
+   //}
 
-   for ( ptrdiff_t i=1; i < local_alloc_size_fftw; ++i)
-   {
-      psi_re[i]
-         = log(
-               1.0 + ( scale_factor * ( psi[i][0] ) / NxNy )
-            );
-         if ( psi_re[i] > max_psi_re) max_psi_re = psi_re[i];
-         if ( psi_re[i] < min_psi_re) min_psi_re = psi_re[i];
-      psi_im[i]
-         = log(
-               1.0 + ( scale_factor * ( psi[i][1] ) / NxNy )
-            );
-         if ( psi_im[i] > max_psi_im) max_psi_im = psi_im[i];
-         if ( psi_im[i] < min_psi_im) min_psi_im = psi_im[i];
-   }
+   //for ( ptrdiff_t i=1; i < local_alloc_size_fftw; ++i)
+   //{
+   //   psi_re[i]
+   //      = log(
+   //            1.0 + ( scale_factor * ( psi[i][0] ) / NxNy )
+   //         );
+   //      if ( psi_re[i] > max_psi_re) max_psi_re = psi_re[i];
+   //      if ( psi_re[i] < min_psi_re) min_psi_re = psi_re[i];
+   //   psi_im[i]
+   //      = log(
+   //            1.0 + ( scale_factor * ( psi[i][1] ) / NxNy )
+   //         );
+   //      if ( psi_im[i] > max_psi_im) max_psi_im = psi_im[i];
+   //      if ( psi_im[i] < min_psi_im) min_psi_im = psi_im[i];
+   //}
    // end debug
 
    double* psi_mag_joined;
-   double* psi_re_joined; // debug
-   double* psi_im_joined; // debug
+   //double* psi_re_joined; // debug
+   //double* psi_im_joined; // debug
    if( mynode == rootnode )
    {
       psi_mag_joined = new double[ Nx * Ny ];
-      psi_re_joined = new double[ Nx * Ny ]; // debug
-      psi_im_joined = new double[ Nx * Ny ]; // debug
+      //psi_re_joined = new double[ Nx * Ny ]; // debug
+      //psi_im_joined = new double[ Nx * Ny ]; // debug
    }
 
    MPI_Gather( psi_mag, local_alloc_size_fftw, MPI_DOUBLE, 
@@ -342,62 +342,62 @@ int TEM_NS::output_diffraction_with_renormalization(
          MPI_MIN,
          rootnode, comm);
 
-   MPI_Gather( psi_re, local_alloc_size_fftw, MPI_DOUBLE, 
-         psi_re_joined, local_alloc_size_fftw, MPI_DOUBLE,
-         rootnode, comm);
+   //MPI_Gather( psi_re, local_alloc_size_fftw, MPI_DOUBLE, 
+   //      psi_re_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   //      rootnode, comm);
 
-   MPI_Reduce( &max_psi_re, &max_psi_re_joined, 
-         1, MPI_DOUBLE, 
-         MPI_MAX,
-         rootnode, comm);
+   //MPI_Reduce( &max_psi_re, &max_psi_re_joined, 
+   //      1, MPI_DOUBLE, 
+   //      MPI_MAX,
+   //      rootnode, comm);
 
-   MPI_Reduce( &min_psi_re, &min_psi_re_joined, 
-         1, MPI_DOUBLE, 
-         MPI_MIN,
-         rootnode, comm);
+   //MPI_Reduce( &min_psi_re, &min_psi_re_joined, 
+   //      1, MPI_DOUBLE, 
+   //      MPI_MIN,
+   //      rootnode, comm);
 
-   MPI_Gather( psi_im, local_alloc_size_fftw, MPI_DOUBLE, 
-         psi_im_joined, local_alloc_size_fftw, MPI_DOUBLE,
-         rootnode, comm);
+   //MPI_Gather( psi_im, local_alloc_size_fftw, MPI_DOUBLE, 
+   //      psi_im_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   //      rootnode, comm);
 
-   MPI_Reduce( &max_psi_im, &max_psi_im_joined, 
-         1, MPI_DOUBLE, 
-         MPI_MAX,
-         rootnode, comm);
+   //MPI_Reduce( &max_psi_im, &max_psi_im_joined, 
+   //      1, MPI_DOUBLE, 
+   //      MPI_MAX,
+   //      rootnode, comm);
 
-   MPI_Reduce( &min_psi_im, &min_psi_im_joined, 
-         1, MPI_DOUBLE, 
-         MPI_MIN,
-         rootnode, comm);
+   //MPI_Reduce( &min_psi_im, &min_psi_im_joined, 
+   //      1, MPI_DOUBLE, 
+   //      MPI_MIN,
+   //      rootnode, comm);
 
    if ( mynode == rootnode )
    {
       //psi_mag_joined[0] = 0.0;
-      cout << "Writing diffraction to tiff" << endl // debug
-         << " max_diffration_psi_mag_joined : " // debug
-         << setprecision(20) // debug
-         << max_psi_mag_joined << endl; // debug
-      cout << " min_diffraction_psi_mag_joined : " // debug
-         << setprecision(20) // debug
-         << min_psi_mag_joined << endl; // debug
+      //cout << "Writing diffraction to tiff" << endl // debug
+      //   << " max_diffration_psi_mag_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << max_psi_mag_joined << endl; // debug
+      //cout << " min_diffraction_psi_mag_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << min_psi_mag_joined << endl; // debug
 
-      cout << " max_diffration_psi_re_joined : " // debug
-         << setprecision(20) // debug
-         << max_psi_re_joined << endl; // debug
-      cout << " min_diffration_psi_re_joined : " // debug
-         << setprecision(20) // debug
-         << min_psi_re_joined << endl; // debug
-      cout << " max_diffraction_psi_im_joined : " // debug
-         << setprecision(20) // debug
-         << max_psi_im_joined << endl; // debug
-      cout << " min_diffraction_psi_im_joined : " // debug
-         << setprecision(20) // debug
-         << min_psi_im_joined << endl; // debug
+      //cout << " max_diffration_psi_re_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << max_psi_re_joined << endl; // debug
+      //cout << " min_diffration_psi_re_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << min_psi_re_joined << endl; // debug
+      //cout << " max_diffraction_psi_im_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << max_psi_im_joined << endl; // debug
+      //cout << " min_diffraction_psi_im_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << min_psi_im_joined << endl; // debug
       
       // Rearrange so that the origin is in the center
       double tmp_mag;
-      double tmp_re; // debug
-      double tmp_im; // debug
+      //double tmp_re; // debug
+      //double tmp_im; // debug
 
       for ( ptrdiff_t i=0; i < Nx/2; ++i)
       {
@@ -408,15 +408,15 @@ int TEM_NS::output_diffraction_with_renormalization(
                = psi_mag_joined[(j + Ny/2) + (i + Nx/2) * Ny];
             psi_mag_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_mag;
 
-            tmp_re = psi_re_joined[j + i * Ny]; // debug
-            psi_re_joined[j + i * Ny]  // debug
-               = psi_re_joined[(j + Ny/2) + (i + Nx/2) * Ny]; // debug
-            psi_re_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_re; // debug
+            //tmp_re = psi_re_joined[j + i * Ny]; // debug
+            //psi_re_joined[j + i * Ny]  // debug
+            //   = psi_re_joined[(j + Ny/2) + (i + Nx/2) * Ny]; // debug
+            //psi_re_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_re; // debug
 
-            tmp_im = psi_im_joined[j + i * Ny]; // debug
-            psi_im_joined[j + i * Ny]  // debug
-               = psi_im_joined[(j + Ny/2) + (i + Nx/2) * Ny]; // debug
-            psi_im_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_im; // debug
+            //tmp_im = psi_im_joined[j + i * Ny]; // debug
+            //psi_im_joined[j + i * Ny]  // debug
+            //   = psi_im_joined[(j + Ny/2) + (i + Nx/2) * Ny]; // debug
+            //psi_im_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_im; // debug
          }
 
          for ( ptrdiff_t j=Ny/2; j < Ny; ++j)
@@ -426,15 +426,15 @@ int TEM_NS::output_diffraction_with_renormalization(
                = psi_mag_joined[(j - Ny/2) + (i + Nx/2) * Ny];
             psi_mag_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_mag;
 
-            tmp_re = psi_re_joined[j + i * Ny]; // debug
-            psi_re_joined[j + i * Ny]  // debug
-               = psi_re_joined[(j - Ny/2) + (i + Nx/2) * Ny]; // debug
-            psi_re_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_re; // debug
+            //tmp_re = psi_re_joined[j + i * Ny]; // debug
+            //psi_re_joined[j + i * Ny]  // debug
+            //   = psi_re_joined[(j - Ny/2) + (i + Nx/2) * Ny]; // debug
+            //psi_re_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_re; // debug
 
-            tmp_im = psi_im_joined[j + i * Ny]; // debug
-            psi_im_joined[j + i * Ny]  // debug
-               = psi_im_joined[(j - Ny/2) + (i + Nx/2) * Ny]; // debug
-            psi_im_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_im; // debug
+            //tmp_im = psi_im_joined[j + i * Ny]; // debug
+            //psi_im_joined[j + i * Ny]  // debug
+            //   = psi_im_joined[(j - Ny/2) + (i + Nx/2) * Ny]; // debug
+            //psi_im_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_im; // debug
          }
       }
 
@@ -449,36 +449,36 @@ int TEM_NS::output_diffraction_with_renormalization(
                + to_string(scale_factor)
             );
 
-      imageWriter.write_tif_grayscale16( // debug
-            psi_re_joined, // debug
-            min_psi_re_joined, // debug
-            max_psi_re_joined, // debug
-            Nx, Ny, // debug
-            resolutionUnit,
-            xResolution, yResolution,
-            outFileName_prefix + "_diffraction_re_scalefactor_"  // debug
-               + to_string(scale_factor) // debug
-            ); // debug
+      //imageWriter.write_tif_grayscale16( // debug
+      //      psi_re_joined, // debug
+      //      min_psi_re_joined, // debug
+      //      max_psi_re_joined, // debug
+      //      Nx, Ny, // debug
+      //      resolutionUnit,
+      //      xResolution, yResolution,
+      //      outFileName_prefix + "_diffraction_re_scalefactor_"  // debug
+      //         + to_string(scale_factor) // debug
+      //      ); // debug
 
-      imageWriter.write_tif_grayscale16( // debug
-            psi_im_joined, // debug
-            min_psi_im_joined, // debug
-            max_psi_im_joined, // debug
-            Nx, Ny, // debug
-            resolutionUnit,
-            xResolution, yResolution,
-            outFileName_prefix + "_diffraction_im_scalefactor_"  // debug
-               + to_string(scale_factor) // debug
-            ); // debug
+      //imageWriter.write_tif_grayscale16( // debug
+      //      psi_im_joined, // debug
+      //      min_psi_im_joined, // debug
+      //      max_psi_im_joined, // debug
+      //      Nx, Ny, // debug
+      //      resolutionUnit,
+      //      xResolution, yResolution,
+      //      outFileName_prefix + "_diffraction_im_scalefactor_"  // debug
+      //         + to_string(scale_factor) // debug
+      //      ); // debug
 
       delete[] psi_mag_joined;
-      delete[] psi_re_joined; // debug
-      delete[] psi_im_joined; // debug
+      //delete[] psi_re_joined; // debug
+      //delete[] psi_im_joined; // debug
    }
 
    delete[] psi_mag;
-   delete[] psi_re; // debug
-   delete[] psi_im; // debug
+   //delete[] psi_re; // debug
+   //delete[] psi_im; // debug
    return EXIT_SUCCESS;
 }
 
@@ -594,13 +594,13 @@ int TEM_NS::output_diffraction(
    // end debug
 
    double* psi_mag_joined;
-   double* psi_re_joined; // debug
-   double* psi_im_joined; // debug
+   //double* psi_re_joined; // debug
+   //double* psi_im_joined; // debug
    if( mynode == rootnode )
    {
       psi_mag_joined = new double[ Nx * Ny ];
-      psi_re_joined = new double[ Nx * Ny ]; // debug
-      psi_im_joined = new double[ Nx * Ny ]; // debug
+      //psi_re_joined = new double[ Nx * Ny ]; // debug
+      //psi_im_joined = new double[ Nx * Ny ]; // debug
    }
 
    MPI_Gather( psi_mag, local_alloc_size_fftw, MPI_DOUBLE, 
@@ -617,62 +617,62 @@ int TEM_NS::output_diffraction(
          MPI_MIN,
          rootnode, comm);
 
-   MPI_Gather( psi_re, local_alloc_size_fftw, MPI_DOUBLE, 
-         psi_re_joined, local_alloc_size_fftw, MPI_DOUBLE,
-         rootnode, comm);
+   //MPI_Gather( psi_re, local_alloc_size_fftw, MPI_DOUBLE, 
+   //      psi_re_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   //      rootnode, comm);
 
-   MPI_Reduce( &max_psi_re, &max_psi_re_joined, 
-         1, MPI_DOUBLE, 
-         MPI_MAX,
-         rootnode, comm);
+   //MPI_Reduce( &max_psi_re, &max_psi_re_joined, 
+   //      1, MPI_DOUBLE, 
+   //      MPI_MAX,
+   //      rootnode, comm);
 
-   MPI_Reduce( &min_psi_re, &min_psi_re_joined, 
-         1, MPI_DOUBLE, 
-         MPI_MIN,
-         rootnode, comm);
+   //MPI_Reduce( &min_psi_re, &min_psi_re_joined, 
+   //      1, MPI_DOUBLE, 
+   //      MPI_MIN,
+   //      rootnode, comm);
 
-   MPI_Gather( psi_im, local_alloc_size_fftw, MPI_DOUBLE, 
-         psi_im_joined, local_alloc_size_fftw, MPI_DOUBLE,
-         rootnode, comm);
+   //MPI_Gather( psi_im, local_alloc_size_fftw, MPI_DOUBLE, 
+   //      psi_im_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   //      rootnode, comm);
 
-   MPI_Reduce( &max_psi_im, &max_psi_im_joined, 
-         1, MPI_DOUBLE, 
-         MPI_MAX,
-         rootnode, comm);
+   //MPI_Reduce( &max_psi_im, &max_psi_im_joined, 
+   //      1, MPI_DOUBLE, 
+   //      MPI_MAX,
+   //      rootnode, comm);
 
-   MPI_Reduce( &min_psi_im, &min_psi_im_joined, 
-         1, MPI_DOUBLE, 
-         MPI_MIN,
-         rootnode, comm);
+   //MPI_Reduce( &min_psi_im, &min_psi_im_joined, 
+   //      1, MPI_DOUBLE, 
+   //      MPI_MIN,
+   //      rootnode, comm);
 
    if ( mynode == rootnode )
    {
-      //psi_mag_joined[0] = 0.0;
-      cout << "Writing diffraction to tiff" << endl // debug
-         << " max_diffration_psi_mag_joined : " // debug
-         << setprecision(20) // debug
-         << max_psi_mag_joined << endl; // debug
-      cout << " min_diffraction_psi_mag_joined : " // debug
-         << setprecision(20) // debug
-         << min_psi_mag_joined << endl; // debug
+      ////psi_mag_joined[0] = 0.0;
+      //cout << "Writing diffraction to tiff" << endl // debug
+      //   << " max_diffration_psi_mag_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << max_psi_mag_joined << endl; // debug
+      //cout << " min_diffraction_psi_mag_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << min_psi_mag_joined << endl; // debug
 
-      cout << " max_diffration_psi_re_joined : " // debug
-         << setprecision(20) // debug
-         << max_psi_re_joined << endl; // debug
-      cout << " min_diffration_psi_re_joined : " // debug
-         << setprecision(20) // debug
-         << min_psi_re_joined << endl; // debug
-      cout << " max_diffraction_psi_im_joined : " // debug
-         << setprecision(20) // debug
-         << max_psi_im_joined << endl; // debug
-      cout << " min_diffraction_psi_im_joined : " // debug
-         << setprecision(20) // debug
-         << min_psi_im_joined << endl; // debug
+      //cout << " max_diffration_psi_re_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << max_psi_re_joined << endl; // debug
+      //cout << " min_diffration_psi_re_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << min_psi_re_joined << endl; // debug
+      //cout << " max_diffraction_psi_im_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << max_psi_im_joined << endl; // debug
+      //cout << " min_diffraction_psi_im_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << min_psi_im_joined << endl; // debug
       
       // Rearrange so that the origin is in the center
       double tmp_mag;
-      double tmp_re; // debug
-      double tmp_im; // debug
+      //double tmp_re; // debug
+      //double tmp_im; // debug
 
       for ( ptrdiff_t i=0; i < Nx/2; ++i)
       {
@@ -683,15 +683,15 @@ int TEM_NS::output_diffraction(
                = psi_mag_joined[(j + Ny/2) + (i + Nx/2) * Ny];
             psi_mag_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_mag;
 
-            tmp_re = psi_re_joined[j + i * Ny]; // debug
-            psi_re_joined[j + i * Ny]  // debug
-               = psi_re_joined[(j + Ny/2) + (i + Nx/2) * Ny]; // debug
-            psi_re_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_re; // debug
+            //tmp_re = psi_re_joined[j + i * Ny]; // debug
+            //psi_re_joined[j + i * Ny]  // debug
+            //   = psi_re_joined[(j + Ny/2) + (i + Nx/2) * Ny]; // debug
+            //psi_re_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_re; // debug
 
-            tmp_im = psi_im_joined[j + i * Ny]; // debug
-            psi_im_joined[j + i * Ny]  // debug
-               = psi_im_joined[(j + Ny/2) + (i + Nx/2) * Ny]; // debug
-            psi_im_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_im; // debug
+            //tmp_im = psi_im_joined[j + i * Ny]; // debug
+            //psi_im_joined[j + i * Ny]  // debug
+            //   = psi_im_joined[(j + Ny/2) + (i + Nx/2) * Ny]; // debug
+            //psi_im_joined[(j + Ny/2) + (i + Nx/2) * Ny] = tmp_im; // debug
          }
 
          for ( ptrdiff_t j=Ny/2; j < Ny; ++j)
@@ -701,15 +701,15 @@ int TEM_NS::output_diffraction(
                = psi_mag_joined[(j - Ny/2) + (i + Nx/2) * Ny];
             psi_mag_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_mag;
 
-            tmp_re = psi_re_joined[j + i * Ny]; // debug
-            psi_re_joined[j + i * Ny]  // debug
-               = psi_re_joined[(j - Ny/2) + (i + Nx/2) * Ny]; // debug
-            psi_re_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_re; // debug
+            //tmp_re = psi_re_joined[j + i * Ny]; // debug
+            //psi_re_joined[j + i * Ny]  // debug
+            //   = psi_re_joined[(j - Ny/2) + (i + Nx/2) * Ny]; // debug
+            //psi_re_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_re; // debug
 
-            tmp_im = psi_im_joined[j + i * Ny]; // debug
-            psi_im_joined[j + i * Ny]  // debug
-               = psi_im_joined[(j - Ny/2) + (i + Nx/2) * Ny]; // debug
-            psi_im_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_im; // debug
+            //tmp_im = psi_im_joined[j + i * Ny]; // debug
+            //psi_im_joined[j + i * Ny]  // debug
+            //   = psi_im_joined[(j - Ny/2) + (i + Nx/2) * Ny]; // debug
+            //psi_im_joined[(j - Ny/2) + (i + Nx/2) * Ny] = tmp_im; // debug
          }
       }
 
@@ -724,36 +724,36 @@ int TEM_NS::output_diffraction(
                + to_string(scale_factor)
             );
 
-      imageWriter.write_tif_grayscale16( // debug
-            psi_re_joined, // debug
-            min_psi_re_joined, // debug
-            max_psi_re_joined, // debug
-            Nx, Ny, // debug
-            resolutionUnit,
-            xResolution, yResolution,
-            outFileName_prefix + "_diffraction_re_scalefactor_"  // debug
-               + to_string(scale_factor) // debug
-            ); // debug
+      //imageWriter.write_tif_grayscale16( // debug
+      //      psi_re_joined, // debug
+      //      min_psi_re_joined, // debug
+      //      max_psi_re_joined, // debug
+      //      Nx, Ny, // debug
+      //      resolutionUnit,
+      //      xResolution, yResolution,
+      //      outFileName_prefix + "_diffraction_re_scalefactor_"  // debug
+      //         + to_string(scale_factor) // debug
+      //      ); // debug
 
-      imageWriter.write_tif_grayscale16( // debug
-            psi_im_joined, // debug
-            min_psi_im_joined, // debug
-            max_psi_im_joined, // debug
-            Nx, Ny, // debug
-            resolutionUnit,
-            xResolution, yResolution,
-            outFileName_prefix + "_diffraction_im_scalefactor_"  // debug
-               + to_string(scale_factor) // debug
-            ); // debug
+      //imageWriter.write_tif_grayscale16( // debug
+      //      psi_im_joined, // debug
+      //      min_psi_im_joined, // debug
+      //      max_psi_im_joined, // debug
+      //      Nx, Ny, // debug
+      //      resolutionUnit,
+      //      xResolution, yResolution,
+      //      outFileName_prefix + "_diffraction_im_scalefactor_"  // debug
+      //         + to_string(scale_factor) // debug
+      //      ); // debug
 
       delete[] psi_mag_joined;
-      delete[] psi_re_joined; // debug
-      delete[] psi_im_joined; // debug
+      //delete[] psi_re_joined; // debug
+      //delete[] psi_im_joined; // debug
    }
 
    delete[] psi_mag;
-   delete[] psi_re; // debug
-   delete[] psi_im; // debug
+   //delete[] psi_re; // debug
+   //delete[] psi_im; // debug
    return EXIT_SUCCESS;
 }
 
@@ -841,13 +841,13 @@ int TEM_NS::output_diffraction(
    if ( mynode == rootnode )
    {
       //psi_mag_joined[0] = 0.0;
-      cout << "Writing diffraction to tiff" << endl // debug
-         << " max_diffraction_psi_mag_joined : " // debug
-         << setprecision(20) // debug
-         << max_psi_mag_joined << endl; // debug
-      cout << " min_diffraction_psi_mag_joined : " // debug
-         << setprecision(20) // debug
-         << min_psi_mag_joined << endl; // debug
+      //cout << "Writing diffraction to tiff" << endl // debug
+      //   << " max_diffraction_psi_mag_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << max_psi_mag_joined << endl; // debug
+      //cout << " min_diffraction_psi_mag_joined : " // debug
+      //   << setprecision(20) // debug
+      //   << min_psi_mag_joined << endl; // debug
 
       // Rearrange so that the origin is in the center
       double tmp_mag;
@@ -914,10 +914,10 @@ void TEM_NS::output_stem_image(
       if( stem_image[i] < min_stem_image ) min_stem_image = stem_image[i];
    }
  
-   cout << " max_stem_image : "
-      << setprecision(20) << max_stem_image << endl;
-   cout <<" min_stem_image : "
-      << setprecision(20) << min_stem_image << endl;
+   //cout << " max_stem_image : "
+   //   << setprecision(20) << max_stem_image << endl;
+   //cout <<" min_stem_image : "
+   //   << setprecision(20) << min_stem_image << endl;
 
    imageWriter.write_tif_grayscale16(
          stem_image,

@@ -82,7 +82,7 @@ int TEM_NS::output_variance_to_netcdf(
    //TODO: note that this direct output won't work for row/column -major
    //       arrays
 
-   cout << "Variance data written to : " << outFilePrefix + ".nc" << endl;
+   //cout << "Variance data written to : " << outFilePrefix + ".nc" << endl;
    //cout << "Nx : " << Nx << endl; // debug
 
    return EXIT_SUCCESS;
@@ -144,8 +144,8 @@ int TEM_NS::output_variance_to_netcdf(
    //TODO: note that this direct output won't work for row/column -major
    //       arrays
 
-   cout << "Variance data written to : " << outFilePrefix + ".nc" << endl;
-   cout << "Nr : " << Nr << endl; // debug
+   //cout << "Variance data written to : " << outFilePrefix + ".nc" << endl;
+   //cout << "Nr : " << Nr << endl; // debug
 
    return EXIT_SUCCESS;
 }
@@ -304,7 +304,7 @@ int TEM_NS::output_psi_realspace_to_netcdf(
       psi_reVariable->put( &psi_re_joined_2Darray[0][0], Nx, Ny );
       psi_imVariable->put( &psi_im_joined_2Darray[0][0], Nx, Ny );
 
-      cout << "wave function written to : " << outFileName << endl; // debug
+      //cout << "wave function written to : " << outFileName << endl; // debug
 
       for ( ptrdiff_t i=0; i<Nx; ++i)
       {
@@ -539,7 +539,7 @@ int TEM_NS::output_psi_reciprocalspace_to_netcdf(
       psi_reVariable->put( &psi_re_joined_2Darray[0][0], Nx, Ny );
       psi_imVariable->put( &psi_im_joined_2Darray[0][0], Nx, Ny );
 
-      cout << "wave function written to : " << outFileName << endl; // debug
+      //cout << "wave function written to : " << outFileName << endl; // debug
 
       for ( ptrdiff_t i=0; i<Nx; ++i)
       {
@@ -682,7 +682,7 @@ int TEM_NS::output_psi_mag_reciprocalspace_to_netcdf(
       //psi_reVariable->put( &psi_re_joined[0][0], Nx, Ny );
       //psi_imVariable->put( &psi_im_joined[0][0], Nx, Ny );
 
-      cout << "wave function written to : " << outFileName << endl; // debug
+      //cout << "wave function written to : " << outFileName << endl; // debug
    }
 
    if ( mynode == rootnode )

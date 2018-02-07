@@ -72,9 +72,8 @@ using std::setprecision;
 using namespace TEM_NS;
 
 //int threads_ok; // global by request of fftw.org/doc/ ... section 6.11
-
-// TODO: separate scherzer conditionals for defocus, alphamax, and Cs3
-#define PRINT_USAGE cout << "Usage: " << argv[0] << " <options>" << endl << "OPTIONS : " << endl << "   -m <Nx> <Ny> <VV>" << endl << "   [--scherzer_defocus] calculate and use scherzer focus conditions" << endl << "   [--scherzer_alphamax] calculate and use scherzer focus conditions" << endl << "   [--scherzer_cs3] calculate and use scherzer Cs3 conditions" << endl << "   [--defocus <defocus>] (if not using --scherzer)" << endl << "   [--alphamax <alpha max>] (if not using --scherzer)" << endl << "   [--spread <defocus spread> <condenser_illumination_angle>] (only if using aberration correction)" << endl << "   [--cs3 <third order spherical aberration>] (ignored if using --scherzer with aberration correction)" << endl << "   [--cs5 <fifth order spherical aberration>] (only if using aberration correction)" << endl << "   [--rasterspacing <raster_spacing>] (Angstroms; default is 1.5 for STEM or 10 for STEM-FEM)" << endl << "   [--dupe <dupe_x> <dupe_y> <dupe_z>] (Periodically instantiate the given scatterers dupe_x, dupe_y, and dupe_z times in respective directions; fem only)" << endl << "   -a <lammps or xyz style position input file>" << endl << "   -o <output file prefix>" << endl << "   --paptif (output images of projected atomic potentials)"<< endl << "   [--adfstemcorrfem] simulate fluctuation microscopy using aberration corrected adfstem mode" << endl << "   [--adfstemuncorrfem] simulate fluctuation microscopy using adfstem mode without aberration correction" << endl << "   [--adfstemcorr] simulate aberration corrected adfstem" << endl << "   [--adfstemuncorr] simulate adfstem mode without aberration correction" << endl << "   [--bfctemcorr] simulate bright field TEM with aberration correction" << endl << "   [--bfctemuncorr] simulate bright field TEM without aberration correction" << endl << "   [--dr <azimuthal_binning_size_factor>] prefactor of sqrt(dx^2+dy^2) in bin size" << endl << "   [--minslice <minSliceThickness> minimum slice thickness in Angstroms, default is 1] " << endl << "   [--images] generate and save images" << endl << "   [--netcdfimages] save images as netcdf files" << endl << "   [--netcdfvariance] save 1-D variance as netcdf files" << endl << "   [--D1]" << endl << "   [--D2]" << endl << "   [--D3]" << endl << "   [--D4]" << endl << "   [--GT17]" << endl << "   [--debug] enable verbose debug output to files and stdout" << endl ;
+#define PRINT_USAGE cout << "Usage: " << argv[0] << " <options>" << endl << "OPTIONS : " << endl << "   --parameter_file <file name>" << endl << "      Contents of this file may specify any of the other arguments, but will" << endl << "      be superceded by those on the command line." << endl << "   -m <samples_x> <samples_y> <VV>" << endl << "      number of samples in the 2-D discretization and microscope voltage" << endl << "   [--scherzer_defocus]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_alphamax]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_cs3]" << endl << "      calculate and use scherzer Cs3 conditions" << endl << "   [--defocus <defocus>]" << endl << "      required if not using --scherzer_defocus" << endl << "   [--alphamax <alpha max>]" << endl << "      required if not using --scherzer_alphamax" << endl << "   [--spread <defocus spread> <condenser_illumination_angle>]" << endl << "      applicable only if using aberration correction" << endl << "   [--cs3 <third order spherical aberration>]" << endl << "      ignored if using --scherzer with aberration correction" << endl << "   [--cs5 <fifth order spherical aberration>]" << endl << "     applicable only if using aberration correction" << endl << "   [--rasterspacing <raster_spacing>]" << endl << "      units: angstroms; default is 1.5 for STEM or 10 for STEM-FEM" << endl << "   [--dupe <dupe_x> <dupe_y> <dupe_z>]" << endl << "      Periodically instantiate the given scatterers dupe_x, dupe_y, and " << endl << "      dupe_z times in respective directions; fem only" << endl << "   -a <lammps or xyz style position input file>" << endl << "   --output_prefix <output file prefix>" << endl << "   --paptif" << endl << "      output images of projected atomic potentials" << endl << "   [--adfstemcorrfem]" << endl << "      simulate fluctuation microscopy using aberration corrected" << endl << "      adfstem mode" << endl << "   [--adfstemuncorrfem]" << endl << "      simulate fluctuation microscopy using" << endl << "      adfstem mode without aberration correction" << endl << "   [--adfstemcorr]" << endl << "      simulate aberration corrected adfstem" << endl << "   [--adfstemuncorr]" << endl << "      simulate adfstem mode without aberration correction" << endl << "   [--dr <azimuthal_binning_size_factor>]" << endl << "      prefactor of sqrt(dx^2+dy^2) in azimuthal integration bin size" << endl << "   [--minslice <minSliceThickness>" << endl << "      minimum slice thickness in Angstroms, default is 1 " << endl << "   [--images]" << endl << "      generate and save images" << endl << "   [--netcdfimages]" << endl << "      save images as netcdf files" << endl << "   [--netcdfvariance]" << endl << "      save 1-D variance as netcdf files" << endl << "   [--D1]" << endl << "      FEM: normalized variance of the annular mean" << endl << "   [--D2]" << endl << "      FEM: mean of normalized variances of rings" << endl << "   [--D3]" << endl << "      FEM: normalized variance of ring ensemble" << endl << "   [--D4]" << endl << "      FEM: annular mean of variance image" << endl << "   [--GT17]" << endl << "      FEM: ratio of annular means of mean diffraction squared and the square of" << endl << "      mean diffraction" << endl << "   [--debug]" << endl << "      enable verbose debug output to files and stdout" << endl ;
+//<< endl << "   [--bfctemcorr]" << endl << "      simulate bright field TEM with aberration correction" << endl << "   [--bfctemuncorr] simulate bright field TEM without aberration correction" 
 
 
 int main( int argc, char* argv[])
@@ -138,7 +137,7 @@ int main( int argc, char* argv[])
    //       and the extended Scherzer defocus is 1.2 sqrt( C_s * lambda )
    double alpha_max_sqr; // = pow( strtod( argv[9], NULL), 2);
    double alpha_max;
-   string outFileName_prefix; // = argv[2];
+   string output_prefix; // = argv[2];
    //string input_position_lammps_file;
 
    // STEM and FEM raster point separation in both x and y directions
@@ -167,9 +166,10 @@ int main( int argc, char* argv[])
    // read input parameters
    //////////////////////////////////////////////////////////////////
    std::vector<string> args( argv, argv + argc );
+   string input_file_name;
    unsigned int failflag = 0;
    unsigned int input_flag_m = 0;// microscope parameters
-   unsigned int input_flag_mf = 0;// file containing microscope parameters
+   unsigned int input_flag_pf = 0;// file containing microscope parameters
    unsigned int input_flag_o = 0;// output file name prefix
    unsigned int input_flag_a = 0;// atom position and species input file
    unsigned int input_flag_defocus = 0;   // defocus
@@ -205,31 +205,157 @@ int main( int argc, char* argv[])
 
    double minSliceThickness = 1.0;
 
-   // Example input:
-   // -m <Nx> <Ny> <VV> <condenser_illumination_angle> 
-   // -o <output file prefix>
-   // -a <lammps or xyz style position input file>
-   // --defocus <defocus> 
-   // --alphamax <alphamax>
-   // --spread <defocus spread>
-   // --cs3 <objective lens third order spherical aberation>
-   // --adfstemuncorrfem
-   // --scherzer
-   // --dupe <dupe_x> <dupe_y> <dupe_z>
-   // --images
-   // --netcdf
-   // --debug
-   // --paptif
-   
+   input_flags flags;
+
    //double tmp_double;// for accepting input from operator>>() and 
    //                      pushing onto a vector<double> 
 
    for ( size_t idx=1; idx < args.size(); idx++)
    {
-      if ( args[idx] == "-o" )
+      if (args[idx] == "--parameter_file")// microscope parameter file name
+      {
+         string parameter_file_name;
+         if (idx + 1 < args.size()) 
+            parameter_file_name = string(args[idx + 1]);
+            //istringstream( args[idx + 1] ) >> parameter_file_name;
+
+         if ( 
+               read_parameter_file(
+                     parameter_file_name,
+                     input_file_name,
+                     flags,
+                     output_prefix,
+                     Nx,
+                     Ny,
+                     VV,
+                     defocus,
+                     alpha_max,
+                     defocus_spread,
+                     condenser_illumination_angle,
+                     Cs3,
+                     Cs5,
+                     raster_spacing,
+                     azimuthal_binning_size_factor,
+                     minSliceThickness,
+                     mynode,
+                     rootnode,
+                     MPI_COMM_WORLD
+                     )
+            )
+         {
+            if ( mynode == rootnode )
+            {
+               cout << "Error, could not read parameter file : " 
+                  << parameter_file_name << endl;
+            }
+            failflag = 1 ;
+         }
+
+         // copy flags struct members to input_flag_* variables
+         input_flag_o = flags.o;
+         input_flag_a = flags.a;
+         input_flag_defocus = flags.defocus;
+         input_flag_spread = flags.spread;
+         input_flag_adfstem_corrected = flags.adfstem_corrected;
+         input_flag_adfstem_uncorrected = flags.adfstem_uncorrected;
+         input_flag_bfctem_corrected = flags.bfctem_corrected;
+         input_flag_bfctem_uncorrected = flags.bfctem_uncorrected;
+         input_flag_fem = flags.fem;
+         input_flag_gt17 = flags.gt17;
+         input_flag_d1 = flags.d1;
+         input_flag_d2 = flags.d2;
+         input_flag_d3 = flags.d3;
+         input_flag_d4 = flags.d4;
+         input_flag_scherzer_defocus = flags.scherzer_defocus;
+         input_flag_scherzer_alphamax = flags.scherzer_alphamax;
+         input_flag_scherzer_cs3 = flags.scherzer_cs3;
+         input_flag_cs3 = flags.cs3;
+         input_flag_cs5 = flags.cs5;
+         input_flag_alpha_max = flags.alpha_max;
+         input_flag_aberration_correction = flags.aberration_correction;
+         input_flag_raster_spacing = flags.raster_spacing;
+         input_flag_pap_tif = flags.pap_tif;
+         input_flag_dupe = flags.dupe;
+         input_flag_image_output = flags.image_output;
+         input_flag_netcdf_images = flags.netcdf_images;
+         input_flag_netcdf_variance = flags.netcdf_variance;
+         input_flag_debug = flags.debug;
+         if ( flags.microscope_voltage && flags.nx && flags.ny ) 
+            input_flag_m = 1;
+         else
+            input_flag_m = 0;
+
+         input_flag_pf = 1;
+         idx += 1;
+
+         // debug
+         //if( mynode == rootnode )
+         //{
+         //   cout << 
+         //   "flags.m " << 
+         //   flags.m << endl <<
+         //   "flags.nx " << 
+         //   flags.nx << endl <<
+         //   "flags.ny " << 
+         //   flags.ny << endl <<
+         //   "flags.microscope_voltage " << 
+         //   flags.microscope_voltage << endl <<
+         //   "flags.o " << 
+         //   flags.o << endl <<
+         //   "flags.a " << 
+         //   flags.a << endl <<
+         //   "flags.defocus " << 
+         //   flags.defocus << endl <<
+         //   "flags.spread " << 
+         //   flags.spread << endl <<
+         //   "flags.dupe " << 
+         //   flags.dupe << endl <<
+         //   "flags.adfstem_corrected " << 
+         //   flags.adfstem_corrected << endl <<
+         //   "flags.adfstem_uncorrected  " << 
+         //   flags.adfstem_uncorrected  << endl <<
+         //   "flags.bfctem_corrected  " << 
+         //   flags.bfctem_corrected  << endl <<
+         //   "flags.bfctem_uncorrected  " << 
+         //   flags.bfctem_uncorrected  << endl <<
+         //   "flags.fem  " << 
+         //   flags.fem  << endl <<
+         //   "flags.gt17 " << 
+         //   flags.gt17  << endl <<
+         //   "flags.d1 " << 
+         //   flags.d1  << endl <<
+         //   "flags.d2 " << 
+         //   flags.d2  << endl <<
+         //   "flags.d3 " << 
+         //   flags.d3  << endl <<
+         //   "flags.d4 " << 
+         //   flags.d4  << endl <<
+         //   "flags.scherzer_defocus " << 
+         //   flags.scherzer_defocus << endl <<
+         //   "flags.scherzer_alphamax " << 
+         //   flags.scherzer_alphamax << endl <<
+         //   "flags.scherzer_cs3 " << 
+         //   flags.scherzer_cs3 << endl <<
+         //   "flags.cs3 " << 
+         //   flags.cs3 << endl <<
+         //   "flags.cs5 " << 
+         //   flags.cs5 << endl <<
+         //   "flags.alpha_max " << 
+         //   flags.alpha_max << endl <<
+         //   "flags.aberration_correction " << 
+         //   flags.aberration_correction << endl <<
+         //   "flags.raster_spacing " << 
+         //   flags.raster_spacing << endl <<
+         //   "flags.debug " << 
+         //   flags.debug 
+         //   << endl;
+         //}
+         // end debug
+      }
+      else if ( args[idx] == "--output_prefix" )
       {
          if (idx + 1 < args.size()) 
-            outFileName_prefix = string(args[idx + 1]);//=string(argv[2]);
+            output_prefix = string(args[idx + 1]);//=string(argv[2]);
          input_flag_o = 1;
          idx += 1;
       }
@@ -247,161 +373,16 @@ int main( int argc, char* argv[])
          Ny = (ptrdiff_t) Ny_int;
          // Nz = (ptrdiff_t) Nz_int;
 
-         NxNy = Nx * Ny;
-         NxNy_sqr = NxNy * NxNy;
-         if ( Nx == Ny ) sqrtNxNy =  Nx ;   
-         else sqrtNxNy = sqrt( NxNy );
-
          input_flag_m = 1;
          idx += 3;
       }
-      // TODO: specify an input file structure
-      else if (args[idx] == "--mf")   // microscope parameter file name
-      {
-         string microscope_file_name;
-         if (idx + 1 < args.size()) 
-            microscope_file_name = string(args[idx + 1]);
-            //istringstream( args[idx + 1] ) >> microscope_file_name;
-
-         if ( mynode == rootnode )
-         {
-            cerr << "Error, file could not be read : " 
-               << microscope_file_name << endl;
-            cerr << "read_microscope_file() has not yet been implemented" 
-               << endl;
-         }
-         failflag = 1 ;
-         //microscope_file_name = string(argv[2]);
-
-         //if (
-         //   read_microscope_file(
-         //      microscope_file_name, 
-         //      Nx_int, Ny_int, Nz_int,
-         //      VV,
-         //      Cs3,
-         //      Cs5,
-         //      condenser_illumination_angle,
-         //      alpha_max
-         //      )
-         //   )
-         //{
-         //   cerr << "Error, file could not be read : " << args[idx + 1] 
-         //      << endl;
-         //   failflag = 1 ;
-         //}
-
-         //alpha_max_sqr = pow( alpha_max, 2);
-
-         //Nx = (ptrdiff_t) Nx_int;
-         //Ny = (ptrdiff_t) Ny_int;
-         //Nz = (ptrdiff_t) Nz_int;
-
-         input_flag_mf = 1;
-         idx += 1;
-      }
       else if ( args[idx] == "-a" )
       {
-    // TODO: would it be more efficient to read only on rootnode and Bcast?
          //if ( mynode == rootnode )
          //{
-         string input_filename;
-         //istringstream( args[idx + 1] ) >> input_filename;
+         //istringstream( args[idx + 1] ) >> input_file_name;
          if (idx + 1 < args.size()) 
-            input_filename = string( args[ idx + 1] );
-         
-         if ( 
-               input_filename.substr( 
-                  input_filename.find_last_of(".") + 1 
-                  )
-               == "xyz" 
-            )
-         {
-            if ( mynode == rootnode )
-            {
-               cout << "Reading xyz format file: "
-                 << input_filename  << endl; // debug
-            }
-            if(  
-                  read_position_xyz_file(
-                     input_filename,
-                     q, // will be allocated within this call
-                     Z_array, // will be allocated within this call
-                     initial_population,
-                     xmin, ymin, zmin,
-                     xperiod, yperiod, zperiod,
-                     input_flag_debug,
-                     mynode, rootnode, MPI_COMM_WORLD
-                     )
-              )
-            {
-               if ( mynode == rootnode )
-               {
-                  cerr << "Error, file could not be read : " 
-                     << args[idx +1] << endl;
-               }
-               failflag = 1 ;
-            }
-         }
-         else
-         {
-            if ( mynode == rootnode )
-            {
-               cout << "Reading lammps format file: "
-                 << input_filename  << endl; // debug
-            }
-            if(  
-                  read_position_lammps_file(
-                     input_filename,
-                     q,       // will be allocated within this call
-                     Z_array, // will be allocated within this call
-                     initial_population,
-                     xmin, ymin, zmin,
-                     xperiod, yperiod, zperiod,
-                     input_flag_debug,
-                     mynode, rootnode, MPI_COMM_WORLD
-                     )
-              )
-            {
-               if ( mynode == rootnode )
-               {
-                  cerr << "Error, file could not be read : " 
-                     << args[idx +1] << endl;
-               }
-               failflag = 1 ;
-            }
-         }
-
-         double periods_and_mins[6];
-         if ( mynode == rootnode )
-         {
-            periods_and_mins[0] = xperiod;
-            periods_and_mins[1] = yperiod;
-            periods_and_mins[2] = zperiod;
-            periods_and_mins[3] = xmin;
-            periods_and_mins[4] = ymin;
-            periods_and_mins[5] = zmin;
-         }
-
-         MPI_Bcast( periods_and_mins, 6, MPI_DOUBLE, 
-               rootnode, MPI_COMM_WORLD);
-
-         //// multiple mpi calls are probably slow
-         //MPI_Bcast( &xperiod, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-         //MPI_Bcast( &yperiod, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-         //MPI_Bcast( &zperiod, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-         //MPI_Bcast( &xmin, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-         //MPI_Bcast( &ymin, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-         //MPI_Bcast( &zmin, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-         if ( mynode != rootnode )
-         {
-            xperiod = periods_and_mins[0];
-            yperiod = periods_and_mins[1];
-            zperiod = periods_and_mins[2];
-            xmin = periods_and_mins[3];
-            ymin = periods_and_mins[4];
-            zmin = periods_and_mins[5];
-         }
-
+            input_file_name = string( args[ idx + 1] );
 
          input_flag_a = 1;
          idx += 1;
@@ -559,73 +540,168 @@ int main( int argc, char* argv[])
          }
          failflag = 1;
       }
-   }
-      if ( (! input_flag_gt17 ) 
-            && (! input_flag_d1 ) && (! input_flag_d2 ) 
-            && (! input_flag_d3 ) && (! input_flag_d4 ) )
-      {
-         input_flag_d1 = 1; // default variance calculation mode
-      }
+   } // iteration over command line arguments
 
-      // debug
-      if( mynode == rootnode  && input_flag_debug )
+
+   // Read model file
+   unsigned int read_xyz_flag = 0;
+   if ( input_file_name.substr( 
+            input_file_name.find_last_of(".") + 1 
+            ) == "xyz" )
+   {
+      if ( mynode == rootnode && input_flag_debug)
       {
-         cout << 
-         "input_flag_m " << 
-         input_flag_m << endl
-         << "input_flag_mf " << 
-         input_flag_mf << endl <<
-         "input_flag_o " << 
-         input_flag_o << endl <<
-         "input_flag_a " << 
-         input_flag_a << endl <<
-         "input_flag_defocus " << 
-         input_flag_defocus << endl <<
-         "input_flag_spread " << 
-         input_flag_spread << endl <<
-         "input_flag_dupe " << 
-         input_flag_dupe << endl <<
-         "input_flag_adfstem_corrected " << 
-         input_flag_adfstem_corrected << endl <<
-         "input_flag_adfstem_uncorrected  " << 
-         input_flag_adfstem_uncorrected  << endl <<
-         "input_flag_bfctem_corrected  " << 
-         input_flag_bfctem_corrected  << endl <<
-         "input_flag_bfctem_uncorrected  " << 
-         input_flag_bfctem_uncorrected  << endl <<
-         "input_flag_fem  " << 
-         input_flag_fem  << endl <<
-         "input_flag_gt17 " << 
-         input_flag_gt17  << endl <<
-         "input_flag_d1 " << 
-         input_flag_d1  << endl <<
-         "input_flag_d2 " << 
-         input_flag_d2  << endl <<
-         "input_flag_d3 " << 
-         input_flag_d3  << endl <<
-         "input_flag_d4 " << 
-         input_flag_d4  << endl <<
-         "input_flag_scherzer_defocus " << 
-         input_flag_scherzer_defocus << endl <<
-         "input_flag_scherzer_alphamax " << 
-         input_flag_scherzer_alphamax << endl <<
-         "input_flag_scherzer_cs3 " << 
-         input_flag_scherzer_cs3 << endl <<
-         "input_flag_cs3 " << 
-         input_flag_cs3 << endl <<
-         "input_flag_cs5 " << 
-         input_flag_cs5 << endl <<
-         "input_flag_alpha_max " << 
-         input_flag_alpha_max << endl <<
-         "input_flag_aberration_correction " << 
-         input_flag_aberration_correction << endl <<
-         "input_flag_raster_spacing " << 
-         input_flag_raster_spacing << endl <<
-         "input_flag_debug " << 
-         input_flag_debug 
-         << endl;
+         cout << "Reading xyz format file: "
+           << input_file_name  << endl; // debug
       }
-      // end debug
+      if ( 
+            read_position_xyz_file(
+               input_file_name,   // only valid on root node
+               q, // will be allocated within this call
+               Z_array, // will be allocated within this call
+               initial_population,
+               xmin, ymin, zmin,
+               xperiod, yperiod, zperiod,
+               input_flag_debug,
+               mynode, rootnode, MPI_COMM_WORLD
+               )
+         )
+      {
+         if ( mynode == rootnode )
+         {
+            cerr << "Error, file could not be read : " 
+               << input_file_name << endl;
+         }
+         failflag = 1 ;
+      }
+   }
+   else
+   {
+      if ( mynode == rootnode && input_flag_debug )
+      {
+         cout << "Reading lammps format file: "
+           << input_file_name  << endl; // debug
+      }
+      if(  
+            read_position_lammps_file(
+               input_file_name,   // only valid on root node
+               q,       // will be allocated within this call
+               Z_array, // will be allocated within this call
+               initial_population,
+               xmin, ymin, zmin,
+               xperiod, yperiod, zperiod,
+               input_flag_debug,
+               mynode, rootnode, MPI_COMM_WORLD
+               )
+        )
+      {
+         if ( mynode == rootnode )
+         {
+            cerr << "Error, file could not be read : " 
+               << input_file_name << endl;
+         }
+         failflag = 1 ;
+      }
+   }
+
+   double periods_and_mins[6];
+   if ( mynode == rootnode )
+   {
+      periods_and_mins[0] = xperiod;
+      periods_and_mins[1] = yperiod;
+      periods_and_mins[2] = zperiod;
+      periods_and_mins[3] = xmin;
+      periods_and_mins[4] = ymin;
+      periods_and_mins[5] = zmin;
+   }
+
+   MPI_Bcast( periods_and_mins, 6, MPI_DOUBLE, 
+         rootnode, MPI_COMM_WORLD);
+
+   //// multiple mpi calls are probably slow
+   //MPI_Bcast( &xperiod, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   //MPI_Bcast( &yperiod, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   //MPI_Bcast( &zperiod, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   //MPI_Bcast( &xmin, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   //MPI_Bcast( &ymin, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   //MPI_Bcast( &zmin, 1, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   if ( mynode != rootnode )
+   {
+      xperiod = periods_and_mins[0];
+      yperiod = periods_and_mins[1];
+      zperiod = periods_and_mins[2];
+      xmin = periods_and_mins[3];
+      ymin = periods_and_mins[4];
+      zmin = periods_and_mins[5];
+   }
+
+
+   if ( (! input_flag_gt17 ) 
+         && (! input_flag_d1 ) && (! input_flag_d2 ) 
+         && (! input_flag_d3 ) && (! input_flag_d4 ) )
+   {
+      input_flag_d1 = 1; // default variance calculation mode
+   }
+
+   // debug
+   if( mynode == rootnode  && input_flag_debug )
+   {
+      cout << 
+      "input_flag_m " << 
+      input_flag_m << endl
+      << "input_flag_pf " << 
+      input_flag_pf << endl <<
+      "input_flag_o " << 
+      input_flag_o << endl <<
+      "input_flag_a " << 
+      input_flag_a << endl <<
+      "input_flag_defocus " << 
+      input_flag_defocus << endl <<
+      "input_flag_spread " << 
+      input_flag_spread << endl <<
+      "input_flag_dupe " << 
+      input_flag_dupe << endl <<
+      "input_flag_adfstem_corrected " << 
+      input_flag_adfstem_corrected << endl <<
+      "input_flag_adfstem_uncorrected  " << 
+      input_flag_adfstem_uncorrected  << endl <<
+      "input_flag_bfctem_corrected  " << 
+      input_flag_bfctem_corrected  << endl <<
+      "input_flag_bfctem_uncorrected  " << 
+      input_flag_bfctem_uncorrected  << endl <<
+      "input_flag_fem  " << 
+      input_flag_fem  << endl <<
+      "input_flag_gt17 " << 
+      input_flag_gt17  << endl <<
+      "input_flag_d1 " << 
+      input_flag_d1  << endl <<
+      "input_flag_d2 " << 
+      input_flag_d2  << endl <<
+      "input_flag_d3 " << 
+      input_flag_d3  << endl <<
+      "input_flag_d4 " << 
+      input_flag_d4  << endl <<
+      "input_flag_scherzer_defocus " << 
+      input_flag_scherzer_defocus << endl <<
+      "input_flag_scherzer_alphamax " << 
+      input_flag_scherzer_alphamax << endl <<
+      "input_flag_scherzer_cs3 " << 
+      input_flag_scherzer_cs3 << endl <<
+      "input_flag_cs3 " << 
+      input_flag_cs3 << endl <<
+      "input_flag_cs5 " << 
+      input_flag_cs5 << endl <<
+      "input_flag_alpha_max " << 
+      input_flag_alpha_max << endl <<
+      "input_flag_aberration_correction " << 
+      input_flag_aberration_correction << endl <<
+      "input_flag_raster_spacing " << 
+      input_flag_raster_spacing << endl <<
+      "input_flag_debug " << 
+      input_flag_debug 
+      << endl;
+   }
+   // end debug
 
    if (
          !(
@@ -633,10 +709,11 @@ int main( int argc, char* argv[])
             &&
             input_flag_a   // atom position and species input file
             &&
-            ( // command line xor file input of microscope parameters
-               // exclusive or:
-               (! input_flag_m) != (! input_flag_mf) 
-            )
+            input_flag_m
+            //( // command line xor file input of microscope parameters
+            //   // exclusive or:
+            //   (! input_flag_m) != (! input_flag_pf) 
+            //)
             &&
             // if aberration correction is used with bfctem, require 
             //    input_flag_spread, input_flag_cs3, input_flag_cs5
@@ -805,6 +882,12 @@ int main( int argc, char* argv[])
       return EXIT_FAILURE;
    }
 
+   NxNy = Nx * Ny;
+   NxNy_sqr = NxNy * NxNy;
+   if ( Nx == Ny ) sqrtNxNy =  Nx ;   
+   else sqrtNxNy = sqrt( NxNy );
+
+
    // At this point rootnode should have arrays of all scatterer 
    //  positions and species Z_array.
    
@@ -862,6 +945,27 @@ int main( int argc, char* argv[])
       cout << "gamma : " << gamma << endl;
       cout << "---------------------------------------" << endl;
       cout << endl;
+
+      cout << endl
+         << "  minSliceThickness : " << minSliceThickness << endl
+         << "  azimuthal_binning_size_factor : " 
+         << azimuthal_binning_size_factor << endl
+         << "  azimuthal_binning_size_factor : " 
+         << azimuthal_binning_size_factor << endl
+         << "  dupe : " << dupe_x << ", " << dupe_y << ", " << dupe_z 
+         << endl
+         << "  raster_spacing : " << raster_spacing << endl
+         << "  Cs3 : " << Cs3 << endl
+         << "  Cs5 : " << Cs5 << endl
+         << "  defocus_spread : " << defocus_spread << endl
+         << "  condenser_illumination_angle : " 
+         << condenser_illumination_angle << endl
+         << "  alpha_max : " << alpha_max << endl
+         << "  defocus : " << defocus << endl
+         << "  input_file_name : " << input_file_name << endl
+         << "  Nx : " << Nx << endl
+         << "  Ny : " << Ny << endl
+         << "  output_prefix : " << output_prefix << endl;
    }
 
 
@@ -896,7 +1000,7 @@ int main( int argc, char* argv[])
    // TODO: ensure wisdom file is customized to local machine type, 
    //        put machine type in the wisdom file name
 
-   string wisdom_filename
+   string wisdom_file_name
       = "wisdom_file_c2c2c_cifb_" + TEM_NS::to_string(Nx_local)
          + "x" + TEM_NS::to_string(Ny) + "_MPI" 
          + TEM_NS::to_string(totalnodes);
@@ -905,11 +1009,11 @@ int main( int argc, char* argv[])
    if ( mynode == rootnode )
    {
       flag_wisdomFile = 
-         fftw_import_wisdom_from_filename( wisdom_filename.c_str() );
+         fftw_import_wisdom_from_filename( wisdom_file_name.c_str() );
          // returns 0 (== false) on failure
-      if ( ! flag_wisdomFile )
+      if ( ! flag_wisdomFile && input_flag_debug )
       {
-         cout << "Could not open wisdom file: " << wisdom_filename
+         cout << "Could not open wisdom file: " << wisdom_file_name
             << " , will create it after execution ..." << endl;
       }
    }
@@ -949,10 +1053,10 @@ int main( int argc, char* argv[])
       xperiod_duped = duped_periods[0];
       yperiod_duped = duped_periods[1];
       zperiod_duped = duped_periods[2];
-      cout << " node " << mynode 
-         << " (duped_periods[2], zperiod_duped) : (" 
-         << duped_periods[2] << ", " << zperiod_duped 
-         << ")" <<  endl;
+      //cout << " node " << mynode 
+      //   << " (duped_periods[2], zperiod_duped) : (" 
+      //   << duped_periods[2] << ", " << zperiod_duped 
+      //   << ")" <<  endl;
    }
 
    if ( input_flag_debug )
@@ -994,12 +1098,6 @@ int main( int argc, char* argv[])
 
    double bwcutoff_t; 
    bwcutoff_t = (2.0/3.0) * bwcutoff_pap; // transmission function
-   //bwcutoff_t = bwcutoff_pap; // transmission function
-
-
-   // TODO: delete the following two lines after running cmd_046.txt
-   //bwcutoff_t = 0.25 * bwcutoff_t;
-   //bwcutoff_pap = 0.25 * bwcutoff_pap;
 
    double bwcutoff_t_sqr; 
    bwcutoff_t_sqr = bwcutoff_t * bwcutoff_t;
@@ -1173,7 +1271,7 @@ int main( int argc, char* argv[])
    std::vector<unsigned int> Z_vector;
    unsigned int Z_vector_size;
 
-   // TODO: parallelize this process of elliminating duplicate Zs
+   // TODO: parallelize this process of eliminating duplicate Zs
    if ( mynode == rootnode )
    {
       // push Z_array elements onto Z_vector, then sort and remove 
@@ -1519,7 +1617,7 @@ int main( int argc, char* argv[])
                NxNy,
                //sqrtNxNy,
                input_flag_pap_tif,
-               outFileName_prefix,
+               output_prefix,
                sliceNumber,
                local_alloc_size_fftw,  
                local_0_start_fftw,
@@ -1670,7 +1768,7 @@ int main( int argc, char* argv[])
       //      << "   detector outer angle : " << detector_outer_angle 
       //      << endl
       //      << "   output file name prefix : " 
-      //      << outFileName_prefix + "_adfstem_uncorr" << endl;
+      //      << output_prefix + "_adfstem_uncorr" << endl;
 
       //   adfstem(
       //         input_flag_fem,
@@ -1692,7 +1790,7 @@ int main( int argc, char* argv[])
       //         alpha_max_sqr,
       //         detector_inner_angle, detector_outer_angle,
       //         lambda, 
-      //         outFileName_prefix + "_adfstem_uncorr",
+      //         output_prefix + "_adfstem_uncorr",
       //         local_alloc_size_fftw,
       //         mynode, rootnode, totalnodes,
       //         MPI_COMM_WORLD
@@ -1778,7 +1876,7 @@ int main( int argc, char* argv[])
                << "   detector outer angle : " 
                << detector_outer_angle << endl
                << "   output file name prefix : " 
-               << outFileName_prefix + "_adfstem_uncorr" << endl;
+               << output_prefix + "_adfstem_uncorr" << endl;
          }
 
          adfstem(
@@ -1809,7 +1907,7 @@ int main( int argc, char* argv[])
                alpha_max,
                detector_inner_angle, detector_outer_angle,
                lambda, 
-               outFileName_prefix + "_adfstem_uncorr",
+               output_prefix + "_adfstem_uncorr",
                local_alloc_size_fftw,
                local_0_start_fftw,
                mynode, rootnode, totalnodes,
@@ -1858,7 +1956,7 @@ int main( int argc, char* argv[])
                << "   detector outer angle : " << detector_outer_angle 
                << endl
                << "   output file name prefix : " 
-               << outFileName_prefix + "_adfstem_corr" << endl;
+               << output_prefix + "_adfstem_corr" << endl;
          }
 
          adfstem(
@@ -1889,7 +1987,7 @@ int main( int argc, char* argv[])
                alpha_max,
                detector_inner_angle, detector_outer_angle,
                lambda, 
-               outFileName_prefix + "_adfstem_corr",
+               output_prefix + "_adfstem_corr",
                local_alloc_size_fftw,
                local_0_start_fftw,
                mynode, rootnode, totalnodes,
@@ -1922,7 +2020,7 @@ int main( int argc, char* argv[])
    //      slice_locations,  
    //      VV, Cs3, defocus,
    //      alpha_max_sqr,  // microscope parameters
-   //      outFileName_prefix,              
+   //      output_prefix,              
    //      threads_ok, nthreads, mynode, rootnode, totalnodes,
    //      MPI_COMM_WORLD
    //    );
@@ -1934,7 +2032,7 @@ int main( int argc, char* argv[])
    //      Nx, Ny, Nz,                   // resolution
    //      VV, Cs3, defocus,
    //      alpha_max_sqr,  // microscope parameters
-   //      outFileName_prefix,              
+   //      output_prefix,              
    //      threads_ok, nthreads, mynode, rootnode, totalnodes,
    //      MPI_COMM_WORLD
    //    );
@@ -1998,15 +2096,15 @@ int main( int argc, char* argv[])
       {
          if ( input_flag_debug )
             cout << "Exporting wisdom to file: " 
-               << wisdom_filename << endl;
+               << wisdom_file_name << endl;
          if ( 
                ! fftw_export_wisdom_to_filename( 
-                  wisdom_filename.c_str()
+                  wisdom_file_name.c_str()
                   )
             )
          {
             cerr << "Error - could not export wisdom to file: "
-              << wisdom_filename << endl;
+              << wisdom_file_name << endl;
          }
       }
 

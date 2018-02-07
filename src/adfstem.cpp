@@ -1781,7 +1781,7 @@ int TEM_NS::adfstem(
                      local_alloc_size_fftw,
                      Nx_local, kx_joined, Nx, ky, Ny,
                      outFileName_prefix 
-                        + "_first_diffraction_" 
+                        + "_first" 
                         + TEM_NS::to_string(*x_itr) 
                         + "_" + TEM_NS::to_string(*y_itr),
                      mynode, rootnode, comm
@@ -1802,7 +1802,7 @@ int TEM_NS::adfstem(
                   Nx_local, Nx, Ny,
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
-                  outFileName_prefix + "_first_diffraction_",
+                  outFileName_prefix + "_first",
                   mynode, rootnode, comm
                   );
             diffraction_scale_factor = 1.0e-1;
@@ -1813,7 +1813,7 @@ int TEM_NS::adfstem(
                   Nx_local, Nx, Ny,
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
-                  outFileName_prefix + "_first_diffraction_",
+                  outFileName_prefix + "_first",
                   mynode, rootnode, comm
                   );
             diffraction_scale_factor = 1.0e0;
@@ -1824,7 +1824,7 @@ int TEM_NS::adfstem(
                   Nx_local, Nx, Ny,
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
-                  outFileName_prefix + "_first_diffraction_",
+                  outFileName_prefix + "_first",
                   mynode, rootnode, comm
                   );
             diffraction_scale_factor = 1.0e10;
@@ -1835,7 +1835,7 @@ int TEM_NS::adfstem(
                   Nx_local, Nx, Ny,
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
-                  outFileName_prefix + "_first_diffraction_",
+                  outFileName_prefix + "_first",
                   mynode, rootnode, comm
                   );
             diffraction_scale_factor = 1.0e+20;//1e-20;
@@ -1846,7 +1846,7 @@ int TEM_NS::adfstem(
                   Nx_local, Nx, Ny,
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
-                  outFileName_prefix + "_first_diffraction_",
+                  outFileName_prefix + "_first",
                   mynode, rootnode, comm
                   );
          }
@@ -2055,22 +2055,22 @@ int TEM_NS::adfstem(
    //=================================================================
    // End of STEM beam position rastering
    //=================================================================
-   if ( input_flag_image_output )
-   {
-      //output_diffraction_with_renormalization(
-      //diffraction_scale_factor = 1.0e13;//1e-20;
-      diffraction_scale_factor = 1.0e+40;//1e-20;
-      output_diffraction(
-            psi,
-            diffraction_scale_factor,
-            local_alloc_size_fftw,
-            Nx_local, Nx, Ny,
-            resolutionUnit_recip,
-            xResolution_recip, yResolution_recip,
-            outFileName_prefix + "_final_0_",
-            mynode, rootnode, comm
-            );
-   }
+   //if ( input_flag_image_output )
+   //{
+   //   //output_diffraction_with_renormalization(
+   //   //diffraction_scale_factor = 1.0e13;//1e-20;
+   //   diffraction_scale_factor = 1.0e+40;//1e-20;
+   //   output_diffraction(
+   //         psi,
+   //         diffraction_scale_factor,
+   //         local_alloc_size_fftw,
+   //         Nx_local, Nx, Ny,
+   //         resolutionUnit_recip,
+   //         xResolution_recip, yResolution_recip,
+   //         outFileName_prefix + "_final_0_",
+   //         mynode, rootnode, comm
+   //         );
+   //}
 
    //double diffracted_wave_mag_sqr_sum_max = 0.0;
    
@@ -2757,7 +2757,7 @@ int TEM_NS::adfstem(
    {
       //output_diffraction_with_renormalization(
       //diffraction_scale_factor = 1.0e13;//1e-20;
-      diffraction_scale_factor = 1.0e+40;//1e-20;
+      diffraction_scale_factor = 1.0e+20;//1e-20;
       output_diffraction(
             psi,
             diffraction_scale_factor,
@@ -2765,7 +2765,7 @@ int TEM_NS::adfstem(
             Nx_local, Nx, Ny,
             resolutionUnit_recip,
             xResolution_recip, yResolution_recip,
-            outFileName_prefix + "_final_1",
+            outFileName_prefix + "_final",
             mynode, rootnode, comm
             );
 

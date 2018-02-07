@@ -87,7 +87,7 @@ int TEM_NS::output_variance_to_txt(
       return EXIT_FAILURE;
    }
 
-   cout << "Variance data written to : " << outFilePrefix + ".nc" << endl;
+   //cout << "Variance data written to : " << outFilePrefix + ".txt" << endl;
 
    return EXIT_SUCCESS;
 }

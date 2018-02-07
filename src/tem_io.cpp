@@ -34,7 +34,7 @@ using std::setw;
 using std::setprecision;
 
 int TEM_NS::read_position_lammps_file( 
-      const string& filename, 
+      const string& filename,  // only valid on root node
       // If the upper and lower boundaries in the file are equal to
       // the periodic bounds, then Nx, Ny, Nz are not needed. 
       // However, if the boundaries are the greatest and least 
@@ -465,9 +465,10 @@ int TEM_NS::read_position_lammps_file(
             {
                cerr << "node " << mynode << ", "
                      << "Error reading position data file; " 
-                     << "tiltxy, tiltxz, tiltyz, data_descriptor1, " // debug
-                     << " data_descriptor2, data_descriptor3 : " // debug
-                  << tiltxy << ", " << tiltxz << ", " << tiltyz << ", "//debug
+                     << "tiltxy, tiltxz, tiltyz, data_descriptor1, "//debug
+                     << " data_descriptor2, data_descriptor3 : "// debug
+                  << tiltxy << ", " << tiltxz << ", " // debug
+                  << tiltyz << ", "// debug
                      << data_descriptor1 // debug
                      << ", " << data_descriptor2 // debug
                      << ", " << data_descriptor3 // debug
@@ -744,10 +745,11 @@ int TEM_NS::read_position_lammps_file(
          else
          {
             cerr << "node " << mynode << ", "
-               << "Error reading position file: " << filename << endl
-               << " declared_population : " << declared_population << endl
-               << " positions read : " << qlist.size() << endl
-               << " unique atom ID numbers : " 
+               << "Error reading position file" << endl
+               << "   declared_population : " << declared_population 
+               << endl
+               << "   positions read : " << qlist.size() << endl
+               << "   unique atom ID numbers : " 
                << atom_number_list_uniqued.size() << endl;
             for ( size_t i=0; i<qlist.size(); i++) 
             {
@@ -802,14 +804,14 @@ int TEM_NS::read_position_lammps_file(
 //               atom_number_list_iterator++;
 //         }
          // end debug
-         //////////////////////////////////////////////////////////////////
+         ///////////////////////////////////////////////////////////////
 
 
-         //////////////////////////////////////////////////////////////////
+         ///////////////////////////////////////////////////////////////
          // clean up
          for ( size_t i = 0; i < qlist.size(); i++)
          {
-            //delete[] qlist.back();   // taken care of in previous loops
+            //delete[] qlist.back(); // taken care of in previous loops
             //                      
             qlist.pop_back();
             // qq to be dealt with above after copying to qq_contig
@@ -821,12 +823,12 @@ int TEM_NS::read_position_lammps_file(
          for ( size_t i = 0; i < atom_number_list.size(); i++) 
             atom_number_list.pop_back(); 
          // end clean up
-         //////////////////////////////////////////////////////////////////
+         ///////////////////////////////////////////////////////////////
       }
       else 
       {
          cerr << "node " << mynode << ", "
-            << "Error opening position file: " << filename << endl;
+            << "Error opening position file" << endl;
          data_file.close();
          return EXIT_FAILURE;
       }
@@ -1996,9 +1998,397 @@ int TEM_NS::create_position_lammps_file_001zincblende(
    return EXIT_SUCCESS;
 }
 
+int TEM_NS::read_parameter_file(
+         const string& parameter_filename, 
+         string& model_file,
+         input_flags& flags,
+         string& output_prefix,
+         ptrdiff_t& Nx,
+         ptrdiff_t& Ny,
+         double& VV,
+         double& defocus,
+         double& alpha_max,
+         double& defocus_spread,
+         double& condenser_illumination_angle,
+         double& Cs3,
+         double& Cs5,
+         double& raster_spacing,
+         double& azimuthal_binning_size_factor,
+         double& minSliceThickness,
+         const int& mynode,
+         const int& rootnode,
+         MPI_Comm comm
+      )
+{
+   // sufficiency and conflicts of the input should be checked by caller
+   int Nx_int;
+   int Ny_int;
+   //if ( mynode == rootnode )
+   //{  // NOTE:
+   //    If only root node is allowed to access the file, then
+   //    root node will have to find a way to Bcast the strings it 
+   //    reads for output_prefix and model_file. Unfortunately, I've
+   //    not yet found a way to do Bcast strings without assuming that
+   //    they're ASCII. If they happen to be UTF, then I don't know
+   //    how to measure their length and thus can't Bcast them yet.
+   ifstream data_file( parameter_filename.c_str() );
+   if ( data_file.is_open() )
+   {
+      //cout << " reading " << parameter_filename.c_str() << endl; // debug
+      string data_line;
+      while( getline( data_file, data_line) && data_file.good() )
+      {
+         // skip lines containing only whitespace
+         size_t first = data_line.find_first_not_of(" \t" );
+         while( first == std::string::npos)//npos: max size of a string
+         {
+            getline( data_file, data_line);
+            first = data_line.find_first_not_of(" \t" );
+         }
+
+         istringstream data_line_stream( data_line );
+         string data_descriptor; 
+         data_line_stream >> data_descriptor;
+         // Transform ASCII characters to lower case.
+         //    TODO: find another solution for transforming case
+         //    Supposedly this won't work for UTF. ?!
+         //    For Unicode support, I've heard that I should use 
+         //    toLower from the ICU library.
+         transform( data_descriptor.begin(), data_descriptor.end(), 
+                    data_descriptor.begin(), (int(*)(int))tolower );
+
+         if ( ! data_descriptor.compare("output_prefix") )
+         {
+            data_line_stream >> output_prefix;
+            flags.o = 1;
+         }
+         else if ( ! data_descriptor.compare("samples_x") )
+         {
+            data_line_stream >> Nx_int;
+            Nx = (ptrdiff_t) Nx_int;
+            flags.nx = 1;
+         }
+         else if ( ! data_descriptor.compare("samples_y") )
+         {
+            data_line_stream >> Ny_int;
+            Ny = (ptrdiff_t) Ny_int;
+            flags.ny = 1;
+         }
+         else if ( ! data_descriptor.compare("model_file") )
+         {
+            data_line_stream >> model_file;
+            flags.a = 1;
+         }
+         else if ( ! data_descriptor.compare("microscope_voltage") )
+         {
+            data_line_stream >> VV;
+            flags.microscope_voltage = 1;
+         }
+         else if ( ! data_descriptor.compare("scherzer_defocus") )
+         {
+            flags.scherzer_defocus = 1;
+         }
+         else if ( ! data_descriptor.compare("scherzer_alphamax") )
+         {
+            flags.scherzer_alphamax = 1;
+         }
+         else if ( ! data_descriptor.compare("scherzer_cs3") )
+         {
+            flags.scherzer_cs3 = 1;
+         }
+         else if ( ! data_descriptor.compare("defocus") )
+         {
+            data_line_stream >> defocus;
+            flags.defocus= 1;
+         }
+         else if ( ! data_descriptor.compare("alphamax") )
+         {
+            data_line_stream >> alpha_max;
+            flags.alpha_max = 1;
+         }
+         else if ( ! data_descriptor.compare("spread") )
+         {
+            data_line_stream >> defocus_spread;
+            data_line_stream >> condenser_illumination_angle;
+            flags.spread= 1;
+         }
+         else if ( ! data_descriptor.compare("cs3") )
+         {
+            data_line_stream >> Cs3;
+            flags.cs3 = 1;
+         }
+         else if ( ! data_descriptor.compare("cs5") )
+         {
+            data_line_stream >> Cs5;
+            flags.cs5 = 1;
+         }
+         else if ( ! data_descriptor.compare("raster_spacing") )
+         {
+            data_line_stream >> raster_spacing;
+            flags.raster_spacing = 1;
+         }
+         else if ( ! data_descriptor.compare("adfstemuncorrfem") )
+         {
+            flags.adfstem_uncorrected = 1;
+            flags.fem = 1;
+         }
+         else if ( ! data_descriptor.compare("adfstemcorrfem") )
+         {
+            flags.adfstem_corrected = 1;
+            flags.fem = 1;
+         }
+         else if ( ! data_descriptor.compare("gt17") )
+         {
+            flags.gt17 = 1;
+         }
+         else if ( ! data_descriptor.compare("d1") )
+         {
+            flags.d1 = 1;
+         }
+         else if ( ! data_descriptor.compare("d2") )
+         {
+            flags.d2 = 1;
+         }
+         else if ( ! data_descriptor.compare("d3") )
+         {
+            flags.d3 = 1;
+         }
+         else if ( ! data_descriptor.compare("d4") )
+         {
+            flags.d4 = 1;
+         }
+         else if ( ! data_descriptor.compare("adfstemcorr") )
+         {
+            flags.adfstem_corrected = 1;
+         }
+         else if ( ! data_descriptor.compare("adfstemuncorr") )
+         {
+            flags.adfstem_uncorrected = 1;
+         }
+         else if ( ! data_descriptor.compare("bfctemcorr") )
+         {
+            flags.bfctem_corrected = 1;
+         }
+         else if ( ! data_descriptor.compare("bfctemuncorr") )
+         {
+            flags.bfctem_uncorrected = 1;
+         }
+         else if ( ! data_descriptor.compare("paptif") )
+         {
+            flags.pap_tif = 1;
+         }
+         else if ( ! data_descriptor.compare("dupe") )
+         {
+            flags.dupe = 1;
+         }
+         else if ( ! data_descriptor.compare("dr") )
+         {
+            data_line_stream >> azimuthal_binning_size_factor;
+         }
+         else if ( ! data_descriptor.compare("minslice") )
+         {
+            data_line_stream >> minSliceThickness; // unexpected camel
+         }
+         else if ( ! data_descriptor.compare("images") )
+         {
+            flags.image_output = 1;
+         }
+         else if ( ! data_descriptor.compare("netcdfimages") )
+         {
+            flags.netcdf_images = 1;
+         }
+         else if ( ! data_descriptor.compare("netcdfvariance") )
+         {
+            flags.netcdf_variance = 1;
+         }
+         else if ( ! data_descriptor.compare("debug") )
+         {
+            flags.debug = 1;
+         }
+         else
+         {
+            if ( mynode == rootnode )
+            {
+               cerr << "Error, unexpected argument in parameter file: "
+                  << data_line << endl;
+               cout << "Acceptable phrases in the parameter file:" << endl
+                  << "  samples_x <integer> " << endl
+                  << "  samples_y <integer> " << endl
+                  << "  model_file <path/to/model/file> " << endl
+                  << "  microscope_voltage <voltage value> " << endl
+                  << "  scherzer_defocus" << endl
+                  << "  scherzer_alphamax" << endl
+                  << "  scherzer_cs3" << endl
+                  << "  defocus <defocus value>" << endl
+                  << "  alphamax <maximum alpha>" << endl
+                  << "  spread <defocus spread>" 
+                  << " <condenser illumination angle>" << endl
+                  << "  cs3 <cs3 value>" << endl
+                  << "  cs5 <cs5 value>" << endl
+                  << "  raster_spacing <distance [A] between probe"
+                  << "  positions>" << endl
+                  << "  adfstemcorrfem" << endl
+                  << "  adfstemuncorrfem" << endl
+                  << "  gt17" << endl
+                  << "  d1" << endl
+                  << "  d2" << endl
+                  << "  d3" << endl
+                  << "  d4" << endl
+                  << "  adfstemcorr" << endl
+                  << "  adfstemuncorr" << endl
+                  //<< "  bfctemcorr" << endl
+                  //<< "  bfctemuncorr" << endl
+                  << "  paptif" << endl
+                  << "  dupe" << endl
+                  << "  dr <azimuthal binning size factor>" << endl
+                  << "  minslice <minimum slice thickness>" << endl
+                  << "  images" << endl
+                  << "  netcdfimages" << endl
+                  << "  netcdfvariance" << endl
+                  << "  debug" << endl;
+            }
+            return EXIT_FAILURE;
+         }
+      }
+   }
+   else 
+   {
+      cerr << "Error opening parameter file: " << parameter_filename 
+         << endl;
+      data_file.close();
+      return EXIT_FAILURE;
+   }
+   data_file.close();
+   //} // rootnode
+
+   //// Broadcast results to the remaining nodes
+   //
+   //// pack the boolean values into an array and then broadcast it
+   //unsigned int* flags_to_send ;
+   //flags_to_send = new unsigned int[ 30 ];
+   //if ( mynode == rootnode ) 
+   //{
+   //   flags_to_send[0] = flags.o;
+   //   flags_to_send[1] = flags.nx;
+   //   flags_to_send[2] = flags.ny;
+   //   flags_to_send[3] = flags.a;
+   //   flags_to_send[4] = flags.microscope_voltage;
+   //   flags_to_send[5] = flags.scherzer_defocus;
+   //   flags_to_send[6] = flags.scherzer_alphamax;
+   //   flags_to_send[7] = flags.scherzer_cs3;
+   //   flags_to_send[8] = flags.defocus;
+   //   flags_to_send[9] = flags.alpha_max;
+   //   flags_to_send[10] = flags.spread;
+   //   flags_to_send[11] = flags.cs3;
+   //   flags_to_send[12] = flags.cs5;
+   //   flags_to_send[13] = flags.raster_spacing;
+   //   flags_to_send[14] = flags.fem;
+   //   flags_to_send[15] = flags.adfstem_uncorrected;
+   //   flags_to_send[16] = flags.adfstem_corrected;
+   //   flags_to_send[17] = flags.gt17;
+   //   flags_to_send[18] = flags.d1;
+   //   flags_to_send[19] = flags.d2;
+   //   flags_to_send[20] = flags.d3;
+   //   flags_to_send[21] = flags.d4;
+   //   flags_to_send[22] = flags.bfctem_corrected;
+   //   flags_to_send[23] = flags.bfctem_uncorrected;
+   //   flags_to_send[24] = flags.pap_tif;
+   //   flags_to_send[25] = flags.dupe;
+   //   flags_to_send[26] = flags.image_output;
+   //   flags_to_send[27] = flags.netcdf_images;
+   //   flags_to_send[28] = flags.netcdf_variance;
+   //   flags_to_send[29] = flags.debug;
+   //}
+   //MPI_Bcast( flags_to_send , 30, MPI_UNSIGNED, rootnode, comm);
+
+   //int* N_int;
+   //N_int = int[2];
+   //if ( mynode == rootnode )
+   //{
+   //   N_int[0] = Nx_int;
+   //   N_int[1] = Ny_int;
+   //}
+   //MPI_Bcast( N_int, 2, MPI_INT, rootnode, comm);
+
+   //// TODO: broadcast output_prefix string
+   //// TODO: broadcast model_file string
+
+   //// pack the double values into an array and then broadcast it
+   //double* doubles_to_send;
+   //doubles_to_send = new double[ 10 ];
+   //if ( mynode == rootnode ) 
+   //{
+   //   doubles_to_send[0] = VV;
+   //   doubles_to_send[1] = defocus;
+   //   doubles_to_send[2] = alpha_max;
+   //   doubles_to_send[3] = defocus_spread;
+   //   doubles_to_send[4] = condenser_illumination_angle;
+   //   doubles_to_send[5] = Cs3;
+   //   doubles_to_send[6] = Cs5;
+   //   doubles_to_send[7] = raster_spacing;
+   //   doubles_to_send[8] = azimuthal_binning_size_factor;
+   //   doubles_to_send[9] = minSliceThickness;
+   //}
+   //MPI_Bcast( doubles_to_send, 10, MPI_DOUBLE, rootnode, comm);
+
+   //// unpack the broadcast values
+   //if ( mynode != rootnode ) 
+   //{
+   //   VV = doubles_to_send[0];
+   //   defocus = doubles_to_send[1];
+   //   alpha_max = doubles_to_send[2];
+   //   defocus_spread = doubles_to_send[3];
+   //   condenser_illumination_angle = doubles_to_send[4];
+   //   Cs3 = doubles_to_send[5];
+   //   Cs5 = doubles_to_send[6];
+   //   raster_spacing = doubles_to_send[7];
+   //   azimuthal_binning_size_factor = doubles_to_send[8];
+   //   minSliceThickness = doubles_to_send[9];
+
+   //   Nx = (ptrdiff_t) N_int[0];
+   //   Ny = (ptrdiff_t) N_int[1];
+
+   //   flags.o = flags_to_send[0];
+   //   flags.nx = flags_to_send[1];
+   //   flags.ny = flags_to_send[2];
+   //   flags.a = flags_to_send[3];
+   //   flags.microscope_voltage = flags_to_send[4];
+   //   flags.scherzer_defocus = flags_to_send[5];
+   //   flags.scherzer_alphamax = flags_to_send[6];
+   //   flags.scherzer_cs3 = flags_to_send[7];
+   //   flags.defocus = flags_to_send[8];
+   //   flags.alpha_max = flags_to_send[9];
+   //   flags.spread = flags_to_send[10];
+   //   flags.cs3 = flags_to_send[11];
+   //   flags.cs5 = flags_to_send[12];
+   //   flags.raster_spacing = flags_to_send[13];
+   //   flags.fem = flags_to_send[14];
+   //   flags.adfstem_uncorrected = flags_to_send[15];
+   //   flags.adfstem_corrected = flags_to_send[16];
+   //   flags.gt17 = flags_to_send[17];
+   //   flags.d1 = flags_to_send[18];
+   //   flags.d2 = flags_to_send[19];
+   //   flags.d3 = flags_to_send[20];
+   //   flags.d4 = flags_to_send[21];
+   //   flags.bfctem_corrected = flags_to_send[22];
+   //   flags.bfctem_uncorrected = flags_to_send[23];
+   //   flags.pap_tif = flags_to_send[24];
+   //   flags.dupe = flags_to_send[25];
+   //   flags.image_output = flags_to_send[26];
+   //   flags.netcdf_images = flags_to_send[27];
+   //   flags.netcdf_variance = flags_to_send[28];
+   //   flags.debug = flags_to_send[29];
+   //}
+
+   //delete[] flags_to_send;
+   //delete[] doubles_to_send;
+   //delete[] N_int;
+
+   return EXIT_SUCCESS;
+}
 
 int TEM_NS::read_position_xyz_file(
-      const string& filename,
+      const string& filename, // only valid on root node
       double*& qq_contig,
       unsigned int*& Z_contig,
       unsigned int& total_population,
