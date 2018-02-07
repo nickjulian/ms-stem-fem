@@ -55,39 +55,39 @@ namespace TEM_NS
 {
    struct input_flags
    {
-      unsigned int m = 0;// microscope parameters
+      unsigned int m;// = 0;// microscope parameters
       //unsigned int pf = 0;// simulation parameter file given
-      unsigned int o = 0;// output file name prefix
-      unsigned int a = 0;// atom position and species input file
-      unsigned int defocus = 0;   // defocus
-      unsigned int spread = 0;  // defocus spread 
-      unsigned int adfstem_corrected = 0;        // 
-      unsigned int adfstem_uncorrected = 0;      // 
-      unsigned int bfctem_corrected = 0;         // 
-      unsigned int bfctem_uncorrected = 0;       // 
-      unsigned int fem = 0;
-      unsigned int gt17 = 0;
-      unsigned int d1 = 0;
-      unsigned int d2 = 0;
-      unsigned int d3 = 0;
-      unsigned int d4 = 0;
-      unsigned int scherzer_defocus = 0;
-      unsigned int scherzer_alphamax = 0;
-      unsigned int scherzer_cs3 = 0;
-      unsigned int cs3 = 0;
-      unsigned int cs5 = 0;
-      unsigned int alpha_max = 0;
-      unsigned int aberration_correction = 0;
-      unsigned int raster_spacing = 0;
-      unsigned int pap_tif = 0;
-      unsigned int dupe = 0;
-      unsigned int image_output = 0;
-      unsigned int netcdf_images = 0;
-      unsigned int netcdf_variance = 0;
-      unsigned int nx = 0;
-      unsigned int ny = 0;
-      unsigned int microscope_voltage = 0;
-      unsigned int debug = 0;
+      unsigned int o;// = 0;// output file name prefix
+      unsigned int a;// = 0;// atom position and species input file
+      unsigned int defocus;// = 0;   // defocus
+      unsigned int spread;// = 0;  // defocus spread 
+      unsigned int adfstem_corrected;// = 0;        // 
+      unsigned int adfstem_uncorrected;// = 0;      // 
+      unsigned int bfctem_corrected;// = 0;         // 
+      unsigned int bfctem_uncorrected;// = 0;       // 
+      unsigned int fem;// = 0;
+      unsigned int gt17;// = 0;
+      unsigned int d1;// = 0;
+      unsigned int d2;// = 0;
+      unsigned int d3;// = 0;
+      unsigned int d4;// = 0;
+      unsigned int scherzer_defocus;// = 0;
+      unsigned int scherzer_alphamax;// = 0;
+      unsigned int scherzer_cs3;// = 0;
+      unsigned int cs3;// = 0;
+      unsigned int cs5;// = 0;
+      unsigned int alpha_max;// = 0;
+      unsigned int aberration_correction;// = 0;
+      unsigned int raster_spacing;// = 0;
+      unsigned int pap_tif;// = 0;
+      unsigned int dupe;// = 0;
+      unsigned int image_output;// = 0;
+      unsigned int netcdf_images;// = 0;
+      unsigned int netcdf_variance;// = 0;
+      unsigned int nx;// = 0;
+      unsigned int ny;// = 0;
+      unsigned int microscope_voltage;// = 0;
+      unsigned int debug;// = 0;
    };
 
    int read_parameter_file(

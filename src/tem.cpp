@@ -206,6 +206,39 @@ int main( int argc, char* argv[])
    double minSliceThickness = 1.0;
 
    input_flags flags;
+   // TODO: move these initializations into a constructor
+   flags.m = 0;
+   flags.o = 0;
+   flags.a = 0;
+   flags.defocus = 0;
+   flags.spread = 0;
+   flags.adfstem_corrected = 0;
+   flags.adfstem_uncorrected = 0;
+   flags.bfctem_corrected = 0;
+   flags.bfctem_uncorrected = 0;
+   flags.fem = 0;
+   flags.gt17 = 0;
+   flags.d1 = 0;
+   flags.d2 = 0;
+   flags.d3 = 0;
+   flags.d4 = 0;
+   flags.scherzer_defocus = 0;
+   flags.scherzer_alphamax = 0;
+   flags.scherzer_cs3 = 0;
+   flags.cs3 = 0;
+   flags.cs5 = 0;
+   flags.alpha_max = 0;
+   flags.aberration_correction = 0;
+   flags.raster_spacing = 0;
+   flags.pap_tif = 0;
+   flags.dupe = 0;
+   flags.image_output = 0;
+   flags.netcdf_images = 0;
+   flags.netcdf_variance = 0;
+   flags.nx = 0;
+   flags.ny = 0;
+   flags.microscope_voltage = 0;
+   flags.debug = 0;
 
    //double tmp_double;// for accepting input from operator>>() and 
    //                      pushing onto a vector<double> 
