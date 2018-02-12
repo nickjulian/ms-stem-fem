@@ -41,6 +41,7 @@ int TEM_NS::adfstem(
       const unsigned int& input_flag_d2,
       const unsigned int& input_flag_d3,
       const unsigned int& input_flag_d4,
+      const unsigned int& input_flag_rva,
       const unsigned int& input_flag_aberration_correction,
       const unsigned int& input_flag_complex_realspace_sum,
       const unsigned int& input_flag_image_output,
@@ -667,11 +668,11 @@ int TEM_NS::adfstem(
    double* diffracted_wave_mag_sqr_sum_radial_intensity_local;// gt17 & d3
    double* diffracted_wave_mag_sqr_sum_radial_intensity_total;// gt17 & d3
 
-   double* diffracted_wave_mag_sum_sqr_radial_intensity_local; // gt17
-   double* diffracted_wave_mag_sum_sqr_radial_intensity_total; // gt17
+   double* diffracted_wave_mag_sum_sqr_radial_intensity_local;// gt17 & rva
+   double* diffracted_wave_mag_sum_sqr_radial_intensity_total;// gt17 & rva
 
-   double* diffracted_wave_mag_sum_radial_intensity_local; // d3
-   double* diffracted_wave_mag_sum_radial_intensity_total; // d3
+   double* diffracted_wave_mag_sum_radial_intensity_local; // d3 & rva
+   double* diffracted_wave_mag_sum_radial_intensity_total; // d3 & rva
 
    double* diffracted_wave_mag_sqr;  // d1 & d2
    double* diffracted_wave_mag_radial_intensity_local; // d1 & d2
@@ -695,11 +696,12 @@ int TEM_NS::adfstem(
    double* ftem_d3;
    double* ftem_d4_local;
    double* ftem_d4;
+   double* ftem_rva;
 
    int* bin_counts_local;
    int* bin_counts_aggregated;
-   int* bin_counts_sqr_local;
-   int* bin_counts_sqr_aggregated;
+   int* bin_counts_sqr_sum_aggregated;
+   int* bin_counts_sum_sqr_aggregated;
 
    //int* bin_counts_mag_local;  // not size_t since MPI datatype required
    //int* bin_counts_mag_aggregated; // d1 & d2
@@ -757,10 +759,10 @@ int TEM_NS::adfstem(
       // Allocate variables for the various FTEM modes
 
       if ( input_flag_d1 || input_flag_d2  || input_flag_d3 
-            || input_flag_d4 || input_flag_gt17 )
+            || input_flag_d4 || input_flag_gt17 || input_flag_rva )
       {
          bin_counts_local = new int[ number_of_bins ];
-         bin_counts_sqr_local = new int[ number_of_bins ];
+         //bin_counts_sqr_local = new int[ number_of_bins ];
          // Initiallization to 0 will be done by integrate_out_theta_...()
          //for ( ptrdiff_t ii=0; ii < number_of_bins; ++ii )
          //{
@@ -771,12 +773,15 @@ int TEM_NS::adfstem(
          {
             bin_counts_aggregated
                = new int[ number_of_bins ];
-            bin_counts_sqr_aggregated
+            bin_counts_sqr_sum_aggregated
+               = new int[ number_of_bins ];
+            bin_counts_sum_sqr_aggregated
                = new int[ number_of_bins ];
             for ( size_t ii=0; ii < number_of_bins; ++ii)
             {
                bin_counts_aggregated[ii] = 0;
-               bin_counts_sqr_aggregated[ii] = 0;
+               bin_counts_sqr_sum_aggregated[ii] = 0;
+               bin_counts_sum_sqr_aggregated[ii] = 0;
             }
          }
       }
@@ -806,6 +811,10 @@ int TEM_NS::adfstem(
                diffracted_wave_mag_sqr_radial_intensity_local[ii] 
                   = 0.0;
             }
+            //for ( ptrdiff_t ii=0; ii < local_alloc_size_fftw; ++ii )
+            //{
+            //   diffracted_wave_mag_sqr[ii] = 0.0;
+            //}
          }
 
          if ( mynode == rootnode )
@@ -844,14 +853,15 @@ int TEM_NS::adfstem(
                {
                   diffracted_wave_mag_sqr_radial_intensity_total[ii]
                      = 0.0;
-                  //diffracted_wave_variance_sum[ii] 
-                  //   = 0.0;
+                  diffracted_wave_variance_sum[ii] 
+                     = 0.0;
                }
             }
          }
       } // ( input_flag_d1 || input_flag_d2 )
  
-      if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+      if ( input_flag_gt17 || input_flag_d3 || input_flag_d4 
+            || input_flag_rva ) 
       {  // accumulate I(\vec{k}) and I^{2}(\vec{k})
 
          // used for 2-D variance image and GT17 & d3 & d4
@@ -859,8 +869,11 @@ int TEM_NS::adfstem(
             = new double[ local_alloc_size_fftw ];
          diffracted_wave_mag_sum_sqr
             = new double[ local_alloc_size_fftw ];
-         diffracted_wave_mag_sqr_sum 
-            = new double[ local_alloc_size_fftw ];
+         if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+         {
+            diffracted_wave_mag_sqr_sum 
+               = new double[ local_alloc_size_fftw ];
+         }
 
          //diffracted_wave_mag_sqr_avg
          //   = new double[ local_alloc_size_fftw ];
@@ -889,7 +902,10 @@ int TEM_NS::adfstem(
          {// ensure that they are initialized to 0.0
             // 2-D image
             diffracted_wave_mag_sum[ii] = 0.0;
-            diffracted_wave_mag_sqr_sum[ii] = 0.0;
+            if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+            {
+               diffracted_wave_mag_sqr_sum[ii] = 0.0;
+            }
 
             if (input_flag_complex_realspace_sum) 
             {
@@ -954,7 +970,7 @@ int TEM_NS::adfstem(
             }
          } // input_flag_gt17 
 
-         if ( input_flag_d3 )
+         if ( input_flag_d3 || input_flag_rva )
          {
             diffracted_wave_mag_sum_radial_intensity_local
                = new double[ number_of_bins ];
@@ -967,7 +983,6 @@ int TEM_NS::adfstem(
             }
             if ( mynode == rootnode )
             {
-               ftem_d3 = new double[ number_of_bins ];
                diffracted_wave_mag_sum_radial_intensity_total
                   = new double[ number_of_bins ];
                //bin_counts_sum_aggregated // TODO: rename
@@ -977,8 +992,16 @@ int TEM_NS::adfstem(
                   diffracted_wave_mag_sum_radial_intensity_total[ii] = 0.0;
                   //bin_counts_sum_aggregated[ii] = 0;
                }
+               if ( input_flag_d3 )
+               {
+                  ftem_d3 = new double[ number_of_bins ];
+               }
+               if ( input_flag_rva )
+               {
+                  ftem_rva = new double[ number_of_bins ];
+               }
             }
-         } // input_flag_d3 
+         } // input_flag_d3 || input_flag_rva
 
          if ( input_flag_d4 )
          {
@@ -1947,7 +1970,7 @@ int TEM_NS::adfstem(
                         kx_local, Nx_local,
                         ky, Ny,
                         binning_boundaries, 
-                        bin_counts_sqr_local,
+                        bin_counts_local,
                         diffracted_wave_mag_sqr_radial_intensity_local
                         );
 
@@ -1960,8 +1983,8 @@ int TEM_NS::adfstem(
                         );
 
                   MPI_Reduce(
-                        bin_counts_sqr_local,
-                        bin_counts_sqr_aggregated,
+                        bin_counts_local,
+                        bin_counts_sqr_sum_aggregated,
                         number_of_bins,
                         MPI_INT, MPI_SUM,
                         rootnode, comm
@@ -1972,7 +1995,7 @@ int TEM_NS::adfstem(
                      {
                         diffracted_wave_variance_sum[ii] += 
                    ((diffracted_wave_mag_sqr_radial_intensity_total[ii]
-                           / bin_counts_sqr_aggregated[ii])
+                           / bin_counts_sqr_sum_aggregated[ii])
                            /
                            (
                    (diffracted_wave_mag_radial_intensity_total[ii]
@@ -1982,13 +2005,14 @@ int TEM_NS::adfstem(
                            )) - 1.0;
 
                         bin_counts_aggregated[ii] = 0;
-                        bin_counts_sqr_aggregated[ii] = 0;
+                        bin_counts_sqr_sum_aggregated[ii] = 0;
                      }
                   }
                } // input_flag_d2
             } // input_flag_d1 || input_flag_d2
 
-            if ( input_flag_gt17 || input_flag_d3 || input_flag_d4 )
+            if ( input_flag_gt17 || input_flag_d3 || input_flag_d4
+                  || input_flag_rva ) 
             {
                // Accumulate values for 2-D variance image.
                for ( ptrdiff_t ii=0; ii < local_alloc_size_fftw; ++ii )
@@ -1998,9 +2022,12 @@ int TEM_NS::adfstem(
                      sqrt(psi[ii][0] * psi[ii][0] 
                            + psi[ii][1] * psi[ii][1]);
 
-                  diffracted_wave_mag_sqr_sum[ii] 
-                     += psi[ii][0] * psi[ii][0] 
-                        + psi[ii][1] * psi[ii][1];
+                  if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+                  {
+                     diffracted_wave_mag_sqr_sum[ii] 
+                        += psi[ii][0] * psi[ii][0] 
+                           + psi[ii][1] * psi[ii][1];
+                  }
                      //(psi[ii][0] * psi[ii][0] 
                      //   + psi[ii][1] * psi[ii][1])
                      //   * (psi[ii][0] * psi[ii][0] 
@@ -2194,7 +2221,8 @@ int TEM_NS::adfstem(
          } // rootnode
       } // input_flag_d2 
 
-      if (input_flag_gt17 || input_flag_d3 || input_flag_d4)
+      if (input_flag_gt17 || input_flag_d3 || input_flag_d4 
+            || input_flag_rva )
       {
          ////////////////////////////////////////////////////////////////
          // Calculate the FTEM 2-D variance V(\vec{k},K_{aperture})
@@ -2222,28 +2250,35 @@ int TEM_NS::adfstem(
 
          // Divide the sum by the number of points to obtain the average
          //  2-D diffracted intensity.
-         for ( ptrdiff_t ii=0; ii < local_alloc_size_fftw; ++ii )
+         if ( input_flag_gt17 || input_flag_d3 || input_flag_d4
+               || input_flag_rva )
          {
-            diffracted_wave_mag_sum[ii] 
-               = diffracted_wave_mag_sum[ii] / number_of_raster_points; 
-
-            diffracted_wave_mag_sqr_sum[ii] 
-               = diffracted_wave_mag_sqr_sum[ii] / number_of_raster_points;
-
-            if ( input_flag_gt17 || input_flag_d4 )
+            for ( ptrdiff_t ii=0; ii < local_alloc_size_fftw; ++ii )
             {
+               diffracted_wave_mag_sum[ii] 
+                  = diffracted_wave_mag_sum[ii] 
+                     / number_of_raster_points; 
+
                diffracted_wave_mag_sum_sqr[ii] 
                   = diffracted_wave_mag_sum[ii] 
                      * diffracted_wave_mag_sum[ii];
-            }
 
-            if (input_flag_complex_realspace_sum)
-            {
-               diffracted_wave_re_sum[ii] 
-                  = diffracted_wave_re_sum[ii] / number_of_raster_points;
+               if ( input_flag_gt17 || input_flag_d3 || input_flag_d4 )
+               {
+                  diffracted_wave_mag_sqr_sum[ii] 
+                     = diffracted_wave_mag_sqr_sum[ii] 
+                        / number_of_raster_points;
+               }
+               if (input_flag_complex_realspace_sum)
+               {
+                  diffracted_wave_re_sum[ii] 
+                     = diffracted_wave_re_sum[ii] 
+                        / number_of_raster_points;
 
-               diffracted_wave_im_sum[ii] 
-                  = diffracted_wave_im_sum[ii] / number_of_raster_points;
+                  diffracted_wave_im_sum[ii] 
+                     = diffracted_wave_im_sum[ii] 
+                        / number_of_raster_points;
+               }
             }
 
             //// begin debug
@@ -2257,52 +2292,53 @@ int TEM_NS::adfstem(
             //   diffracted_wave_mag_sqr_sum_max 
             //      =  diffracted_wave_mag_sqr_sum[ii];
             //// end debug
-         }
 
-         // Combine re_sum and im_sum to obtain the magnitudes
-         //  for 2-D variance images
+            // Combine re_sum and im_sum to obtain the magnitudes
+            //  for 2-D variance images
 
-         // TODO: modify to obtain 1-D variance curve using the complex sum
-         if (input_flag_complex_realspace_sum) 
-         {
-            diffracted_wave_complex_sum_mag 
-               = new double[ local_alloc_size_fftw ];
-
-            diffracted_wave_fftw_complex_sum 
-               = fftw_alloc_complex( local_alloc_size_fftw );
-
-            for ( size_t ii=0; ii < local_alloc_size_fftw; ++ii )
+            // TODO: modify to obtain 1-D variance curve using the complex sum
+            if (input_flag_complex_realspace_sum) 
             {
-               diffracted_wave_complex_sum_mag[ii] 
-                  = sqrt(
-                        (diffracted_wave_re_sum[ii] 
-                           * diffracted_wave_re_sum[ii])
-                        + (diffracted_wave_im_sum[ii] 
-                          * diffracted_wave_im_sum[ii])
-                    );
+               diffracted_wave_complex_sum_mag 
+                  = new double[ local_alloc_size_fftw ];
 
-               //cout << "diffracted_wave_im_sum[" << ii << "] : " // debug
-               //   << diffracted_wave_im_sum[ii] << endl; // debug
-               //cout << "diffracted_wave_complex_sum[" << ii << "] : " // debug
-               //   << diffracted_wave_complex_sum[ii] << endl; // debug
+               diffracted_wave_fftw_complex_sum 
+                  = fftw_alloc_complex( local_alloc_size_fftw );
 
-               // Store the sums as fftw_complex variables for 
-               //    input into output_psi_reciprocalspace_to_netcdf
-               // TODO : check to see if this is necessary, or even useful
-               // TODO : do these need to be divided by 
-               //          number_of_raster_points? they already have been
-               diffracted_wave_fftw_complex_sum[ii][0] 
-                  = diffracted_wave_re_sum[ii];
-               diffracted_wave_fftw_complex_sum[ii][1] 
-                  = diffracted_wave_im_sum[ii];
+               for ( size_t ii=0; ii < local_alloc_size_fftw; ++ii )
+               {
+                  diffracted_wave_complex_sum_mag[ii] 
+                     = sqrt(
+                           (diffracted_wave_re_sum[ii] 
+                              * diffracted_wave_re_sum[ii])
+                           + (diffracted_wave_im_sum[ii] 
+                             * diffracted_wave_im_sum[ii])
+                       );
 
-               // TODO: remove this averaging when performed by 
-               //        variance_2D_STEM. ... why would it be done there?
-               diffracted_wave_complex_sum_mag[ii]
-                  = diffracted_wave_complex_sum_mag[ii] 
-                     / number_of_raster_points;
-            }
-         } // input_flag_complex_realspace_sum
+                  //cout << "diffracted_wave_im_sum[" << ii << "] : " // debug
+                  //   << diffracted_wave_im_sum[ii] << endl; // debug
+                  //cout << "diffracted_wave_complex_sum[" << ii << "] : " // debug
+                  //   << diffracted_wave_complex_sum[ii] << endl; // debug
+
+                  // Store the sums as fftw_complex variables for 
+                  //    input into output_psi_reciprocalspace_to_netcdf
+                  // TODO : check to see if this is necessary, or even useful
+                  // TODO : do these need to be divided by 
+                  //          number_of_raster_points? they already have been
+                  diffracted_wave_fftw_complex_sum[ii][0] 
+                     = diffracted_wave_re_sum[ii];
+                  diffracted_wave_fftw_complex_sum[ii][1] 
+                     = diffracted_wave_im_sum[ii];
+
+                  // TODO: remove this averaging when performed by 
+                  //      variance_2D_STEM. ... why would it be done there?
+                  diffracted_wave_complex_sum_mag[ii]
+                     = diffracted_wave_complex_sum_mag[ii] 
+                        / number_of_raster_points;
+               }
+            } // input_flag_complex_realspace_sum
+         }  // input_flag_gt17 || input_flag_d3 || input_flag_d4 
+            //  || input_flag_rva
 
 
 
@@ -2324,18 +2360,20 @@ int TEM_NS::adfstem(
                   outFileName_prefix + "_diffracted_wave_avg",
                   mynode, rootnode, comm
                   );
-
-            diffraction_scale_factor = 1.0e13 ;//1e-53;
-            output_diffraction(
-                  diffracted_wave_mag_sqr_sum,
-                  diffraction_scale_factor,
-                  local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix + "_diffracted_wave_sqr_avg",
-                  mynode, rootnode, comm
-                  );
+            if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+            {
+               diffraction_scale_factor = 1.0e13 ;//1e-53;
+               output_diffraction(
+                     diffracted_wave_mag_sqr_sum,
+                     diffraction_scale_factor,
+                     local_alloc_size_fftw,
+                     Nx_local, Nx, Ny,
+                     resolutionUnit_recip,
+                     xResolution_recip, yResolution_recip,
+                     outFileName_prefix + "_diffracted_wave_sqr_avg",
+                     mynode, rootnode, comm
+                     );
+            }
          }
 
          if (input_flag_image_output && input_flag_complex_realspace_sum) 
@@ -2409,13 +2447,13 @@ int TEM_NS::adfstem(
                   kx_local, Nx_local,
                   ky, Ny,
                   binning_boundaries,
-                  bin_counts_sqr_local,
+                  bin_counts_local,
                   diffracted_wave_mag_sqr_sum_radial_intensity_local
                   );
 
             MPI_Reduce(
-                  bin_counts_sqr_local,
-                  bin_counts_sqr_aggregated,
+                  bin_counts_local,
+                  bin_counts_sqr_sum_aggregated,
                   number_of_bins,
                   MPI_INT, MPI_SUM,
                   rootnode, comm
@@ -2428,153 +2466,174 @@ int TEM_NS::adfstem(
                   MPI_DOUBLE, MPI_SUM,
                   rootnode, comm
                   );
+         }
 
-            if ( input_flag_gt17 )
+         if ( input_flag_gt17 || input_flag_rva )
+         {
+            integrate_out_theta_double(
+                  diffracted_wave_mag_sum_sqr,
+                  kx_local, Nx_local,
+                  ky, Ny,
+                  binning_boundaries,
+                  bin_counts_local,
+                  diffracted_wave_mag_sum_sqr_radial_intensity_local
+                  );
+
+            MPI_Reduce(
+                  bin_counts_local,
+                  bin_counts_sum_sqr_aggregated,
+                  number_of_bins,
+                  MPI_INT, MPI_SUM,
+                  rootnode, comm
+                  );
+
+            MPI_Reduce(
+                  diffracted_wave_mag_sum_sqr_radial_intensity_local,
+                  diffracted_wave_mag_sum_sqr_radial_intensity_total,
+                  number_of_bins,
+                  MPI_DOUBLE, MPI_SUM,
+                  rootnode, comm
+                  );
+
+            if ( mynode == rootnode && input_flag_gt17 )
             {
-               integrate_out_theta_double(
-                     diffracted_wave_mag_sum_sqr,
-                     kx_local, Nx_local,
-                     ky, Ny,
-                     binning_boundaries,
-                     bin_counts_local,
-                     diffracted_wave_mag_sum_sqr_radial_intensity_local
-                     );
-
-               MPI_Reduce(
-                     bin_counts_local,
-                     bin_counts_aggregated,
-                     number_of_bins,
-                     MPI_INT, MPI_SUM,
-                     rootnode, comm
-                     );
-
-               MPI_Reduce(
-                     diffracted_wave_mag_sum_sqr_radial_intensity_local,
-                     diffracted_wave_mag_sum_sqr_radial_intensity_total,
-                     number_of_bins,
-                     MPI_DOUBLE, MPI_SUM,
-                     rootnode, comm
-                     );
-
-               if ( mynode == rootnode )
+               for( size_t ii=0; ii < number_of_bins; ++ii)
                {
-                  for( size_t ii=0; ii < number_of_bins; ++ii)
-                  {
-                     // Caculate the ratio  to obtain 
-                     //  \frac{\langle \langle I^{2}(\vec{k})\rangle_{\vec{r}} \rangle_{\phi}}{\langle \langle I(\vec{k})\rangle_{\vec{r}}^{2} \rangle_{\phi}}
-                     ftem_gt17[ii] 
-            = (diffracted_wave_mag_sqr_sum_radial_intensity_total[ii]
-                              / bin_counts_sqr_aggregated[ii])
+                  // Caculate the ratio  to obtain 
+                  //  \frac{\langle \langle I^{2}(\vec{k})\rangle_{\vec{r}} \rangle_{\phi}}{\langle \langle I(\vec{k})\rangle_{\vec{r}}^{2} \rangle_{\phi}}
+                  ftem_gt17[ii] 
+            = (   diffracted_wave_mag_sqr_sum_radial_intensity_total[ii]
+                           / bin_counts_sqr_sum_aggregated[ii])
                            / 
-              (diffracted_wave_mag_sum_sqr_radial_intensity_total[ii]
-                               / bin_counts_aggregated[ii]);
+              (   diffracted_wave_mag_sum_sqr_radial_intensity_total[ii]
+                               / bin_counts_sum_sqr_aggregated[ii]);
 
-                     bin_counts_aggregated[ii] = 0;
-                     if ( ! input_flag_d3 )
-                     {
-                        bin_counts_sqr_aggregated[ii] = 0;
-                     }
-
-                     // NOTE: bin_counts_sqr_aggregated and
-                     //       bin_counts_aggregated 
-                     //       should be equal, and might not be needed 
-                     //       here.
-                  }
-
-                  // save output of gt17
-                  if( input_flag_netcdf_variance )
+                  if ( ! input_flag_rva )
                   {
-                     if ( 
-                           output_variance_to_netcdf(
-                              ftem_gt17,
-                              binning_boundaries,
-                              outFileName_prefix 
-                                 + "_fem_gt17"
-                           ) != EXIT_SUCCESS)
-                     {
-                        cout << " failed to write gt17 variance data to"
-                          << " netCDF file : " 
-                          << outFileName_prefix 
-                              + "_fem_gt17.nc" 
-                          << endl;
-                     }
-                  } else {
-                     // debug
-                     //output_variance_to_txt(
-                     //   diffracted_wave_radial_intensity_sqr_avg_gt17,
-                     //   binning_boundaries,
-                     //   outFileName_prefix 
-                     //      + "_radial_intensity_sqr_avg_gt17"
-                     //   );
-                     //output_variance_to_txt(
-                     //   diffracted_wave_radial_intensity_avg_sqr_gt17,
-                     //   binning_boundaries,
-                     //   outFileName_prefix 
-                     //      + "_radial_intensity_avg_sqr_gt17"
-                     //   );
-                     // end debug
-                     if ( 
-                        output_variance_to_txt(
-                              ftem_gt17,
-                              binning_boundaries,
-                              outFileName_prefix 
-                                 + "_fem_gt17"
-                           ) != EXIT_SUCCESS)
-                     {
-                        cout << " failed to write gt17 variance data"
-                           << " to a txt file : " 
-                           << outFileName_prefix 
-                              + "_fem_gt17.txt"
-                           << endl;
-                     }
-                  } // gt17 text output block
-               } // mynode == rootnode
-            } // input_flag_gt17
+                     bin_counts_aggregated[ii] = 0;
+                  }
+                  if (! input_flag_d3  )
+                  {
+                     bin_counts_sqr_sum_aggregated[ii] = 0;
+                     // NOTE: bin_counts_sqr_sum_aggregated and
+                     //       bin_counts_aggregated 
+                     //       should be equal, and might not be 
+                     //       needed here.
+                  }
+               }
 
-            if ( input_flag_d3 )
-            {
-               integrate_out_theta_double(
-                     diffracted_wave_mag_sum,
-                     kx_local, Nx_local,
-                     ky, Ny,
-                     binning_boundaries,
-                     bin_counts_local,
-                     diffracted_wave_mag_sum_radial_intensity_local
-                     );
-
-               MPI_Reduce(
-                     bin_counts_local,
-                     bin_counts_aggregated,
-                     number_of_bins,
-                     MPI_INT, MPI_SUM,
-                     rootnode, comm
-                     );
-
-               MPI_Reduce(
-                     diffracted_wave_mag_sum_radial_intensity_local,
-                     diffracted_wave_mag_sum_radial_intensity_total,
-                     number_of_bins,
-                     MPI_DOUBLE, MPI_SUM,
-                     rootnode, comm
-                     );
-
-               if ( mynode == rootnode )
+               // save output of gt17
+               if( input_flag_netcdf_variance )
                {
-                  for (size_t ii=0; ii < number_of_bins; ++ii)
+                  if ( 
+                        output_variance_to_netcdf(
+                           ftem_gt17,
+                           binning_boundaries,
+                           outFileName_prefix 
+                              + "_fem_gt17"
+                        ) != EXIT_SUCCESS)
+                  {
+                     cout << " failed to write gt17 variance data to"
+                       << " netCDF file : " 
+                       << outFileName_prefix 
+                           + "_fem_gt17.nc" 
+                       << endl;
+                  }
+               } else {
+                  // debug
+                  //output_variance_to_txt(
+                  //   diffracted_wave_radial_intensity_sqr_avg_gt17,
+                  //   binning_boundaries,
+                  //   outFileName_prefix 
+                  //      + "_radial_intensity_sqr_avg_gt17"
+                  //   );
+                  //output_variance_to_txt(
+                  //   diffracted_wave_radial_intensity_avg_sqr_gt17,
+                  //   binning_boundaries,
+                  //   outFileName_prefix 
+                  //      + "_radial_intensity_avg_sqr_gt17"
+                  //   );
+                  // end debug
+                  if ( 
+                     output_variance_to_txt(
+                           ftem_gt17,
+                           binning_boundaries,
+                           outFileName_prefix 
+                              + "_fem_gt17"
+                        ) != EXIT_SUCCESS)
+                  {
+                     cout << " failed to write gt17 variance data"
+                        << " to a txt file : " 
+                        << outFileName_prefix 
+                           + "_fem_gt17.txt"
+                        << endl;
+                  }
+               } // gt17 text output block
+            } // mynode == rootnode && input_flag_gt17 
+         } // input_flag_gt17 || input_flag_rva
+
+         if ( input_flag_d3 || input_flag_rva )
+         {
+            integrate_out_theta_double(
+                  diffracted_wave_mag_sum,
+                  kx_local, Nx_local,
+                  ky, Ny,
+                  binning_boundaries,
+                  bin_counts_local,
+                  diffracted_wave_mag_sum_radial_intensity_local
+                  );
+
+            MPI_Reduce(
+                  bin_counts_local,
+                  bin_counts_aggregated,
+                  number_of_bins,
+                  MPI_INT, MPI_SUM,
+                  rootnode, comm
+                  );
+
+            MPI_Reduce(
+                  diffracted_wave_mag_sum_radial_intensity_local,
+                  diffracted_wave_mag_sum_radial_intensity_total,
+                  number_of_bins,
+                  MPI_DOUBLE, MPI_SUM,
+                  rootnode, comm
+                  );
+
+            if ( mynode == rootnode )
+            {
+               for (size_t ii=0; ii < number_of_bins; ++ii)
+               {
+                  if ( input_flag_d3 ) 
                   {
                      ftem_d3[ii] =
                         ((
-                 diffracted_wave_mag_sqr_sum_radial_intensity_total[ii]
-                     / bin_counts_sqr_aggregated[ii]
+              diffracted_wave_mag_sqr_sum_radial_intensity_total[ii]
+                     / bin_counts_sqr_sum_aggregated[ii]
                         ) / (
-                 diffracted_wave_mag_sum_radial_intensity_total[ii]
-                 * diffracted_wave_mag_sum_radial_intensity_total[ii]
-                 / (
-                    bin_counts_aggregated[ii] * bin_counts_aggregated[ii]
-                   )
+              diffracted_wave_mag_sum_radial_intensity_total[ii]
+              * diffracted_wave_mag_sum_radial_intensity_total[ii]
+              / (
+                 bin_counts_aggregated[ii] * bin_counts_aggregated[ii]
+                )
                         )) - 1.0;
                   }
-                  // save output of d3
+                  if ( input_flag_rva ) 
+                  {
+                     ftem_rva[ii] 
+                = ((diffracted_wave_mag_sum_sqr_radial_intensity_total[ii]
+                     / bin_counts_sum_sqr_aggregated[ii])  
+                  / (
+                        diffracted_wave_mag_sum_radial_intensity_total[ii]
+                        *
+                        diffracted_wave_mag_sum_radial_intensity_total[ii]
+                        / (bin_counts_aggregated[ii] 
+                           * bin_counts_aggregated[ii])
+                    )) - 1.0;
+                  }
+               }
+               // save output of d3
+               if ( input_flag_d3 ) 
+               {
                   if( input_flag_netcdf_variance )
                   {
                      if ( 
@@ -2607,9 +2666,45 @@ int TEM_NS::adfstem(
                            << endl;
                      }
                   } // d3 text output block
-               }
-            } // input_flag_d3
-         } // input_flag_gt17 || input_flag_d3
+               } // input_flag_d3
+
+               if ( input_flag_rva ) 
+               {
+                  if( input_flag_netcdf_variance )
+                  {
+                     if ( 
+                           output_variance_to_netcdf(
+                              ftem_rva,
+                              binning_boundaries,
+                              outFileName_prefix 
+                                 + "_fem_rva"
+                           ) != EXIT_SUCCESS)
+                     {
+                        cout << " failed to write --rva variance data to"
+                          << " netCDF file : " 
+                          << outFileName_prefix 
+                              + "_fem_rva.nc" 
+                          << endl;
+                     }
+                  } else {
+                     if ( 
+                        output_variance_to_txt(
+                              ftem_rva,
+                              binning_boundaries,
+                              outFileName_prefix 
+                                 + "_fem_rva"
+                           ) != EXIT_SUCCESS)
+                     {
+                        cout << " failed to write --rva variance data"
+                           << " to a txt file : " 
+                           << outFileName_prefix 
+                              + "_fem_rva.txt"
+                           << endl;
+                     }
+                  } // rva text output block
+               } // input_flag_rva
+            } // root node 
+         } // input_flag_d3 || input_flag_rva
 
          if ( input_flag_d4 )
          {
@@ -2731,6 +2826,7 @@ int TEM_NS::adfstem(
          }
 
       } // input_flag_gt17 || input_flag_d3 || input_flag_d4 
+         // input_flag_rva
 
    }// end fem specific commands
 
@@ -2923,14 +3019,15 @@ int TEM_NS::adfstem(
    if ( input_flag_fem )
    {
       if ( input_flag_d1 || input_flag_d2  || input_flag_d3 
-            || input_flag_d4 || input_flag_gt17 )
+            || input_flag_d4 || input_flag_gt17 || input_flag_rva )
       {
          delete[] bin_counts_local;
-         delete[] bin_counts_sqr_local;
+         //delete[] bin_counts_sqr_local;
          if ( mynode == rootnode )
          {
             delete[] bin_counts_aggregated;
-            delete[] bin_counts_sqr_aggregated;
+            delete[] bin_counts_sqr_sum_aggregated;
+            delete[] bin_counts_sum_sqr_aggregated;
          }
       }
       if ( input_flag_d1 || input_flag_d2 )
@@ -2957,42 +3054,58 @@ int TEM_NS::adfstem(
             }
          }
       }
-      if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+      if ( input_flag_gt17 || input_flag_d3 || input_flag_d4
+            || input_flag_rva ) 
       {
          delete[] diffracted_wave_mag_sum;
          delete[] diffracted_wave_mag_sum_sqr;
-         delete[] diffracted_wave_mag_sqr_sum;
+         if ( input_flag_gt17 || input_flag_d3 || input_flag_d4 ) 
+         {
+            delete[] diffracted_wave_mag_sqr_sum;
+         }
          if (input_flag_complex_realspace_sum) 
          {
             delete[] diffracted_wave_re_sum;
             delete[] diffracted_wave_im_sum;
             //delete[] diffracted_wave_complex_variance_2D;
          }
-         if ( input_flag_gt17 || input_flag_d3 ) 
+         if ( input_flag_gt17 || input_flag_d3 || input_flag_rva ) 
          {
-            delete[] diffracted_wave_mag_sqr_sum_radial_intensity_local;
-            if ( mynode == rootnode )
+            if ( input_flag_gt17 || input_flag_d3 ) 
             {
-               delete[] 
-                  diffracted_wave_mag_sqr_sum_radial_intensity_total;
-            }
-            if ( input_flag_gt17 )
-            {
-               delete[] diffracted_wave_mag_sum_sqr_radial_intensity_local;
+               delete[] diffracted_wave_mag_sqr_sum_radial_intensity_local;
                if ( mynode == rootnode )
                {
-                  delete[] ftem_gt17;
                   delete[] 
-                     diffracted_wave_mag_sum_sqr_radial_intensity_total;
+                     diffracted_wave_mag_sqr_sum_radial_intensity_total;
                }
-            }
-            if ( input_flag_d3 )
-            {
-               delete[] diffracted_wave_mag_sum_radial_intensity_local;
-               if ( mynode == rootnode )
+               if ( input_flag_gt17 )
                {
-                  delete[] ftem_d3;
-                  delete[] diffracted_wave_mag_sum_radial_intensity_total;
+                  delete[] 
+                     diffracted_wave_mag_sum_sqr_radial_intensity_local;
+                  if ( mynode == rootnode )
+                  {
+                     delete[] ftem_gt17;
+                     delete[] 
+                        diffracted_wave_mag_sum_sqr_radial_intensity_total;
+                  }
+               }
+               if ( input_flag_d3 || input_flag_rva )
+               {
+                  delete[] diffracted_wave_mag_sum_radial_intensity_local;
+                  if ( mynode == rootnode )
+                  {
+                     if ( input_flag_d3 )
+                     {
+                        delete[] ftem_d3;
+                     }
+                     if ( input_flag_rva )
+                     {
+                        delete[] ftem_rva;
+                     }
+                     delete[] 
+                        diffracted_wave_mag_sum_radial_intensity_total;
+                  }
                }
             }
          }

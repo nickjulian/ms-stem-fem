@@ -2157,6 +2157,10 @@ int TEM_NS::read_parameter_file(
          {
             flags.d4 = 1;
          }
+         else if ( ! data_descriptor.compare("rva") )
+         {
+            flags.rva = 1;
+         }
          else if ( ! data_descriptor.compare("adfstemcorr") )
          {
             flags.adfstem_corrected = 1;
@@ -2234,6 +2238,7 @@ int TEM_NS::read_parameter_file(
                   << "  d2" << endl
                   << "  d3" << endl
                   << "  d4" << endl
+                  << "  rva" << endl
                   << "  adfstemcorr" << endl
                   << "  adfstemuncorr" << endl
                   //<< "  bfctemcorr" << endl

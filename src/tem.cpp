@@ -184,6 +184,7 @@ int main( int argc, char* argv[])
    unsigned int input_flag_d2 = 0;
    unsigned int input_flag_d3 = 0;
    unsigned int input_flag_d4 = 0;
+   unsigned int input_flag_rva = 0;
    unsigned int input_flag_scherzer_defocus = 0;
    unsigned int input_flag_scherzer_alphamax = 0;
    unsigned int input_flag_scherzer_cs3 = 0;
@@ -299,6 +300,7 @@ int main( int argc, char* argv[])
          input_flag_d2 = flags.d2;
          input_flag_d3 = flags.d3;
          input_flag_d4 = flags.d4;
+         input_flag_rva = flags.rva;
          input_flag_scherzer_defocus = flags.scherzer_defocus;
          input_flag_scherzer_alphamax = flags.scherzer_alphamax;
          input_flag_scherzer_cs3 = flags.scherzer_cs3;
@@ -506,6 +508,10 @@ int main( int argc, char* argv[])
       {
          input_flag_d4 = 1;
       }
+      else if ( args[idx] == "--RVA" )
+      {
+         input_flag_rva = 1;
+      }
       else if ( args[idx] == "--adfstemcorr" )
       {
          input_flag_adfstem_corrected = 1;
@@ -671,7 +677,8 @@ int main( int argc, char* argv[])
 
    if ( (! input_flag_gt17 ) 
          && (! input_flag_d1 ) && (! input_flag_d2 ) 
-         && (! input_flag_d3 ) && (! input_flag_d4 ) )
+         && (! input_flag_d3 ) && (! input_flag_d4 )
+         && (! input_flag_rva) )
    {
       input_flag_d1 = 1; // default variance calculation mode
    }
@@ -714,6 +721,8 @@ int main( int argc, char* argv[])
       input_flag_d3  << endl <<
       "input_flag_d4 " << 
       input_flag_d4  << endl <<
+      "input_flag_rva " << 
+      input_flag_rva  << endl <<
       "input_flag_scherzer_defocus " << 
       input_flag_scherzer_defocus << endl <<
       "input_flag_scherzer_alphamax " << 
@@ -1916,6 +1925,7 @@ int main( int argc, char* argv[])
                input_flag_fem,
                input_flag_gt17,
                input_flag_d1, input_flag_d2, input_flag_d3, input_flag_d4,
+               input_flag_rva,
                0,                         // aberration correction?
                0, // calculate using complex average over real space?
                input_flag_image_output,
@@ -1996,6 +2006,7 @@ int main( int argc, char* argv[])
                input_flag_fem,
                input_flag_gt17,
                input_flag_d1, input_flag_d2, input_flag_d3, input_flag_d4,
+               input_flag_rva,
                1, // aberration correction?
                0, // calculate using complex average over real space?
                input_flag_image_output,

@@ -68,6 +68,7 @@ int adfstem(
       const unsigned int& input_flag_d2,
       const unsigned int& input_flag_d3,
       const unsigned int& input_flag_d4,
+      const unsigned int& input_flag_rva,
       const unsigned int& input_flag_aberration_correction,
       const unsigned int& input_flag_complex_realspace_sum,
       const unsigned int& input_flag_image_output,

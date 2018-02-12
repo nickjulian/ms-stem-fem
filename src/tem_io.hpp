@@ -71,6 +71,7 @@ namespace TEM_NS
       unsigned int d2;// = 0;
       unsigned int d3;// = 0;
       unsigned int d4;// = 0;
+      unsigned int rva;
       unsigned int scherzer_defocus;// = 0;
       unsigned int scherzer_alphamax;// = 0;
       unsigned int scherzer_cs3;// = 0;
