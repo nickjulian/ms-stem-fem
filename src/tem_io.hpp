@@ -134,6 +134,24 @@ namespace TEM_NS
          MPI_Comm comm
          );
 
+   int read_position_lammps_file_nonmpi( 
+   // Precondition: 
+   // - input is expected to be the same format as a lammps position
+   //  input file, with an Atoms section and an enumerated list of 
+   //  atoms types and coordinates
+         const string& filename, 
+         //scatterer_param_LUT& lut,
+         //const ptrdiff_t& Nx, const ptrdiff_t& Ny, const ptrdiff_t& Nz,
+         //std::vector<scatterer>& myScatterers,
+         double*& qq_contig,
+         unsigned int*& Z_contig,
+         unsigned int& total_population,
+         double& xlo, double& ylo, double& zlo, 
+         double& xperiod, double& yperiod, double& zperiod,
+         const unsigned int& input_flag_debug
+         );
+
+
    int read_position_xyz_file( 
    // Precondition: 
    // - input is expected to be the same format as a lammps position
@@ -154,6 +172,23 @@ namespace TEM_NS
          MPI_Comm comm
          );
 
+   int read_position_xyz_file_nonmpi( 
+   // Precondition: 
+   // - input is expected to be the same format as a lammps position
+   //  input file, with an Atoms section and an enumerated list of 
+   //  atoms types and coordinates
+         const string& filename, 
+         //scatterer_param_LUT& lut,
+         //const ptrdiff_t& Nx, const ptrdiff_t& Ny, const ptrdiff_t& Nz,
+         //std::vector<scatterer>& myScatterers,
+         double*& qq_contig,
+         unsigned int*& Z_contig,
+         unsigned int& total_population,
+         double& xlo, double& ylo, double& zlo, 
+         double& xperiod, double& yperiod, double& zperiod,
+         const unsigned int& input_flag_debug
+         );
+
    //   TODO: implement function to read microscope parameters from a file
 //   int read_microscope_file(
 //         const string& filename,
@@ -166,6 +201,7 @@ namespace TEM_NS
 //         );
 
    size_t atom_element_abbrev_to_Z( const string& element_name);
+   string atom_element_Z_to_abbrev( const size_t& element_Z);
 
    int create_position_lammps_file_011diamond(
          const string& filename,

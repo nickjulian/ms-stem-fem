@@ -853,6 +853,775 @@ int TEM_NS::read_position_lammps_file(
 }
 
 
+int TEM_NS::read_position_lammps_file_nonmpi( 
+      const string& filename,  // only valid on root node
+      // If the upper and lower boundaries in the file are equal to
+      // the periodic bounds, then Nx, Ny, Nz are not needed. 
+      // However, if the boundaries are the greatest and least 
+      // values contained in the discretized domain, then Nx, Ny, Nz
+      // might be needed so that an extra delta_x = (xhi - xlo)/Nx 
+      // may be added.
+      double*& qq_contig,
+      unsigned int*& Z_contig,
+      unsigned int& total_population,
+      double& xlo, double& ylo, double& zlo, 
+      double& xperiod, double& yperiod, double& zperiod,
+      const unsigned int& input_flag_debug
+      )
+{
+   // Precondition: 
+   // - input is expected to be the same format as a lammps position
+   //  input file, with an Atoms section and an enumerated list of 
+   //  atoms types and coordinates
+   // - qq_contig and Z_contig have not been allocated.
+   
+   // Postcondition:
+   // - qq_contig and Z_contig have been allocated, and its memory 
+   //    must be deleted elsewhere
+   // - qq_contig[] and Z_contig[] all reside in contiguous regions 
+   //    of memory for MPI
+   
+   if ( 1 )
+   {
+      // declared_population 'atoms'
+      size_t declared_population = 0;
+
+      ifstream data_file( filename.c_str() );
+      if ( data_file.is_open() )
+      {
+
+         //char data_line[256];// 256 is an arbitrary line length limit
+         string data_line;
+         getline(data_file, data_line); // first line
+         
+         // First line must begin with a space separated list of atomic
+         //    numbers.
+         size_t Z; 
+         std::vector<size_t> Zcategories;
+         if ( data_file.good() ) 
+         {
+            istringstream data_line_stream( data_line );
+            while( data_line_stream >> Z ) Zcategories.push_back( Z );
+         }
+
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) 
+                                       // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            istringstream data_line_stream( data_line );
+            data_line_stream >> declared_population;
+
+            string data_descriptor; 
+            data_line_stream >> data_descriptor;
+            // TODO: why can't I use std::tolower, but I can use tolower?
+            transform( data_descriptor.begin(), data_descriptor.end(), 
+                       data_descriptor.begin(), (int(*)(int))tolower );
+            // TODO: this will only work with ASCII input, not UTF. 
+            //       For Unicode support, use toLower from the ICU 
+            //       library.
+            
+            if ( (! declared_population) 
+                  || ( data_descriptor.compare("atoms") ) )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; " 
+                  //<< "declared_population, data_descriptor : "//debug
+                  //<< declared_population  // debug
+                  //<< ", " << data_descriptor  // debug
+                  << endl;
+               cerr << " current line should be : "<< endl;
+               cerr << "<size_t> atoms " << endl;
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               cout //<< "node " << mynode << ", "
+                  << "declared_population : "
+                  << declared_population << endl;
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << endl;
+            cerr << "data_file.good() : " << data_file.good();
+            return EXIT_FAILURE;
+         }
+
+         // numberofspecies 'atom types'
+         size_t numberofspecies = 0;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            istringstream data_line_stream( data_line );
+            data_line_stream >> numberofspecies;
+
+            string data_descriptor1, data_descriptor2; 
+            data_line_stream >> data_descriptor1 >> data_descriptor2;
+            if ( data_descriptor1.empty() || data_descriptor2.empty() )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  << "text following number of species must be 'atom types'" 
+                  << endl;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use 
+            //       tolower?
+            // TODO: the following will only work with ASCII input, not
+            //       UTF. 
+            //       For Unicode support, use toLower from the ICU 
+            //       library.
+            transform( data_descriptor1.begin(), 
+                        data_descriptor1.end(), 
+                           data_descriptor1.begin(), 
+                           (int(*)(int))tolower );
+            transform( data_descriptor2.begin(), 
+                        data_descriptor2.end(), 
+                           data_descriptor2.begin(), 
+                           (int(*)(int))tolower );
+            
+            if (  (! numberofspecies )
+                    || ( data_descriptor1.compare("atom") ) 
+                    || ( data_descriptor2.compare("types") ) 
+               )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; " 
+                  << "numberofspecies, data_descriptor1, " // debug
+                  << " data_descriptor2 : " // debug
+                  << numberofspecies  // debug
+                  << ", " << data_descriptor1  // debug
+                  << ", " << data_descriptor2  // debug
+                  << endl;
+               cerr << " current line should be : "<< endl;
+               cerr << "<double> atom types"
+                  << endl;
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               cout //<< "node " << mynode << ", "
+                  << "numberofspecies : "
+                  << numberofspecies << endl;
+
+            if ( numberofspecies != Zcategories.size() )
+            {
+               cerr //<< "node " << mynode << ", "   
+                  << "The first line of the input file must begin with "
+                  << "a space separated list of atomic numbers having order "
+                 << " corresponding with the lammps species enumeration"
+                 << endl;
+               return EXIT_FAILURE;
+            }
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "   
+               << "Error reading position data file; data_line : "
+               << data_line << endl;
+            cerr << "data_file.good() : " << data_file.good();
+            return EXIT_FAILURE;
+         }
+
+         // double double 'xlo xhi'
+         double xlower, xupper;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            string data_descriptor1, data_descriptor2; 
+            istringstream data_line_stream( data_line );
+            data_line_stream >> xlower >> xupper 
+               >> data_descriptor1 >> data_descriptor2;
+
+            if ( data_descriptor1.empty() || data_descriptor2.empty() )
+            {
+               cerr << "Error reading position data file;" 
+                  << " current line should be : "<< endl;
+               cerr << "<double> <double> xlo xhi"
+                  << endl;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use tolower?
+            // TODO: the following will only work with ASCII input, not UTF. 
+            //       For Unicode support, use toLower from the ICU library.
+            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+                           data_descriptor1.begin(), (int(*)(int))tolower );
+                           //data_descriptor1.begin(), tolower );
+            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+                           data_descriptor2.begin(), (int(*)(int))tolower );
+                           //data_descriptor2.begin(), tolower );
+            
+            if (
+                  ( data_descriptor1.compare("xlo") ) 
+                  || ( data_descriptor2.compare("xhi") ) 
+               )
+            {
+               cerr //<< "node " << mynode << ", "   // debug
+                  << "Error reading position data file; " // debug
+                  << "xlower, xupper, data_descriptor1, " // debug
+                  << " data_descriptor2 : " // debug
+                  << xlower << ", " << xupper // debug
+                  << ", " << data_descriptor1 // debug
+                  << ", " << data_descriptor2 // debug
+                  << endl;
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               cout //<< "node " << mynode << ", "
+                  << "xlower, xupper : "
+                  << xlower << ", " << xupper << endl;
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << endl;
+            cerr << "data_file.good() : " << data_file.good();
+            return EXIT_FAILURE;
+         }
+
+         // double double 'ylo yhi'
+         double ylower, yupper;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            string data_descriptor1, data_descriptor2; 
+            istringstream data_line_stream( data_line );
+            data_line_stream >> ylower >> yupper 
+               >> data_descriptor1 >> data_descriptor2;
+
+            if ( data_descriptor1.empty() || data_descriptor2.empty() )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;" 
+                  << " current line should be : "<< endl;
+               cerr << "<double> <double> ylo yhi"
+                  << endl;
+               return EXIT_FAILURE;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use tolower?
+            // TODO: the following will only work with ASCII input, not UTF
+            //       For Unicode support, use toLower from the ICU library.
+            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+                           data_descriptor1.begin(), (int(*)(int))tolower);
+                           //data_descriptor1.begin(), tolower );
+            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+                           data_descriptor2.begin(), (int(*)(int))tolower);
+                           //data_descriptor2.begin(), tolower );
+            
+            if (  
+                    ( data_descriptor1.compare("ylo") ) 
+                    || ( data_descriptor2.compare("yhi") ) 
+               )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; " 
+                  << "ylower, yupper, data_descriptor1, "// debug
+                  << " data_descriptor2 : "// debug
+                  << ylower << ", " << yupper // debug
+                  << ", " << data_descriptor1 // debug
+                  << ", " << data_descriptor2 // debug
+                  << endl;
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               cout //<< "node " << mynode << ", "
+                  << "ylower, yupper : "
+                  << ylower << ", " << yupper << endl;
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << endl;
+            cerr << "data_file.good() : " << data_file.good();
+            return EXIT_FAILURE;
+         }
+
+         // double double 'zlo zhi'
+         double zlower, zupper;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            string data_descriptor1, data_descriptor2; 
+            istringstream data_line_stream( data_line );
+            data_line_stream >> zlower >> zupper 
+               >> data_descriptor1 >> data_descriptor2;
+
+            if ( data_descriptor1.empty() || data_descriptor2.empty() )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;" 
+                  << " current line should be : "<< endl;
+               cerr << "<double> <double> zlo zhi"
+                  << endl;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use tolower?
+            // TODO: the following will only work with ASCII input, not UTF. 
+            //       For Unicode support, use toLower from the ICU library.
+            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+                           data_descriptor1.begin(), (int(*)(int))tolower );
+                           //data_descriptor1.begin(), tolower );
+            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+                           data_descriptor2.begin(), (int(*)(int))tolower );
+                           //data_descriptor2.begin(), tolower );
+            
+            if (  
+                    ( data_descriptor1.compare("zlo") ) 
+                    || ( data_descriptor2.compare("zhi") ) 
+               )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; " 
+                  << "zlower, zupper, data_descriptor1, " // debug
+                  << " data_descriptor2 : " // debug
+                  << zlower << ", " << zupper  // debug
+                  << ", " << data_descriptor1  // debug
+                  << ", " << data_descriptor2  // debug
+                  << endl; 
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               cout //<< "node " << mynode << ", "
+                  << "zlower, zupper : "
+                  << zlower << ", " << zupper << endl;
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << endl;
+            cerr << "data_file.good() : " << data_file.good();
+            return EXIT_FAILURE;
+         }
+
+         // double double double xy xz yz // tilt factors for triclinic system
+         double tiltxy, tiltxz, tiltyz;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            string data_descriptor1, data_descriptor2, data_descriptor3; 
+            istringstream data_line_stream( data_line );
+            data_line_stream >> tiltxy >> tiltxz >> tiltyz
+               >> data_descriptor1 >> data_descriptor2 >> data_descriptor3;
+
+            if ( data_descriptor1.empty() 
+                  || data_descriptor2.empty() 
+                  || data_descriptor3.empty() 
+                  )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;" 
+                  << " current line should be : "<< endl
+                  << "<double> <double> <double> xy xz yz"
+                  << endl;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use tolower?
+            // TODO: the following will only work with ASCII input, not UTF. 
+            //       For Unicode support, use toLower from the ICU library.
+            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+                           data_descriptor1.begin(), (int(*)(int))tolower );
+                           //data_descriptor1.begin(), tolower );
+            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+                           data_descriptor2.begin(), (int(*)(int))tolower );
+                           //data_descriptor2.begin(), tolower );
+            transform( data_descriptor3.begin(), data_descriptor3.end(), 
+                           data_descriptor3.begin(), (int(*)(int))tolower );
+                           //data_descriptor3.begin(), tolower );
+            
+            if (  
+                    ( data_descriptor1.compare("xy") ) 
+                    || ( data_descriptor2.compare("xz") ) 
+                    || ( data_descriptor3.compare("yz") ) 
+               )
+            {
+               cerr //<< "node " << mynode << ", "
+                     << "Error reading position data file; " 
+                     << "tiltxy, tiltxz, tiltyz, data_descriptor1, "//debug
+                     << " data_descriptor2, data_descriptor3 : "// debug
+                  << tiltxy << ", " << tiltxz << ", " // debug
+                  << tiltyz << ", "// debug
+                     << data_descriptor1 // debug
+                     << ", " << data_descriptor2 // debug
+                     << ", " << data_descriptor3 // debug
+                     << endl
+                     << " current line should be : "<< endl
+                     << "<double> <double> <double> xy xz yz"
+                     << endl
+                     << "data_descriptor1.compar('xy') : " 
+                     <<  data_descriptor1.compare("xy")  
+                     << endl
+                     << "data_descriptor2.compar('xz') : " 
+                     <<  data_descriptor2.compare("xz")  
+                     << endl
+                     << "data_descriptor3.compar('yz') : " 
+                     <<  data_descriptor3.compare("yz")  
+                     << endl;
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               cout //<< "node " << mynode << ", "
+                     << "tiltxy, tiltxz, tiltyz: "
+                     << tiltxy
+                     << ", " << tiltxz
+                     << ", " << tiltyz << endl;
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << endl;
+            cerr << "data_file.good() : " << data_file.good();
+            return EXIT_FAILURE;
+         }
+
+         // check that boundary values are valid
+         if ( xupper <= xlower ) 
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; xhi <= xlo" << endl;
+            return EXIT_FAILURE;
+         }
+         if ( yupper <= ylower ) 
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; yhi <= ylo" << endl;
+            return EXIT_FAILURE;
+         }
+         if ( zupper <= zlower ) 
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; zhi <= zlo" << endl;
+            return EXIT_FAILURE;
+         }
+         if ( tiltxy != 0.0 || tiltxz != 0.0 || tiltyz != 0.0 )
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; xy, xz, yz, != 0.0" 
+               << endl
+               << "Cannot handle triclinic boundaries at the moment"
+               << endl;
+            return EXIT_FAILURE;
+         }
+
+         // Assign boundaries to output variables
+         xperiod = xupper - xlower;
+         yperiod = yupper - ylower;
+         zperiod = zupper - zlower;
+         xlo = xlower;
+         ylo = ylower;
+         zlo = zlower;
+         
+         if ( //mynode == rootnode && 
+               input_flag_debug )
+            cout << " From input file: (xperiod, xlower, xupper): ("
+               << xlower << ", " << xupper << ")"
+               << "(yperiod, ylower, yupper): ("
+               << ylower << ", " << yupper << ")"
+               << endl;
+
+         // 'Atoms'
+         
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            // std::string::npos : max size of a string
+            while( first == std::string::npos ) 
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            string section_name; 
+            istringstream data_line_stream( data_line );
+            data_line_stream >> section_name;
+
+            if ( section_name.empty() )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;" 
+                  << " current line should be : "<< endl
+                  << "Atoms"
+                  << endl;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use tolower?
+            // TODO: the following will only work with ASCII input, not UTF
+            //       For Unicode support, use toLower from the ICU library.
+            transform( section_name.begin(), section_name.end(), 
+                           section_name.begin(), (int(*)(int))tolower );
+            if ( section_name.compare("atoms") )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; " 
+                  << " section_name : " // debug
+                  << section_name //debug
+                  << endl
+                  << " current line should be : "<< endl
+                  << "Atoms"
+                  << endl;
+               return EXIT_FAILURE;
+            }
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << endl
+               << "data_file.good() : " << data_file.good();
+            return EXIT_FAILURE;
+         }
+
+
+         // read types and positions of individual atoms
+
+         size_t atom_number, atom_type; 
+         size_t number_of_read_atoms = 0;
+         double* qq;
+         std::list<size_t> atom_number_list;
+         std::list<size_t> atom_type_list;
+         //std::vector<size_t> Zlist;
+         std::vector<double*> qlist;
+
+         // The following assignments will be overwritten since positions
+         //  are ensured to be lower than (xupper, yupper, zupper).
+         double xmin, ymin, zmin;
+         xmin = xupper;
+         ymin = yupper;
+         zmin = zupper;
+
+         while ( number_of_read_atoms < declared_population )
+         {
+            if( getline( data_file, data_line) && data_file.good() )
+            {
+               // skip lines containing only whitespace
+               size_t first = data_line.find_first_not_of(" \t" );
+               while( first == std::string::npos)//npos : max size of a string
+               {
+                  getline( data_file, data_line);
+                  first = data_line.find_first_not_of(" \t" );
+               } 
+
+               qq = new double[3];
+               // grab data from the current line
+               istringstream data_line_stream( data_line );
+               data_line_stream >> atom_number >> atom_type;
+               data_line_stream >> qq[0] >> qq[1] >> qq[2] ;
+
+               // check that the data is valid
+               if ( atom_number > declared_population
+                     || atom_type > numberofspecies
+                     || atom_type <= 0
+                     || qq[0] > xupper || qq[0] < xlower
+                     || qq[1] > yupper || qq[1] < ylower
+                     || qq[2] > zupper || qq[2] < zlower
+                  )
+               {
+                  cerr //<< "node " << mynode << ", "
+                     << "Error reading position data file;" 
+                     << " on line with atom number : " << atom_number << endl
+                     << " Check that atom number, type, and position are "
+                     << "within appropriate boundaries." << endl;
+                  return EXIT_FAILURE;
+                  // TODO: clean allocated lists before returning failure
+               }
+               
+               // Determine minimum positions so that all they may be 
+               //  shifted to be all positive.
+               if ( qq[0] < xmin ) xmin = qq[0];
+               if ( qq[1] < ymin ) ymin = qq[1];
+               if ( qq[2] < zmin ) zmin = qq[2];
+
+               // TODO: assign data to qlist, atom_number_list
+               qlist.push_back(qq);
+               atom_number_list.push_back(atom_number);
+               atom_type_list.push_back(atom_type );
+               
+               number_of_read_atoms++;
+            }
+            else
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;" 
+                  << " atoms read : " 
+                  << number_of_read_atoms  
+                  << ", declared population : "
+                  << declared_population
+                  << endl
+                  << "data_file.eof() : " << data_file.eof() << endl
+                  << "data_file.good() : " << data_file.good() << endl
+                  << "data_file.fail() : " << data_file.fail() << endl
+                  << "data_file.bad() : " << data_file.bad() << endl;
+               return EXIT_FAILURE;
+            }
+         }
+         
+         // Ensure that atom types (1 2 ...) match numberofspecies, and 
+         //  that all atoms have unique indices (atom_number_list).
+
+         std::list<size_t> atom_type_list_uniqued( atom_type_list );
+         atom_type_list_uniqued.sort();
+         atom_type_list_uniqued.unique();
+
+         std::list<size_t> atom_number_list_uniqued( atom_number_list );
+         atom_number_list_uniqued.sort();
+         atom_number_list_uniqued.unique();
+
+         ////////////////////////////////////////////////////////////////
+         // shift all atoms so that all coordinates are positive
+         ////////////////////////////////////////////////////////////////
+         for ( size_t i=0; i < qlist.size() ; ++i )
+         {
+            qlist[i][0] = qlist[i][0] - xmin;
+            qlist[i][1] = qlist[i][1] - ymin;
+            qlist[i][2] = qlist[i][2] - zmin;
+         }
+
+         // Sequential pointers in qlist[] are contiguous, but the qq[] 
+         //  arrays they point to are not contiguous to each other.
+         // Here we transfer values from the qq[] arrays to a contiguous 
+         //  array so that MPI may properly broadcast them between nodes 
+         //  with ease.
+         
+         //std::vector<double*> qlist_contig;   // not needed
+         size_t common_size = qlist.size();
+
+
+         if ( 
+               declared_population == common_size 
+               && atom_type_list_uniqued.size() == numberofspecies 
+               && atom_number_list_uniqued.size() == common_size 
+            )
+         {
+            total_population = common_size;
+
+            std::list<size_t>::iterator 
+               atom_type_list_iterator = atom_type_list.begin();
+
+            qq_contig = new double[ 3 * common_size ]; // 3-D
+            Z_contig = new unsigned int[ total_population ];
+
+            for (unsigned int i=0; i < total_population; i++)
+            {
+               qq_contig[ 3 * i ]       = qlist[i][0];
+               qq_contig[ 3 * i + 1 ]   = qlist[i][1];
+               qq_contig[ 3 * i + 2 ]   = qlist[i][2];
+
+               delete[] qlist[i];// TODO: is this appropriate?
+               qlist[i] = NULL;  // TODO: is this necessary?
+
+               Z_contig[ i ] = Zcategories[ (*atom_type_list_iterator) -1];
+               atom_type_list_iterator++;
+            }
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position file" << endl
+               << "   declared_population : " << declared_population 
+               << endl
+               << "   positions read : " << qlist.size() << endl
+               << "   unique atom ID numbers : " 
+               << atom_number_list_uniqued.size() << endl;
+            for ( size_t i=0; i<qlist.size(); i++) 
+            {
+               delete[] qlist[i];
+               qlist.pop_back();
+            }
+            return EXIT_FAILURE;
+         }
+
+         ///////////////////////////////////////////////////////////////
+         // clean up
+         for ( size_t i = 0; i < qlist.size(); i++)
+         {
+            //delete[] qlist.back(); // taken care of in previous loops
+            //                      
+            qlist.pop_back();
+            // qq to be dealt with above after copying to qq_contig
+            // qlist_contig.pop_back();
+            // qq_contig to be deleted by calling function
+         }
+         for ( size_t i = 0; i < atom_type_list.size(); i++)
+            atom_type_list.pop_back();
+         for ( size_t i = 0; i < atom_number_list.size(); i++) 
+            atom_number_list.pop_back(); 
+         // end clean up
+         ///////////////////////////////////////////////////////////////
+      }
+      else 
+      {
+         cerr //<< "node " << mynode << ", "
+            << "Error opening position file" << endl;
+         data_file.close();
+         return EXIT_FAILURE;
+      }
+
+      data_file.close();
+   } // end of the rootnode block
+ 
+   // Broadcast results to the remaining nodes
+   //MPI_Bcast( &total_population, 1, MPI_UNSIGNED, rootnode, comm);
+
+   //if ( mynode != rootnode )
+   //{
+   //   qq_contig = new double[ 3 * total_population ];
+   //   Z_contig = new unsigned int[ total_population ];
+   //}
+
+   //MPI_Bcast( qq_contig, 3 * total_population, MPI_DOUBLE, rootnode, comm);
+
+   //MPI_Bcast( Z_contig, total_population, MPI_UNSIGNED, rootnode, comm);
+
+   return EXIT_SUCCESS;
+}
+
 
 
 
@@ -2717,6 +3486,324 @@ int TEM_NS::read_position_xyz_file(
 }
 
 
+int TEM_NS::read_position_xyz_file_nonmpi(
+      const string& filename, // only valid on root node
+      double*& qq_contig,
+      unsigned int*& Z_contig,
+      unsigned int& total_population,
+      double& xlo, double& ylo, double& zlo,
+      double& xperiod, double& yperiod, double& zperiod,
+      const unsigned int& input_flag_debug
+      )
+{
+   // Currently elements 1 through 103 are modeled.
+
+   if ( 1 )//mynode == rootnode ) 
+   {
+      ifstream data_file( filename.c_str() );
+      if ( data_file.is_open() )
+      {
+         string data_line;
+         //getline(data_file, data_line);
+
+         size_t declared_population;
+         
+
+         ////////////////////////////////////////////////////////////////
+         // First line of an xyz file must begin with the number of atoms
+         ////////////////////////////////////////////////////////////////
+         size_t decleared_population = 0;
+         if ( getline( data_file, data_line) && data_file.good() )
+         {
+            istringstream data_line_stream( data_line );
+            data_line_stream >> declared_population;
+            
+            if ( !  declared_population )
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  << "declared_population : "
+                  << declared_population << endl;
+               cerr << " current line should be : " << endl;
+               cerr << "<number of atoms>  " << endl;
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               cout //<< "node " << mynode << ", "
+                  << "declared_population : "
+                  << declared_population << endl;
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << endl;
+            cerr << "data_file.good() : " << data_file.good();
+            return EXIT_FAILURE;
+         }
+
+         ////////////////////////////////////////////////////////////////
+         // The second line should begin with : 
+         //    <xperiod> <yperiod> <zperiod>
+         ////////////////////////////////////////////////////////////////
+         if ( getline( data_file, data_line) && data_file.good() )
+         {
+            double xperiod_local, yperiod_local, zperiod_local;
+            istringstream data_line_stream( data_line );
+            data_line_stream >> xperiod_local 
+               >> yperiod_local >> zperiod_local;
+
+            if ( xperiod_local > 0.0 
+                  && yperiod_local > 0.0 
+                  && zperiod_local > 0.0 )
+            {
+               xperiod = xperiod_local;
+               yperiod = yperiod_local;
+               zperiod = zperiod_local;
+            }
+            else
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading xyz position data file;"
+                  << " second line should begin with : " << endl;
+               cerr << "<xperiod> <yperiod> <zperiod>" << endl;
+               cerr << "data_line : " << endl << data_line << endl;
+               cerr << "xperiod_local, yperiod_local, zperiod_local : " 
+                  << xperiod_local << ", "
+                  << yperiod_local << ", "
+                  << zperiod_local << endl;
+               return EXIT_FAILURE;
+            }
+
+         }
+         else
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << endl;
+            cerr << "data_file.good() : " << data_file.good();
+            return EXIT_FAILURE;
+         }
+
+         ////////////////////////////////////////////////////////////////
+         // Read declared_population lines of the file to populate 
+         //    positions and Zs
+         ////////////////////////////////////////////////////////////////
+         size_t atom_type;
+         size_t number_of_read_atoms = 0;
+         double* qq;
+         std::vector<size_t> atom_type_list;
+         std::vector<double*> qlist;
+
+         double xmin = 0.0; double xmax = 0.0;
+         double ymin = 0.0; double ymax = 0.0;
+         double zmin = 0.0; double zmax = 0.0;
+
+         if ( input_flag_debug )
+            cout << "declared population : " 
+               << declared_population << endl;
+
+         while ( number_of_read_atoms < declared_population )
+         {
+            if ( getline( data_file, data_line) && data_file.good() )
+            {
+               qq = new double[3];
+               string element_name;
+               istringstream data_line_stream( data_line );
+
+               // grab element abbreviation from the current line
+               data_line_stream >> element_name;
+
+               // transform the read element name to lower case
+               transform( element_name.begin(), element_name.end(),
+                     element_name.begin(), (int(*)(int))tolower );
+
+               // Translate the element name to atomic number Z
+               atom_type = atom_element_abbrev_to_Z( element_name );
+               if ( atom_type < 1 || atom_type > 103 )
+               {
+                  cerr //<< "node " << mynode << ", "
+                     << "Error reading position data file; "
+                     << "atom " << number_of_read_atoms << ", "
+                     << "element " << element_name << " invalid; "
+                     << "data_line : " << data_line << endl;
+                   // clean up before exiting
+                  for ( size_t i=0; i < qlist.size(); i++) 
+                     qlist.pop_back();
+                  for ( size_t i=0; i < atom_type_list.size(); i++)
+                     atom_type_list.pop_back();
+                  return EXIT_FAILURE;
+               }
+
+               data_line_stream >> qq[0] >> qq[1] >> qq[2] ;
+
+               // keep track of atomic position maximums and minimums for 
+               //  comparison to xperiod, yperiod, and zperiod
+               if ( qq[0] < xmin ) xmin = qq[0];
+               if ( qq[0] > xmax ) xmax = qq[0];
+               if ( qq[1] < ymin ) ymin = qq[1];
+               if ( qq[1] > ymax ) ymax = qq[1];
+               if ( qq[2] < zmin ) zmin = qq[2];
+               if ( qq[2] > zmax ) zmax = qq[2];
+
+               qlist.push_back( qq );
+               atom_type_list.push_back( atom_type );
+               
+               number_of_read_atoms++;
+
+            }
+            else
+            {
+               cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  << "atoms read : " << number_of_read_atoms
+                  << ", declared population : " << declared_population << endl
+                  << ", data_file.good() : " << data_file.good()
+                  << ", data_file.eof() : " << data_file.eof()
+                  << ", data_file.fail() : " << data_file.fail()
+                  << ", data_file.bad() : " << data_file.bad();
+                // clean up before exiting
+               for ( size_t i=0; i < qlist.size(); i++) 
+                  qlist.pop_back();
+               for ( size_t i=0; i < atom_type_list.size(); i++)
+                  atom_type_list.pop_back();
+               return EXIT_FAILURE;
+            }
+
+         }
+         if ( input_flag_debug )
+            cout << "number of atoms read: "
+               << number_of_read_atoms << endl;
+         
+         // TODO : check that xmax - xmin <= xperiod, and similary for y & z
+         if ( xmax - xmin > xperiod 
+               || ymax - ymin > yperiod 
+               || zmax - zmin > zperiod )
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file;"
+               << " positions exceed period "
+               << endl 
+               << "xmax, xmin, xperiod : " 
+               << xmax << ", " << xmin << ", " << xperiod << endl
+               << "ymax, ymin, yperiod : " 
+               << ymax << ", " << ymin << ", " << yperiod << endl
+               << "zmax, zmin, zperiod : " 
+               << zmax << ", " << zmin << ", " << zperiod << endl;
+
+            // clean up before exiting
+            for ( size_t i=0; i < qlist.size(); i++) 
+               qlist.pop_back();
+            for ( size_t i=0; i < atom_type_list.size(); i++)
+               atom_type_list.pop_back();
+            return EXIT_FAILURE;
+         }
+
+         // Calculate xlo, ylo, zlo from xmin, ymin, zmin and xperiod,
+         //  yperiod, zperiod
+         //xlo = xmin - ( xperiod - (xmax - xmin) )/2.0;
+         //ylo = ymin - ( yperiod - (ymax - ymin) )/2.0;
+         //zlo = zmin - ( zperiod - (zmax - zmin) )/2.0;
+          
+         // Note: The above causes the stem probe to be misplaced.
+         // TODO: shift everything so that the lower left corner is (0,0,0)
+
+         xlo = 0.0;
+         ylo = 0.0;
+         zlo = 0.0;
+         //if ( input_flag_debug )
+         //   cout << "node " << mynode << ", "
+         //      << "ymin, yperiod : "
+         //      << ylo  << ", " << yperiod << endl
+         //      << "     " << mynode << ", "
+         //      << "xmin, xperiod : "
+         //      << xlo  << ", " << xperiod << endl;
+
+         ////////////////////////////////////////////////////////////////
+         // shift all atoms so that all coordinates are positive
+         ////////////////////////////////////////////////////////////////
+         for ( size_t i=0; i < qlist.size() ; ++i )
+         {
+            qlist[i][0] = qlist[i][0] - xmin;
+            qlist[i][1] = qlist[i][1] - ymin;
+            qlist[i][2] = qlist[i][2] - zmin;
+         }
+
+         ////////////////////////////////////////////////////////////////
+         // copy atom positions and atomic number to qq_contig & Z_contig
+         ////////////////////////////////////////////////////////////////
+         if ( 
+               qlist.size() != declared_population 
+               ||
+               qlist.size() != atom_type_list.size()
+               )
+         {
+            cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; "
+               << "number_of_read_atoms " << number_of_read_atoms 
+              << ",  declared population " << declared_population 
+              << ",  qlist.size() " << qlist.size()
+              << ",  atom_type_list.size() " << atom_type_list.size()
+              << endl;
+            for ( size_t i=0; i < qlist.size(); i++) 
+               qlist.pop_back();
+            for ( size_t i=0; i < atom_type_list.size(); i++)
+               atom_type_list.pop_back();
+            return EXIT_FAILURE;
+         }
+
+         total_population = atom_type_list.size();
+
+         qq_contig = new double[ 3 * qlist.size()]; // 3-D
+         Z_contig = new unsigned int[ qlist.size() ];
+         for ( size_t i=0; i < qlist.size() ; ++i )
+         {
+            qq_contig[ 3 * i ]      = qlist[i][0];
+            qq_contig[ 3 * i + 1 ]  = qlist[i][1];
+            qq_contig[ 3 * i + 2 ]  = qlist[i][2];
+
+            delete[] qlist[i];// TODO : is this appropriate?
+            qlist[i] = NULL;  // TODO : is this necessary?
+
+            Z_contig[ i ] = atom_type_list[i];
+         }
+
+         ////////////////////////////////////////////////////////////////
+         // clean up
+         ////////////////////////////////////////////////////////////////
+         for ( size_t i=0; i < qlist.size(); i++) 
+            qlist.pop_back();
+         for ( size_t i=0; i < atom_type_list.size(); i++)
+            atom_type_list.pop_back();
+         ////////////////////////////////////////////////////////////////
+      }
+      else
+      {
+         cerr //<< "node " << mynode << ", "
+            << "Error opening position file: " << filename << endl;
+         data_file.close();
+         return EXIT_FAILURE;
+      }
+
+      data_file.close();
+   }  // end of the rootnode block
+
+   // Broadcast results to the remaining nodes
+   //MPI_Bcast( &total_population, 1, MPI_UNSIGNED, rootnode, comm);
+
+   //if ( mynode != rootnode )
+   //{
+   //   qq_contig = new double[ 3 * total_population ];
+   //   Z_contig = new unsigned int[ total_population ];
+   //}
+
+   //MPI_Bcast( qq_contig, 3 * total_population, MPI_DOUBLE, rootnode, comm);
+
+   //MPI_Bcast( Z_contig, total_population, MPI_UNSIGNED, rootnode, comm);
+
+   return EXIT_SUCCESS;
+}
+
 
 
 size_t TEM_NS::atom_element_abbrev_to_Z( const string& element_name)
@@ -2935,5 +4022,119 @@ size_t TEM_NS::atom_element_abbrev_to_Z( const string& element_name)
    //  atomic number 0 .
    return 0;
 }
+
+string TEM_NS::atom_element_Z_to_abbrev( const size_t& element_Z)
+{
+   // Precondition : 
+   //    - element_Z is an atomic number between 1 and 103
+   if ( element_Z == 1 ) return "H";
+   if ( element_Z == 2 ) return "He";
+   if ( element_Z == 3 ) return "Li";
+   if ( element_Z == 4 ) return "Be";
+   if ( element_Z == 5 ) return "B";
+   if ( element_Z == 6 ) return "C";
+   if ( element_Z == 7 ) return "N";
+   if ( element_Z == 8 ) return "O";
+   if ( element_Z == 9 ) return "F";
+   if ( element_Z == 10 ) return "Ne";
+   if ( element_Z == 11 ) return "Na";
+   if ( element_Z == 12 ) return "Mg";
+   if ( element_Z == 13 ) return "Al";
+   if ( element_Z == 14 ) return "Si";
+   if ( element_Z == 15 ) return "P";
+   if ( element_Z == 16 ) return "S";
+   if ( element_Z == 17 ) return "Cl";
+   if ( element_Z == 18 ) return "Ar";
+   if ( element_Z == 19 ) return "K";
+   if ( element_Z == 20 ) return "Ca";
+   if ( element_Z == 21 ) return "Sc";
+   if ( element_Z == 22 ) return "Ti";
+   if ( element_Z == 23 ) return "V";
+   if ( element_Z == 24 ) return "Cr";
+   if ( element_Z == 25 ) return "Mn";
+   if ( element_Z == 26 ) return "Fe";
+   if ( element_Z == 27 ) return "Co";
+   if ( element_Z == 28 ) return "Ni";
+   if ( element_Z == 29 ) return "Cu";
+   if ( element_Z == 30 ) return "Zn";
+   if ( element_Z == 31 ) return "Ga";
+   if ( element_Z == 32 ) return "Ge";
+   if ( element_Z == 33 ) return "As";
+   if ( element_Z == 34 ) return "Se";
+   if ( element_Z == 35 ) return "Br";
+   if ( element_Z == 36 ) return "Kr";
+   if ( element_Z == 37 ) return "Rb";
+   if ( element_Z == 38 ) return "Sr";
+   if ( element_Z == 39 ) return "Y";
+   if ( element_Z == 40 ) return "Zr";
+   if ( element_Z == 41 ) return "Nb";
+   if ( element_Z == 42 ) return "Mo";
+   if ( element_Z == 43 ) return "Tc";
+   if ( element_Z == 44 ) return "Ru";
+   if ( element_Z == 45 ) return "Rh";
+   if ( element_Z == 46 ) return "Pd";
+   if ( element_Z == 47 ) return "Zg";
+   if ( element_Z == 48 ) return "Cd";
+   if ( element_Z == 49 ) return "In";
+   if ( element_Z == 50 ) return "Sn";
+   if ( element_Z == 51 ) return "Sb";
+   if ( element_Z == 52 ) return "Te";
+   if ( element_Z == 53 ) return "I";
+   if ( element_Z == 54 ) return "Xe";
+   if ( element_Z == 55 ) return "Cs";
+   if ( element_Z == 56 ) return "Ba";
+   if ( element_Z == 57 ) return "La";
+   if ( element_Z == 58 ) return "Ce";
+   if ( element_Z == 59 ) return "Pr";
+   if ( element_Z == 60 ) return "Nd";
+   if ( element_Z == 61 ) return "Pm";
+   if ( element_Z == 62 ) return "Sm";
+   if ( element_Z == 63 ) return "Eu";
+   if ( element_Z == 64 ) return "Gd";
+   if ( element_Z == 65 ) return "Tb";
+   if ( element_Z == 66 ) return "Dy";
+   if ( element_Z == 67 ) return "Ho";
+   if ( element_Z == 68 ) return "Er";
+   if ( element_Z == 69 ) return "Tm";
+   if ( element_Z == 70 ) return "Yb";
+   if ( element_Z == 71 ) return "Lu";
+   if ( element_Z == 72 ) return "Hf";
+   if ( element_Z == 73 ) return "Ta";
+   if ( element_Z == 74 ) return "W";
+   if ( element_Z == 75 ) return "Re";
+   if ( element_Z == 76 ) return "Os";
+   if ( element_Z == 77 ) return "Ir";
+   if ( element_Z == 78 ) return "Pt";
+   if ( element_Z == 79 ) return "Au";
+   if ( element_Z == 80 ) return "Hg";
+   if ( element_Z == 81 ) return "Tl";
+   if ( element_Z == 82 ) return "Pb";
+   if ( element_Z == 83 ) return "Bi";
+   if ( element_Z == 84 ) return "Po";
+   if ( element_Z == 85 ) return "At";
+   if ( element_Z == 86 ) return "Rn";
+   if ( element_Z == 87 ) return "Fr";
+   if ( element_Z == 88 ) return "Ra";
+   if ( element_Z == 89 ) return "Ac";
+   if ( element_Z == 90 ) return "Th";
+   if ( element_Z == 91 ) return "Pa";
+   if ( element_Z == 92 ) return "U";
+   if ( element_Z == 93 ) return "Np";
+   if ( element_Z == 94 ) return "Pu";
+   if ( element_Z == 95 ) return "Am";
+   if ( element_Z == 96 ) return "Cm";
+   if ( element_Z == 97 ) return "Bk";
+   if ( element_Z == 98 ) return "Cf";
+   if ( element_Z == 99 ) return "Es";
+   if ( element_Z == 100 ) return "Fm";
+   if ( element_Z == 101 ) return "Md";
+   if ( element_Z == 102 ) return "No";
+   if ( element_Z == 103 ) return "Lr";
+   
+   // If none of the modeled elements matched, return the invalid
+   //  atomic number 0 .
+   return 0;
+}
+
 
 #endif
