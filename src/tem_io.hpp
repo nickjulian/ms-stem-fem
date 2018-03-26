@@ -56,7 +56,7 @@ namespace TEM_NS
    struct input_flags
    {
       unsigned int m;// = 0;// microscope parameters
-      //unsigned int pf = 0;// simulation parameter file given
+      unsigned int pf = 0;// simulation parameter file given
       unsigned int o;// = 0;// output file name prefix
       unsigned int a;// = 0;// atom position and species input file
       unsigned int defocus;// = 0;   // defocus
@@ -89,6 +89,43 @@ namespace TEM_NS
       unsigned int ny;// = 0;
       unsigned int microscope_voltage;// = 0;
       unsigned int debug;// = 0;
+      unsigned int complex_realspace_sum;// = 0;
+      input_flags()  // constructor
+      {
+         m = 0;
+         o = 0;
+         a = 0;
+         defocus = 0;
+         spread = 0;
+         adfstem_corrected = 0;
+         adfstem_uncorrected = 0;
+         bfctem_corrected = 0;
+         bfctem_uncorrected = 0;
+         fem = 0;
+         gt17 = 0;
+         d1 = 0;
+         d2 = 0;
+         d3 = 0;
+         d4 = 0;
+         scherzer_defocus = 0;
+         scherzer_alphamax = 0;
+         scherzer_cs3 = 0;
+         cs3 = 0;
+         cs5 = 0;
+         alpha_max = 0;
+         aberration_correction = 0;
+         raster_spacing = 0;
+         pap_tif = 0;
+         dupe = 0;
+         image_output = 0;
+         netcdf_images = 0;
+         netcdf_variance = 0;
+         nx = 0;
+         ny = 0;
+         microscope_voltage = 0;
+         debug = 0;
+         complex_realspace_sum = 0;
+      }
    };
 
    int read_parameter_file(
@@ -199,6 +236,40 @@ namespace TEM_NS
 //         double& condenser_illumination_angle,
 //         double& alphamax
 //         );
+
+   unsigned int read_cmdline_options( 
+         const std::vector<string>& args,
+         string& model_file,
+         input_flags& flags,
+         string& output_prefix,
+         ptrdiff_t& Nx,
+         ptrdiff_t& Ny,
+         double& VV,
+         double& defocus,
+         double& alpha_max,
+         double& defocus_spread,
+         double& condenser_illumination_angle,
+         double& Cs3,
+         double& Cs5,
+         double& raster_spacing,
+         double& azimuthal_binning_size_factor,
+         double& minSliceThickness,
+         unsigned int& dupe_x,
+         unsigned int& dupe_y,
+         unsigned int& dupe_z,
+         const int& mynode,
+         const int& rootnode,
+         MPI_Comm comm
+         );
+
+   unsigned int check_runtime_flags(
+         const input_flags& flags,
+         const string& args0,
+         const int& mynode,
+         const int& rootnode,
+         MPI_Comm comm
+         );
+
 
    size_t atom_element_abbrev_to_Z( const string& element_name);
    string atom_element_Z_to_abbrev( const size_t& element_Z);

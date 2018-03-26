@@ -48,6 +48,7 @@
 #include "probe_wavefunction.hpp"         // convergent probe wavefunction
 #include "variance.hpp"
 #include "io_netcdf.hpp"
+#include "tem_io.hpp"
 
 #ifndef PI
 #define PI 3.14159265369
@@ -62,19 +63,7 @@ namespace TEM_NS
 {
 
 int adfstem(
-      const unsigned int& input_flag_fem,
-      const unsigned int& input_flag_gt17,
-      const unsigned int& input_flag_d1,  // default TRUE
-      const unsigned int& input_flag_d2,
-      const unsigned int& input_flag_d3,
-      const unsigned int& input_flag_d4,
-      const unsigned int& input_flag_rva,
-      const unsigned int& input_flag_aberration_correction,
-      const unsigned int& input_flag_complex_realspace_sum,
-      const unsigned int& input_flag_image_output,
-      const unsigned int& input_flag_netcdf_images,
-      const unsigned int& input_flag_netcdf_variance,
-      const unsigned int& input_flag_debug,
+      const input_flags& flags,
       // parameters taken from simulation of system evolution:
       //const std::list< slice* >& slicesOfScatterers,
       std::list< slice* >& slicesOfScatterers,

@@ -35,19 +35,7 @@
 
 
 int TEM_NS::adfstem(
-      const unsigned int& input_flag_fem,
-      const unsigned int& input_flag_gt17,
-      const unsigned int& input_flag_d1,  // default TRUE
-      const unsigned int& input_flag_d2,
-      const unsigned int& input_flag_d3,
-      const unsigned int& input_flag_d4,
-      const unsigned int& input_flag_rva,
-      const unsigned int& input_flag_aberration_correction,
-      const unsigned int& input_flag_complex_realspace_sum,
-      const unsigned int& input_flag_image_output,
-      const unsigned int& input_flag_netcdf_images,
-      const unsigned int& input_flag_netcdf_variance,
-      const unsigned int& input_flag_debug,
+      const input_flags& flags,
       // parameters taken from simulation of system evolution:
       //const std::list< slice* >& slicesOfScatterers,
       std::list< slice* >& slicesOfScatterers,
@@ -108,7 +96,7 @@ int TEM_NS::adfstem(
 
    double diffraction_scale_factor;
 
-   //if ( input_flag_image_output || input_flag_netcdf_output ) 
+   //if ( flags.image_output || flags.netcdf_output ) 
    //{
    // intialize tif output class
    //writeImage imageWriter;  // not used by this function
@@ -339,10 +327,10 @@ int TEM_NS::adfstem(
 
    ////////////////////////////////////////////////////////////////////
    // evaluate the probe values in reciprocal space
-   if ( input_flag_aberration_correction )
+   if ( flags.aberration_correction )
    {
       if ( mynode == rootnode 
-            && input_flag_debug )
+            && flags.debug )
          cout 
             << "calling"
             << " probe_wavefunction_correctedtoCs5_unnormalized"
@@ -367,13 +355,13 @@ int TEM_NS::adfstem(
             large_probe
             );
 
-      if ( input_flag_debug )
+      if ( flags.debug )
          cout << "Evaluated probe ..." << endl;// debug
    }
    else
    {
       if ( mynode == rootnode 
-            && input_flag_debug )
+            && flags.debug )
          cout << "calling"
             << " probe_wavefunction_uncorrected_unnormalized"
             << endl << "   Cs3 : " << Cs3
@@ -396,7 +384,7 @@ int TEM_NS::adfstem(
             large_probe
             );
 
-      if ( input_flag_debug )
+      if ( flags.debug )
          cout << "Evaluated probe ..." << endl;// debug
    }
 
@@ -413,7 +401,7 @@ int TEM_NS::adfstem(
    ///////////////////////////////////////////////////////////////////
    // Periodic boundary conditions ensure that the probe norm
    //  is invariant with probe position.
-   //if ( mynode == rootnode && input_flag_debug )
+   //if ( mynode == rootnode && flags.debug )
    //   cout << "Calculating probe norm in reciprocal space ... " << endl;
 
    //double Ap; Ap = 0.0; // probe normalization factor
@@ -424,7 +412,7 @@ int TEM_NS::adfstem(
    //      comm
    //      );
 
-   //if ( mynode == rootnode && input_flag_debug )
+   //if ( mynode == rootnode && flags.debug )
    //   cout << "Normalizing probe ..." << endl;
 
    //for (ptrdiff_t i=0; i < local_alloc_size_fftw; ++i)
@@ -438,7 +426,7 @@ int TEM_NS::adfstem(
 
    ///////////////////////////////////////////////////////////////////
    // Transform the split probe into realspace
-   if ( mynode == rootnode && input_flag_debug )
+   if ( mynode == rootnode && flags.debug )
       cout << "Transforming probe to realspace ..." << endl;
 
    fftw_execute( pb_c2c_large_probe_split );
@@ -464,7 +452,7 @@ int TEM_NS::adfstem(
    // TODO: the following is just a test and should be deleted
    //  Also try realspace limiting the propagator and 
    //   transmission functions.
-   //if ( mynode == rootnode && input_flag_debug )
+   //if ( mynode == rootnode && flags.debug )
    //   cout << "Cutting probe in realspace, centering at" 
    //      << "  (xx_local[0], yy[0]): ("
    //         << xx_local[0] << ", " << yy[0] << ")" << endl;
@@ -543,7 +531,7 @@ int TEM_NS::adfstem(
       large_probe_split_im[i] = large_probe[i][1] / sqrtNxNy;
    }
 
-   if ( mynode == rootnode && input_flag_debug )
+   if ( mynode == rootnode && flags.debug )
       cout << "Allgathering enlarged probe ..." << endl;
 
    double* large_probe_joined_re;
@@ -629,7 +617,7 @@ int TEM_NS::adfstem(
    ///////////////////////////////////////////////////////////////////
    // Periodic boundary conditions ensure that the probe norm
    //  is invariant with probe position.
-   if ( mynode == rootnode && input_flag_debug )
+   if ( mynode == rootnode && flags.debug )
       cout << "Calculating probe norm in real space ... " << endl;
 
    double Ap; Ap = 0.0; // probe normalization factor
@@ -641,7 +629,7 @@ int TEM_NS::adfstem(
          stem_probe_joined_im,
          comm
          );
-   if (mynode == rootnode && input_flag_debug ) // debug
+   if (mynode == rootnode && flags.debug ) // debug
       cout << "Probe norm in real space : " << Ap << endl;//debug
    for ( ptrdiff_t i=0; i< Nx * Ny; ++i)
    {
@@ -730,7 +718,7 @@ int TEM_NS::adfstem(
    double delta_k;   // length of aziumthal integration subintervals
    std::vector<double> binning_boundaries;
 
-   if ( input_flag_fem )
+   if ( flags.fem )
    {
       // Initalize binning_boundaries for azimuthal integration.
       //
@@ -758,8 +746,8 @@ int TEM_NS::adfstem(
 
       // Allocate variables for the various FTEM modes
 
-      if ( input_flag_d1 || input_flag_d2  || input_flag_d3 
-            || input_flag_d4 || input_flag_gt17 || input_flag_rva )
+      if ( flags.d1 || flags.d2  || flags.d3 
+            || flags.d4 || flags.gt17 || flags.rva )
       {
          bin_counts_local = new int[ number_of_bins ];
          //bin_counts_sqr_local = new int[ number_of_bins ];
@@ -786,7 +774,7 @@ int TEM_NS::adfstem(
          }
       }
 
-      if ( input_flag_d1 || input_flag_d2 )
+      if ( flags.d1 || flags.d2 )
       {
          diffracted_wave_mag_radial_intensity_local
             = new double[ number_of_bins ];
@@ -798,7 +786,7 @@ int TEM_NS::adfstem(
             diffracted_wave_mag_radial_intensity_local[ii] = 0.0;
          }
 
-         if ( input_flag_d2 )
+         if ( flags.d2 )
          {
             diffracted_wave_mag_sqr
                = new double[local_alloc_size_fftw];
@@ -828,7 +816,7 @@ int TEM_NS::adfstem(
                //bin_counts_mag_aggregated[ii] = 0;
             }
 
-            if ( input_flag_d1 )
+            if ( flags.d1 )
             {
                ftem_d1 = new double[ number_of_bins ];
                diffracted_wave_mag_radial_intensity_total_sum
@@ -843,7 +831,7 @@ int TEM_NS::adfstem(
                      = 0.0;
                }
             }
-            if ( input_flag_d2 )
+            if ( flags.d2 )
             {
                diffracted_wave_mag_sqr_radial_intensity_total
                   = new double[ number_of_bins ];
@@ -858,10 +846,10 @@ int TEM_NS::adfstem(
                }
             }
          }
-      } // ( input_flag_d1 || input_flag_d2 )
+      } // ( flags.d1 || flags.d2 )
  
-      if ( input_flag_gt17 || input_flag_d3 || input_flag_d4 
-            || input_flag_rva ) 
+      if ( flags.gt17 || flags.d3 || flags.d4 
+            || flags.rva ) 
       {  // accumulate I(\vec{k}) and I^{2}(\vec{k})
 
          // used for 2-D variance image and GT17 & d3 & d4
@@ -869,7 +857,7 @@ int TEM_NS::adfstem(
             = new double[ local_alloc_size_fftw ];
          diffracted_wave_mag_sum_sqr
             = new double[ local_alloc_size_fftw ];
-         if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+         if ( flags.gt17 || flags.d3 || flags.d4) 
          {
             diffracted_wave_mag_sqr_sum 
                = new double[ local_alloc_size_fftw ];
@@ -878,15 +866,15 @@ int TEM_NS::adfstem(
          //diffracted_wave_mag_sqr_avg
          //   = new double[ local_alloc_size_fftw ];
 
-         //if ( input_flag_gt17 || input_flag_d4 )
+         //if ( flags.gt17 || flags.d4 )
          //   diffracted_wave_mag_avg_sqr
          //      = new double[ local_alloc_size_fftw ];
 
-         //if ( input_flag_d3 )
+         //if ( flags.d3 )
          //   diffracted_wave_mag_avg_sqr_d3
          //      = new double[ local_alloc_size_fftw ];
 
-         if (input_flag_complex_realspace_sum) 
+         if (flags.complex_realspace_sum) 
          {
             // used for 2-D variance image when adding phase in the 
             //  image plane
@@ -902,12 +890,12 @@ int TEM_NS::adfstem(
          {// ensure that they are initialized to 0.0
             // 2-D image
             diffracted_wave_mag_sum[ii] = 0.0;
-            if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+            if ( flags.gt17 || flags.d3 || flags.d4) 
             {
                diffracted_wave_mag_sqr_sum[ii] = 0.0;
             }
 
-            if (input_flag_complex_realspace_sum) 
+            if (flags.complex_realspace_sum) 
             {
                diffracted_wave_re_sum[ii] = 0.0;
                diffracted_wave_im_sum[ii] = 0.0;
@@ -915,7 +903,7 @@ int TEM_NS::adfstem(
             }
          }
 
-         if ( input_flag_gt17 || input_flag_d3 ) 
+         if ( flags.gt17 || flags.d3 ) 
          {
             diffracted_wave_mag_sqr_sum_radial_intensity_local
                = new double[ number_of_bins ];
@@ -940,9 +928,9 @@ int TEM_NS::adfstem(
                   //bin_counts_sqr_sum_aggregated = 0;
                }
             }
-         } // ( input_flag_gt17 || input_flag_d3 ) 
+         } // ( flags.gt17 || flags.d3 ) 
 
-         if ( input_flag_gt17 )
+         if ( flags.gt17 )
          {
             diffracted_wave_mag_sum_sqr_radial_intensity_local
                = new double[ number_of_bins ];
@@ -968,9 +956,9 @@ int TEM_NS::adfstem(
                   //bin_counts_sum_sqr_aggregated[ii] = 0;
                }
             }
-         } // input_flag_gt17 
+         } // flags.gt17 
 
-         if ( input_flag_d3 || input_flag_rva )
+         if ( flags.d3 || flags.rva )
          {
             diffracted_wave_mag_sum_radial_intensity_local
                = new double[ number_of_bins ];
@@ -992,18 +980,18 @@ int TEM_NS::adfstem(
                   diffracted_wave_mag_sum_radial_intensity_total[ii] = 0.0;
                   //bin_counts_sum_aggregated[ii] = 0;
                }
-               if ( input_flag_d3 )
+               if ( flags.d3 )
                {
                   ftem_d3 = new double[ number_of_bins ];
                }
-               if ( input_flag_rva )
+               if ( flags.rva )
                {
                   ftem_rva = new double[ number_of_bins ];
                }
             }
-         } // input_flag_d3 || input_flag_rva
+         } // flags.d3 || flags.rva
 
-         if ( input_flag_d4 )
+         if ( flags.d4 )
          {
             diffracted_wave_mag_variance
                = new double[ local_alloc_size_fftw ];
@@ -1032,9 +1020,9 @@ int TEM_NS::adfstem(
                   //bin_count_variance_aggregated[ii] = 0;
                }
             }
-         } // input_flag_d4 
-      } // ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
-   } // input_flag_fem
+         } // flags.d4 
+      } // ( flags.gt17 || flags.d3 || flags.d4) 
+   } // flags.fem
 
 
    ///////////////////////////////////////////////////////////////////
@@ -1278,10 +1266,10 @@ int TEM_NS::adfstem(
 
          //TODO: uncomment this to see if evaluating the probe at each
          //       STEM image point gives different results than copying it
-         //if ( input_flag_aberration_correction )
+         //if ( flags.aberration_correction )
          //{
          //   if ( mynode == rootnode && first_probe_flag 
-         //         && input_flag_debug )
+         //         && flags.debug )
          //      cout 
          //         << "calling"
          //         << " probe_wavefunction_correctedtoCs5_unnormalized"
@@ -1305,7 +1293,7 @@ int TEM_NS::adfstem(
          //else
          //{
          //   if ( mynode == rootnode && first_probe_flag 
-         //         && input_flag_debug )
+         //         && flags.debug )
          //      cout << "calling"
          //         << " probe_wavefunction_uncorrected_unnormalized"
          //         << endl << "   Cs3 : " << Cs3
@@ -1355,15 +1343,15 @@ int TEM_NS::adfstem(
          // TODO : consider elliminating the following block
          if( //first_probe_flag 
              //  && 
-               input_flag_debug 
+               flags.debug 
                &&
-               (input_flag_image_output || input_flag_netcdf_images))
+               (flags.image_output || flags.netcdf_images))
          {
-            //if ( mynode == rootnode && input_flag_debug 
-            //      && input_flag_image_output )
+            //if ( mynode == rootnode && flags.debug 
+            //      && flags.image_output )
             //   cout << "saving initial probe in reciprocal space" << endl;
 
-            //if ( input_flag_image_output )
+            //if ( flags.image_output )
             //{
             //   diffraction_scale_factor = 1.0e30;
             //   output_diffraction_with_renormalization(
@@ -1388,9 +1376,9 @@ int TEM_NS::adfstem(
             //   psi[i][1] = psi[i][1] / sqrtNxNy;
             //}
 
-            if ( input_flag_image_output )
+            if ( flags.image_output )
             {
-               if ( mynode == rootnode && input_flag_debug )  // debug
+               if ( mynode == rootnode && flags.debug )  // debug
                   cout << "saving initial probe to tiff" << endl; // debug
 
                debug_output_complex_fftw_operand(//TODO: rename this function
@@ -1405,9 +1393,9 @@ int TEM_NS::adfstem(
                   mynode, rootnode, comm);
             }
 
-            if ( input_flag_netcdf_images )
+            if ( flags.netcdf_images )
             {
-               if ( mynode == rootnode && input_flag_debug)
+               if ( mynode == rootnode && flags.debug)
                   cout << "saving initial probe to netCDF" << endl;
 
                if( output_psi_realspace_to_netcdf(
@@ -1441,7 +1429,7 @@ int TEM_NS::adfstem(
          //      Nx_local, kx_local, Ny, ky,
          //      bwcutoff_t   
          //      );
-         if ( input_flag_image_output && input_flag_debug )
+         if ( flags.image_output && flags.debug )
          {
             diffraction_scale_factor = 1.0e+0;
             output_diffraction(
@@ -1489,7 +1477,7 @@ int TEM_NS::adfstem(
 
             //TODO: make a flag for this output since it's sometimes nice,
             //       but usually a waste of disk space
-            //if ( first_probe_flag && input_flag_image_output )  // debug
+            //if ( first_probe_flag && flags.image_output )  // debug
             //   debug_output_complex_fftw_operand(
             //         psi,
             //         2, 
@@ -1502,7 +1490,7 @@ int TEM_NS::adfstem(
             //         mynode, rootnode, comm
             //         );
 
-            if ( mynode == rootnode && input_flag_debug )
+            if ( mynode == rootnode && flags.debug )
             {
                cout << "multiplying psi by "
                   << "transmission function, slice : "
@@ -1608,7 +1596,7 @@ int TEM_NS::adfstem(
                }
             }
 
-            //if ( input_flag_debug )
+            //if ( flags.debug )
             //{
             //   cout << "first_probe_flag " << first_probe_flag << endl
             //      << "sliceNumber " << sliceNumber << endl;
@@ -1617,7 +1605,7 @@ int TEM_NS::adfstem(
             // scale factor for logarithmic scaling of diffraction images
             //double diffraction_scale_factor;
             // TODO: comment this out or give it its own flag
-            //if ( input_flag_image_output && input_flag_debug
+            //if ( flags.image_output && flags.debug
             //      && first_probe_flag )  // debug
             //{
             //   debug_output_complex_fftw_operand(
@@ -1681,7 +1669,7 @@ int TEM_NS::adfstem(
             //             * FT[t_{n}(x,y) \psi_{n}(x,y)]
             //////////////////////////////////////////////////////////
 
-            //if ( mynode == rootnode && input_flag_debug )//debug
+            //if ( mynode == rootnode && flags.debug )//debug
             //{
             //   cout << "propagating, slice : " // debug
             //      << sliceNumber 
@@ -1713,7 +1701,7 @@ int TEM_NS::adfstem(
 //               psi[i][1] = psi[i][1] /sqrtNxNy;
 //            }
 //
-//            //if ( first_probe_flag && input_flag_debug)
+//            //if ( first_probe_flag && flags.debug)
 //            //{
 //               //if( output_psi_realspace_to_netcdf(
 //               //         psi,
@@ -1787,16 +1775,16 @@ int TEM_NS::adfstem(
 
          } // end of iteration over slices
 
-         if ( mynode == rootnode && input_flag_debug )
+         if ( mynode == rootnode && flags.debug )
             cout << "finished propagating through slices,"
               << " probe centered at : (x,y) = ( " 
               << *x_itr << ", " << *y_itr << ")" << endl;
 
          if ( first_probe_flag 
-               && (input_flag_image_output || input_flag_netcdf_images) )
+               && (flags.image_output || flags.netcdf_images) )
          {
-            if ( mynode == rootnode && input_flag_debug 
-                  && input_flag_netcdf_images )
+            if ( mynode == rootnode && flags.debug 
+                  && flags.netcdf_images )
             {
                cout << "writing first diffraction to netcdf" << endl;
                if( output_psi_reciprocalspace_to_netcdf(
@@ -1891,9 +1879,9 @@ int TEM_NS::adfstem(
          //   I(|\vec{k}|) is still split among the nodes and needs to
          //   be reduced during final variance calculation.
 
-         if ( input_flag_fem )
+         if ( flags.fem )
          {
-            if ( input_flag_d1 || input_flag_d2 )
+            if ( flags.d1 || flags.d2 )
             {
                // Azimuthally integrate diffraction for 1-D variance.
                integrate_out_theta_fftw(
@@ -1937,7 +1925,7 @@ int TEM_NS::adfstem(
 
                if ( mynode == rootnode )
                {
-                  if ( input_flag_d1 )
+                  if ( flags.d1 )
                   {
                      for ( unsigned int ii=0; ii < number_of_bins; ++ii)
                      {
@@ -1956,7 +1944,7 @@ int TEM_NS::adfstem(
                   }
                }
 
-               if ( input_flag_d2 )
+               if ( flags.d2 )
                {
                   for ( ptrdiff_t ii=0; ii < local_alloc_size_fftw; ++ii)
                   {
@@ -2008,11 +1996,11 @@ int TEM_NS::adfstem(
                         bin_counts_sqr_sum_aggregated[ii] = 0;
                      }
                   }
-               } // input_flag_d2
-            } // input_flag_d1 || input_flag_d2
+               } // flags.d2
+            } // flags.d1 || flags.d2
 
-            if ( input_flag_gt17 || input_flag_d3 || input_flag_d4
-                  || input_flag_rva ) 
+            if ( flags.gt17 || flags.d3 || flags.d4
+                  || flags.rva ) 
             {
                // Accumulate values for 2-D variance image.
                for ( ptrdiff_t ii=0; ii < local_alloc_size_fftw; ++ii )
@@ -2022,7 +2010,7 @@ int TEM_NS::adfstem(
                      sqrt(psi[ii][0] * psi[ii][0] 
                            + psi[ii][1] * psi[ii][1]);
 
-                  if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+                  if ( flags.gt17 || flags.d3 || flags.d4) 
                   {
                      diffracted_wave_mag_sqr_sum[ii] 
                         += psi[ii][0] * psi[ii][0] 
@@ -2033,21 +2021,21 @@ int TEM_NS::adfstem(
                      //   * (psi[ii][0] * psi[ii][0] 
                      //   + psi[ii][1] * psi[ii][1]);
                   
-                  if (input_flag_complex_realspace_sum) 
+                  if (flags.complex_realspace_sum) 
                   {
                      diffracted_wave_re_sum[ii] += psi[ii][0] ;
                      diffracted_wave_im_sum[ii] += psi[ii][1] ;
                   }
                }
-            } // input_flag_gt17 || input_flag_d3 || input_flag_d4
-         } // end of input_flag_fem dependent block
+            } // flags.gt17 || flags.d3 || flags.d4
+         } // end of flags.fem dependent block
 
          /////////////////////////////////////////////////////////////
          // STEM: integrate the diffracted intensity impingent upon 
          //       the annular detector
          /////////////////////////////////////////////////////////////
 
-         if ( input_flag_image_output )
+         if ( flags.image_output )
          {
             detected_intensity = 
                sum_detected_intensity( 
@@ -2082,7 +2070,7 @@ int TEM_NS::adfstem(
    //=================================================================
    // End of STEM beam position rastering
    //=================================================================
-   //if ( input_flag_image_output )
+   //if ( flags.image_output )
    //{
    //   //output_diffraction_with_renormalization(
    //   //diffraction_scale_factor = 1.0e13;//1e-20;
@@ -2104,9 +2092,9 @@ int TEM_NS::adfstem(
    ////////////////////////////////////////////////////////////////
    // Calculation of FTEM statistical measures
    ////////////////////////////////////////////////////////////////
-   if ( input_flag_fem )
+   if ( flags.fem )
    {
-      if ( input_flag_d1 )
+      if ( flags.d1 )
       {
          // V(|\vec{k}|,K_{aperture})
          //  = \frac{ \langle I^{2}(|\vec{k}|,K_{aperture}) \rangle }
@@ -2148,7 +2136,7 @@ int TEM_NS::adfstem(
             }
 
             // write the d1 variance to a file
-            if( input_flag_netcdf_variance )
+            if( flags.netcdf_variance )
             {
                if ( 
                      output_variance_to_netcdf(
@@ -2173,9 +2161,9 @@ int TEM_NS::adfstem(
                }
             }
          } // rootnode
-      } // input_flag_d1
+      } // flags.d1
 
-      if ( input_flag_d2 )
+      if ( flags.d2 )
       {
          if ( mynode == rootnode )
          {
@@ -2194,7 +2182,7 @@ int TEM_NS::adfstem(
                }
             }
             // write the d2 variance to a file
-            if( input_flag_netcdf_variance )
+            if( flags.netcdf_variance )
             {
                if (
                      output_variance_to_netcdf(
@@ -2219,10 +2207,10 @@ int TEM_NS::adfstem(
                }
             }
          } // rootnode
-      } // input_flag_d2 
+      } // flags.d2 
 
-      if (input_flag_gt17 || input_flag_d3 || input_flag_d4 
-            || input_flag_rva )
+      if (flags.gt17 || flags.d3 || flags.d4 
+            || flags.rva )
       {
          ////////////////////////////////////////////////////////////////
          // Calculate the FTEM 2-D variance V(\vec{k},K_{aperture})
@@ -2250,8 +2238,8 @@ int TEM_NS::adfstem(
 
          // Divide the sum by the number of points to obtain the average
          //  2-D diffracted intensity.
-         if ( input_flag_gt17 || input_flag_d3 || input_flag_d4
-               || input_flag_rva )
+         if ( flags.gt17 || flags.d3 || flags.d4
+               || flags.rva )
          {
             for ( ptrdiff_t ii=0; ii < local_alloc_size_fftw; ++ii )
             {
@@ -2263,13 +2251,13 @@ int TEM_NS::adfstem(
                   = diffracted_wave_mag_sum[ii] 
                      * diffracted_wave_mag_sum[ii];
 
-               if ( input_flag_gt17 || input_flag_d3 || input_flag_d4 )
+               if ( flags.gt17 || flags.d3 || flags.d4 )
                {
                   diffracted_wave_mag_sqr_sum[ii] 
                      = diffracted_wave_mag_sqr_sum[ii] 
                         / number_of_raster_points;
                }
-               if (input_flag_complex_realspace_sum)
+               if (flags.complex_realspace_sum)
                {
                   diffracted_wave_re_sum[ii] 
                      = diffracted_wave_re_sum[ii] 
@@ -2297,7 +2285,7 @@ int TEM_NS::adfstem(
             //  for 2-D variance images
 
             // TODO: modify to obtain 1-D variance curve using the complex sum
-            if (input_flag_complex_realspace_sum) 
+            if (flags.complex_realspace_sum) 
             {
                diffracted_wave_complex_sum_mag 
                   = new double[ local_alloc_size_fftw ];
@@ -2336,9 +2324,9 @@ int TEM_NS::adfstem(
                      = diffracted_wave_complex_sum_mag[ii] 
                         / number_of_raster_points;
                }
-            } // input_flag_complex_realspace_sum
-         }  // input_flag_gt17 || input_flag_d3 || input_flag_d4 
-            //  || input_flag_rva
+            } // flags.complex_realspace_sum
+         }  // flags.gt17 || flags.d3 || flags.d4 
+            //  || flags.rva
 
 
 
@@ -2346,7 +2334,7 @@ int TEM_NS::adfstem(
          // Save average of 2-D diffraction magnitude taken from all 
          //  raster points
          ////////////////////////////////////////////////////////////////
-         if ( input_flag_image_output )
+         if ( flags.image_output )
          {
             //diffraction_scale_factor = 1.0e15 ;//1e-53;
             diffraction_scale_factor = 1.0e13 ;//1e-53;
@@ -2360,7 +2348,7 @@ int TEM_NS::adfstem(
                   outFileName_prefix + "_diffracted_wave_avg",
                   mynode, rootnode, comm
                   );
-            if ( input_flag_gt17 || input_flag_d3 || input_flag_d4) 
+            if ( flags.gt17 || flags.d3 || flags.d4) 
             {
                diffraction_scale_factor = 1.0e13 ;//1e-53;
                output_diffraction(
@@ -2376,7 +2364,7 @@ int TEM_NS::adfstem(
             }
          }
 
-         if (input_flag_image_output && input_flag_complex_realspace_sum) 
+         if (flags.image_output && flags.complex_realspace_sum) 
          {
             diffraction_scale_factor = 1.0e13 ;//1e-53;
             output_diffraction(
@@ -2413,9 +2401,9 @@ int TEM_NS::adfstem(
                   mynode, rootnode, comm
                   );
 
-         } // input_flag_image_output && input_flag_complex_realspace_sum
+         } // flags.image_output && flags.complex_realspace_sum
 
-         if (input_flag_complex_realspace_sum && input_flag_netcdf_images)
+         if (flags.complex_realspace_sum && flags.netcdf_images)
          {
            if(
               output_psi_reciprocalspace_to_netcdf(
@@ -2437,7 +2425,7 @@ int TEM_NS::adfstem(
             }
          }
 
-         if ( input_flag_gt17 || input_flag_d3 )
+         if ( flags.gt17 || flags.d3 )
          {
             // Azimuthally average and MPI_Reduce the 2-D averages 
             //    of intensity and intensity squared.
@@ -2468,7 +2456,7 @@ int TEM_NS::adfstem(
                   );
          }
 
-         if ( input_flag_gt17 || input_flag_rva )
+         if ( flags.gt17 || flags.rva )
          {
             integrate_out_theta_double(
                   diffracted_wave_mag_sum_sqr,
@@ -2495,7 +2483,7 @@ int TEM_NS::adfstem(
                   rootnode, comm
                   );
 
-            if ( mynode == rootnode && input_flag_gt17 )
+            if ( mynode == rootnode && flags.gt17 )
             {
                for( size_t ii=0; ii < number_of_bins; ++ii)
                {
@@ -2508,11 +2496,11 @@ int TEM_NS::adfstem(
               (   diffracted_wave_mag_sum_sqr_radial_intensity_total[ii]
                                / bin_counts_sum_sqr_aggregated[ii]);
 
-                  if ( ! input_flag_rva )
+                  if ( ! flags.rva )
                   {
                      bin_counts_aggregated[ii] = 0;
                   }
-                  if (! input_flag_d3  )
+                  if (! flags.d3  )
                   {
                      bin_counts_sqr_sum_aggregated[ii] = 0;
                      // NOTE: bin_counts_sqr_sum_aggregated and
@@ -2523,7 +2511,7 @@ int TEM_NS::adfstem(
                }
 
                // save output of gt17
-               if( input_flag_netcdf_variance )
+               if( flags.netcdf_variance )
                {
                   if ( 
                         output_variance_to_netcdf(
@@ -2569,10 +2557,10 @@ int TEM_NS::adfstem(
                         << endl;
                   }
                } // gt17 text output block
-            } // mynode == rootnode && input_flag_gt17 
-         } // input_flag_gt17 || input_flag_rva
+            } // mynode == rootnode && flags.gt17 
+         } // flags.gt17 || flags.rva
 
-         if ( input_flag_d3 || input_flag_rva )
+         if ( flags.d3 || flags.rva )
          {
             integrate_out_theta_double(
                   diffracted_wave_mag_sum,
@@ -2603,7 +2591,7 @@ int TEM_NS::adfstem(
             {
                for (size_t ii=0; ii < number_of_bins; ++ii)
                {
-                  if ( input_flag_d3 ) 
+                  if ( flags.d3 ) 
                   {
                      ftem_d3[ii] =
                         ((
@@ -2617,7 +2605,7 @@ int TEM_NS::adfstem(
                 )
                         )) - 1.0;
                   }
-                  if ( input_flag_rva ) 
+                  if ( flags.rva ) 
                   {
                      ftem_rva[ii] 
                 = ((diffracted_wave_mag_sum_sqr_radial_intensity_total[ii]
@@ -2632,9 +2620,9 @@ int TEM_NS::adfstem(
                   }
                }
                // save output of d3
-               if ( input_flag_d3 ) 
+               if ( flags.d3 ) 
                {
-                  if( input_flag_netcdf_variance )
+                  if( flags.netcdf_variance )
                   {
                      if ( 
                            output_variance_to_netcdf(
@@ -2666,11 +2654,11 @@ int TEM_NS::adfstem(
                            << endl;
                      }
                   } // d3 text output block
-               } // input_flag_d3
+               } // flags.d3
 
-               if ( input_flag_rva ) 
+               if ( flags.rva ) 
                {
-                  if( input_flag_netcdf_variance )
+                  if( flags.netcdf_variance )
                   {
                      if ( 
                            output_variance_to_netcdf(
@@ -2702,11 +2690,11 @@ int TEM_NS::adfstem(
                            << endl;
                      }
                   } // rva text output block
-               } // input_flag_rva
+               } // flags.rva
             } // root node 
-         } // input_flag_d3 || input_flag_rva
+         } // flags.d3 || flags.rva
 
-         if ( input_flag_d4 )
+         if ( flags.d4 )
          {
             for ( size_t ii=0; ii < local_alloc_size_fftw; ++ii)
             {
@@ -2720,7 +2708,7 @@ int TEM_NS::adfstem(
                      )
                   ) - 1.0;
             }
-            if ( input_flag_image_output )
+            if ( flags.image_output )
             {
                diffraction_scale_factor = 1.0e0;
                output_diffraction(
@@ -2790,7 +2778,7 @@ int TEM_NS::adfstem(
                   ftem_d4[ii] = ftem_d4[ii] / bin_counts_aggregated[ii];
                }
                // save output of d4
-               if( input_flag_netcdf_variance )
+               if( flags.netcdf_variance )
                {
                   if ( 
                         output_variance_to_netcdf(
@@ -2825,15 +2813,15 @@ int TEM_NS::adfstem(
             }
          }
 
-      } // input_flag_gt17 || input_flag_d3 || input_flag_d4 
-         // input_flag_rva
+      } // flags.gt17 || flags.d3 || flags.d4 
+         // flags.rva
 
    }// end fem specific commands
 
    ////////////////////////////////////////////////////////////////
    // Save stem_image as a tif
    ////////////////////////////////////////////////////////////////
-   if ( mynode == rootnode && input_flag_image_output )
+   if ( mynode == rootnode && flags.image_output )
    {
       output_stem_image(
             stem_image,
@@ -2849,7 +2837,7 @@ int TEM_NS::adfstem(
    // Save diffraction as tif
    ////////////////////////////////////////////////////////////////
    
-   if ( input_flag_image_output )
+   if ( flags.image_output )
    {
       //output_diffraction_with_renormalization(
       //diffraction_scale_factor = 1.0e13;//1e-20;
@@ -3006,7 +2994,7 @@ int TEM_NS::adfstem(
    
    fftw_free( psi );
 
-   //if ( input_flag_fem && (input_flag_d1))
+   //if ( flags.fem && (flags.d1))
    //{
    //   fftw_free( diffracted_wave_fftw_complex_sum ); // debug
    //}
@@ -3016,10 +3004,10 @@ int TEM_NS::adfstem(
    //delete[] ky;
    //delete[] kx_local;
 
-   if ( input_flag_fem )
+   if ( flags.fem )
    {
-      if ( input_flag_d1 || input_flag_d2  || input_flag_d3 
-            || input_flag_d4 || input_flag_gt17 || input_flag_rva )
+      if ( flags.d1 || flags.d2  || flags.d3 
+            || flags.d4 || flags.gt17 || flags.rva )
       {
          delete[] bin_counts_local;
          //delete[] bin_counts_sqr_local;
@@ -3030,23 +3018,23 @@ int TEM_NS::adfstem(
             delete[] bin_counts_sum_sqr_aggregated;
          }
       }
-      if ( input_flag_d1 || input_flag_d2 )
+      if ( flags.d1 || flags.d2 )
       {
          delete[] diffracted_wave_mag_radial_intensity_local;
-         if ( input_flag_d2 )
+         if ( flags.d2 )
          {
             delete[] diffracted_wave_mag_sqr_radial_intensity_local;
          }
          if ( mynode == rootnode )
          {
             delete[] diffracted_wave_mag_radial_intensity_total;
-            if ( input_flag_d1 )
+            if ( flags.d1 )
             {
                delete[] ftem_d1;
                delete[] diffracted_wave_mag_radial_intensity_total_sum;
                delete[] diffracted_wave_mag_radial_intensity_total_sqr_sum;
             }
-            if ( input_flag_d2 )
+            if ( flags.d2 )
             {
                delete[] diffracted_wave_mag_sqr;
                delete[] diffracted_wave_mag_sqr_radial_intensity_total;
@@ -3054,24 +3042,24 @@ int TEM_NS::adfstem(
             }
          }
       }
-      if ( input_flag_gt17 || input_flag_d3 || input_flag_d4
-            || input_flag_rva ) 
+      if ( flags.gt17 || flags.d3 || flags.d4
+            || flags.rva ) 
       {
          delete[] diffracted_wave_mag_sum;
          delete[] diffracted_wave_mag_sum_sqr;
-         if ( input_flag_gt17 || input_flag_d3 || input_flag_d4 ) 
+         if ( flags.gt17 || flags.d3 || flags.d4 ) 
          {
             delete[] diffracted_wave_mag_sqr_sum;
          }
-         if (input_flag_complex_realspace_sum) 
+         if (flags.complex_realspace_sum) 
          {
             delete[] diffracted_wave_re_sum;
             delete[] diffracted_wave_im_sum;
             //delete[] diffracted_wave_complex_variance_2D;
          }
-         if ( input_flag_gt17 || input_flag_d3 || input_flag_rva ) 
+         if ( flags.gt17 || flags.d3 || flags.rva ) 
          {
-            if ( input_flag_gt17 || input_flag_d3 ) 
+            if ( flags.gt17 || flags.d3 ) 
             {
                delete[] diffracted_wave_mag_sqr_sum_radial_intensity_local;
                if ( mynode == rootnode )
@@ -3079,7 +3067,7 @@ int TEM_NS::adfstem(
                   delete[] 
                      diffracted_wave_mag_sqr_sum_radial_intensity_total;
                }
-               if ( input_flag_gt17 )
+               if ( flags.gt17 )
                {
                   delete[] 
                      diffracted_wave_mag_sum_sqr_radial_intensity_local;
@@ -3090,16 +3078,16 @@ int TEM_NS::adfstem(
                         diffracted_wave_mag_sum_sqr_radial_intensity_total;
                   }
                }
-               if ( input_flag_d3 || input_flag_rva )
+               if ( flags.d3 || flags.rva )
                {
                   delete[] diffracted_wave_mag_sum_radial_intensity_local;
                   if ( mynode == rootnode )
                   {
-                     if ( input_flag_d3 )
+                     if ( flags.d3 )
                      {
                         delete[] ftem_d3;
                      }
-                     if ( input_flag_rva )
+                     if ( flags.rva )
                      {
                         delete[] ftem_rva;
                      }
@@ -3109,7 +3097,7 @@ int TEM_NS::adfstem(
                }
             }
          }
-         if ( input_flag_d4 )
+         if ( flags.d4 )
          {
             delete[] diffracted_wave_mag_variance;
             delete[] diffracted_wave_mag_variance_radial_intensity_local;

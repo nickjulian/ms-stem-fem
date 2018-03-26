@@ -2826,7 +2826,11 @@ int TEM_NS::read_parameter_file(
          transform( data_descriptor.begin(), data_descriptor.end(), 
                     data_descriptor.begin(), (int(*)(int))tolower );
 
-         if ( ! data_descriptor.compare("output_prefix") )
+         if ( ! data_descriptor.compare("debug") )
+         {
+            flags.debug = 1;
+         }
+         else if ( ! data_descriptor.compare("output_prefix") )
          {
             data_line_stream >> output_prefix;
             flags.o = 1;
@@ -2973,10 +2977,6 @@ int TEM_NS::read_parameter_file(
          else if ( ! data_descriptor.compare("netcdfvariance") )
          {
             flags.netcdf_variance = 1;
-         }
-         else if ( ! data_descriptor.compare("debug") )
-         {
-            flags.debug = 1;
          }
          else
          {
@@ -3804,7 +3804,533 @@ int TEM_NS::read_position_xyz_file_nonmpi(
    return EXIT_SUCCESS;
 }
 
+unsigned int TEM_NS::read_cmdline_options( 
+   const std::vector<string>& args,
+   string& model_file_name,
+   input_flags& flags,
+   string& output_prefix,
+   ptrdiff_t& Nx,
+   ptrdiff_t& Ny,
+   double& VV,
+   double& defocus,
+   double& alpha_max,
+   double& defocus_spread,
+   double& condenser_illumination_angle,
+   double& Cs3,
+   double& Cs5,
+   double& raster_spacing,
+   double& azimuthal_binning_size_factor,
+   double& minSliceThickness,
+   unsigned int& dupe_x,
+   unsigned int& dupe_y,
+   unsigned int& dupe_z,
+   const int& mynode,
+   const int& rootnode,
+   MPI_Comm comm
+)
+{
+   unsigned int failflag;
+   int Nx_int;
+   int Ny_int;
+   failflag = 0;
+   for ( size_t idx=1; idx < args.size(); idx++)
+   {
+      if (args[idx] == "--parameter_file")// microscope parameter file name
+      {
+         string parameter_file_name;
+         if (idx + 1 < args.size()) 
+            parameter_file_name = string(args[idx + 1]);
+            //istringstream( args[idx + 1] ) >> parameter_file_name;
+         if ( 
+               read_parameter_file(
+                  parameter_file_name,
+                  model_file_name,
+                  flags,
+                  output_prefix,
+                  Nx,
+                  Ny,
+                  VV,
+                  defocus,
+                  alpha_max,
+                  defocus_spread,
+                  condenser_illumination_angle,
+                  Cs3,
+                  Cs5,
+                  raster_spacing,
+                  azimuthal_binning_size_factor,
+                  minSliceThickness,
+                  mynode,
+                  rootnode,
+                  MPI_COMM_WORLD
+               ) == EXIT_FAILURE
+         )
+         {
+            if ( mynode == rootnode )
+            {
+               cout << "Error, could not read parameter file : " 
+                  << parameter_file_name << endl;
+            }
+            failflag = 1 ;
+         }
 
+         if ( flags.microscope_voltage && flags.nx && flags.ny ) 
+            flags.m = 1;
+         else
+            flags.m = 0;
+
+         flags.pf = 1;
+         idx += 1;
+
+      }
+      else if ( args[idx] == "--debug" )
+      {
+         flags.debug  = 1;
+      }
+      else if ( args[idx] == "--output_prefix" )
+      {
+         if (idx + 1 < args.size()) 
+            output_prefix = string(args[idx + 1]);//=string(argv[2]);
+         flags.o = 1;
+         idx += 1;
+      }
+      else if ( args[idx] == "-m" )
+      {
+         if (idx + 1 < args.size()) 
+            istringstream(args[idx + 1]) >> Nx_int;
+         if (idx + 2 < args.size()) 
+            istringstream(args[idx + 2]) >> Ny_int;
+         //if (idx + 3 < args.size()) 
+         // istringstream(args[idx + 3]) >> Nz_int;
+         if (idx + 3 < args.size()) istringstream(args[idx + 3]) >> VV;
+
+         Nx = (ptrdiff_t) Nx_int;
+         Ny = (ptrdiff_t) Ny_int;
+         // Nz = (ptrdiff_t) Nz_int;
+
+         flags.m = 1;
+         idx += 3;
+      }
+      else if ( args[idx] == "-a" )
+      {
+         //if ( mynode == rootnode )
+         //{
+         //istringstream( args[idx + 1] ) >> model_file_name;
+         if (idx + 1 < args.size()) 
+            model_file_name = string( args[ idx + 1] );
+
+         flags.a = 1;
+         idx += 1;
+      }
+      else if ( args[idx] == "--scherzer_defocus")
+      {
+         flags.scherzer_defocus = 1;
+      }
+      else if ( args[idx] == "--scherzer_alphamax")
+      {
+         flags.scherzer_alphamax = 1;
+      }
+      else if ( args[idx] == "--scherzer_cs3")
+      {
+         flags.scherzer_cs3 = 1;
+      }
+      else if ( args[idx] == "--defocus" )
+      {
+         if (idx + 1 < args.size()) 
+            istringstream( args[idx + 1] ) >> defocus;
+         flags.defocus= 1;
+         idx += 1;
+      }
+      else if ( args[idx] == "--alphamax" )
+      {
+         if (idx + 1 < args.size()) 
+            istringstream( args[idx + 1] ) >> alpha_max;
+         flags.alpha_max = 1;
+         idx += 1;
+      }
+      else if ( args[idx] == "--spread" )
+      {
+         if (idx + 1 < args.size()) 
+            istringstream( args[idx + 1] ) >> defocus_spread;
+         if (idx + 2 < args.size()) 
+            istringstream( args[idx + 2] ) >> condenser_illumination_angle;
+         flags.spread = 1;
+         idx += 2;
+      }
+      else if ( args[idx] == "--cs3" )
+      {
+         if (idx + 1 < args.size()) 
+            istringstream( args[idx + 1] ) >> Cs3;
+         flags.cs3 = 1;
+         idx += 1;
+      }
+      else if ( args[idx] == "--cs5" )
+      {
+         if (idx + 1 < args.size()) 
+            istringstream( args[idx + 1] ) >> Cs5;
+         flags.cs5 = 1;
+         idx += 1;
+      }
+      else if ( args[idx] == "--rasterspacing" )
+      {
+         if ( idx + 1 < args.size())
+            istringstream( args[idx + 1] ) >> raster_spacing;
+         flags.raster_spacing = 1;
+         idx += 1;
+      }
+      else if ( args[idx] == "--adfstemuncorrfem" )
+      {
+         flags.adfstem_uncorrected = 1;
+         flags.fem = 1;
+      }
+      else if ( args[idx] == "--adfstemcorrfem" )
+      {
+         flags.adfstem_corrected = 1;
+         flags.fem = 1;
+      }
+      else if ( args[idx] == "--GT17" )
+      {
+         flags.gt17 = 1;
+      }
+      else if ( args[idx] == "--D1" )
+      {
+         flags.d1 = 1;
+      }
+      else if ( args[idx] == "--D2" )
+      {
+         flags.d2 = 1;
+      }
+      else if ( args[idx] == "--D3" )
+      {
+         flags.d3 = 1;
+      }
+      else if ( args[idx] == "--D4" )
+      {
+         flags.d4 = 1;
+      }
+      else if ( args[idx] == "--RVA" )
+      {
+         flags.rva = 1;
+      }
+      else if ( args[idx] == "--adfstemcorr" )
+      {
+         flags.adfstem_corrected = 1;
+      }
+      else if ( args[idx] == "--adfstemuncorr" )
+      {
+         flags.adfstem_uncorrected = 1;
+      }
+      else if ( args[idx] == "--bfctemcorr" )
+      {
+         flags.bfctem_corrected = 1;
+      }
+      else if ( args[idx] == "--bfctemuncorr" )
+      {
+         flags.bfctem_uncorrected = 1;
+      }
+      else if ( args[idx] == "--paptif" )
+      {
+          flags.pap_tif = 1;
+      }
+      else if ( args[idx] == "--dupe" )
+      {
+         if (idx + 3 < args.size()) 
+            istringstream( args[idx + 1] ) >> dupe_x;
+            istringstream( args[idx + 2] ) >> dupe_y;
+            istringstream( args[idx + 3] ) >> dupe_z;
+         flags.dupe = 1;
+         idx += 3;
+      }
+      else if ( args[idx] == "--dr" )
+      {
+         if ( idx + 1 < args.size())
+            istringstream( args[idx + 1] ) 
+               >> azimuthal_binning_size_factor;
+         idx += 1;
+      }
+      else if ( args[idx] == "--minslice" )
+      {
+         if ( idx + 1 < args.size())
+            istringstream( args[idx + 1] ) 
+               >> minSliceThickness;
+         idx += 1;
+      }
+      else if ( args[idx] == "--images" )
+      {
+         flags.image_output = 1;
+      }
+      else if ( args[idx] == "--netcdfimages" )
+      {
+         flags.netcdf_images = 1;
+      }
+      else if ( args[idx] == "--netcdfvariance" )
+      {
+         flags.netcdf_variance = 1;
+      }
+      else
+      {
+         if ( mynode == rootnode )
+         {
+            cerr << "Error, unexpected argument : " << args[idx] << endl;
+         }
+         failflag = 1;
+      }
+   } // iteration over command line arguments
+
+   if ( (! flags.gt17 ) 
+         && (! flags.d1 ) && (! flags.d2 ) 
+         && (! flags.d3 ) && (! flags.d4 )
+         && (! flags.rva) )
+   {
+      flags.d1 = 1; // default variance calculation mode
+   }
+
+   if ( failflag ==1 )
+   {
+      return EXIT_FAILURE;
+   }
+
+   return EXIT_SUCCESS;
+}
+
+unsigned int TEM_NS::check_runtime_flags(
+   const input_flags& flags,
+   const string& args0,
+   const int& mynode,
+   const int& rootnode,
+   MPI_Comm comm
+)
+{
+   unsigned int failflag;
+   failflag = 0;
+   // debug
+   if( mynode == rootnode  && flags.debug )
+   {
+      cout << 
+      "flags.m " << 
+      flags.m << endl
+      << "flags.pf " << 
+      flags.pf << endl <<
+      "flags.o " << 
+      flags.o << endl <<
+      "flags.a " << 
+      flags.a << endl <<
+      "flags.defocus " << 
+      flags.defocus << endl <<
+      "flags.spread " << 
+      flags.spread << endl <<
+      "flags.dupe " << 
+      flags.dupe << endl <<
+      "flags.adfstem_corrected " << 
+      flags.adfstem_corrected << endl <<
+      "flags.adfstem_uncorrected  " << 
+      flags.adfstem_uncorrected  << endl <<
+      "flags.bfctem_corrected  " << 
+      flags.bfctem_corrected  << endl <<
+      "flags.bfctem_uncorrected  " << 
+      flags.bfctem_uncorrected  << endl <<
+      "flags.fem  " << 
+      flags.fem  << endl <<
+      "flags.gt17 " << 
+      flags.gt17  << endl <<
+      "flags.d1 " << 
+      flags.d1  << endl <<
+      "flags.d2 " << 
+      flags.d2  << endl <<
+      "flags.d3 " << 
+      flags.d3  << endl <<
+      "flags.d4 " << 
+      flags.d4  << endl <<
+      "flags.rva " << 
+      flags.rva  << endl <<
+      "flags.scherzer_defocus " << 
+      flags.scherzer_defocus << endl <<
+      "flags.scherzer_alphamax " << 
+      flags.scherzer_alphamax << endl <<
+      "flags.scherzer_cs3 " << 
+      flags.scherzer_cs3 << endl <<
+      "flags.cs3 " << 
+      flags.cs3 << endl <<
+      "flags.cs5 " << 
+      flags.cs5 << endl <<
+      "flags.alpha_max " << 
+      flags.alpha_max << endl <<
+      "flags.aberration_correction " << 
+      flags.aberration_correction << endl <<
+      "flags.raster_spacing " << 
+      flags.raster_spacing << endl <<
+      "flags.debug " << 
+      flags.debug 
+      << endl;
+   }
+   // end debug
+
+   if (
+         !(
+            flags.o   // output file name prefix
+            &&
+            flags.a   // atom position and species input file
+            &&
+            flags.m
+            //( // command line xor file input of microscope parameters
+            //   // exclusive or:
+            //   (! flags.m) != (! flags.pf) 
+            //)
+            &&
+            // if aberration correction is used with bfctem, require 
+            //    flags.spread, flags.cs3, flags.cs5
+            !(
+               (
+                  flags.adfstem_corrected 
+                  || 
+                  flags.bfctem_corrected
+               )
+               &&
+               (!
+                  (
+                     //flags.spread
+                     //&&
+                                                // defocus_spread is 
+                                                // currently only used
+                                                // in bfctem
+                     flags.cs5
+                     &&
+                     (
+                        flags.scherzer_cs3
+                        ||
+                        flags.cs3
+                     )
+                  )
+               )
+            )
+            &&
+            !(
+               (// require specifying Cs3 if using uncorrected TEM
+                  flags.adfstem_uncorrected
+                  ||
+                  flags.bfctem_uncorrected
+               )
+               && 
+               (! flags.cs3)
+            )
+            &&
+            (
+               flags.scherzer_defocus 
+               || 
+               flags.defocus
+            )
+            &&
+            (
+               flags.scherzer_alphamax
+               || 
+               flags.alpha_max
+            )
+         )
+      )
+   {
+      if ( mynode == rootnode )
+      {
+         cout << args0 << " : lacking required parameters" << endl;
+         // TODO: the following two if(){} statements duplicate tests above
+         //       Perhaps implement these error messages inside the above
+         //       tests or vice versa.
+         if (
+              (flags.adfstem_corrected || flags.bfctem_corrected)
+               && 
+               ! (
+                  //flags.spread
+                  //&&
+                                          // defocus_spread is 
+                                          // currently only used 
+                                          // in bfctem
+                  (flags.cs3 || flags.scherzer_cs3)
+                  && 
+                  flags.cs5
+               )
+                
+            )
+         {
+            cout << "Use of aberraction correction requires"
+               << " specifying --defocus_spread and --cs5. If not using"
+               << " --scherzer_cs3, then --cs3 is also required." << endl;
+         }
+         if (
+               (// require specifying Cs3 if using uncorrected TEM
+                  flags.adfstem_uncorrected
+                  ||
+                  flags.bfctem_uncorrected
+               )
+               && 
+               (! flags.cs3)
+            )
+         {
+            cout << "Use of uncorrected aberration"
+             << " requires specifying --cs3." << endl;
+         }
+
+         if (
+               !(
+                  flags.scherzer_defocus 
+                  || 
+                  flags.defocus
+               )
+            )
+         {
+            cout << "You must specify either --defocus <value [angstrom]>"
+               << " or --scherzer_defocus" << endl;
+         }
+         if (
+               !(
+                  flags.scherzer_alphamax
+                  || 
+                  flags.alpha_max
+               )
+            )
+         {
+            cout << "You must specify either --alphamax <value [radians]>"
+               << " or --scherzer_alphamax" << endl;
+         }
+      }
+      failflag = 1;
+   }
+
+   if (
+         failflag == 0
+         &&
+         ! flags.adfstem_uncorrected
+         &&
+         ! flags.adfstem_corrected
+         &&
+         ! flags.bfctem_corrected
+         &&
+         ! flags.bfctem_uncorrected
+      )
+   {
+      if ( mynode == rootnode )
+      {
+         cout << args0 << " : you must specify at least one of the following" << endl
+            << "   [--adfstemcorrfem] simulate fluctuation microscopy using aberration corrected adfstem mode" 
+            << endl 
+            << "   [--adfstemuncorrfem] simulate fluctuation microscopy using adfstem mode without aberration correction" 
+            << endl 
+            << "   [--adfstemcorr] simulate aberration corrected adfstem" 
+            << endl 
+            << "   [--adfstemuncorr] simulate adfstem mode without aberration correction" 
+            << endl 
+            << "   [--bfctemcorr] simulate bright field TEM with aberration correction" 
+            << endl 
+            << "   [--bfctemuncorr] simulate bright field TEM without aberration correction" 
+            << endl;
+      }
+      failflag = 1;
+   }
+   if ( flags.dupe && ! flags.fem && mynode == rootnode )
+   {
+      cout << "Note: --dupe flag only duplicates the sample for FTEM."
+         << " The sample will not be duplicated this time." 
+         << endl;
+   }
+   return EXIT_SUCCESS;
+}
 
 size_t TEM_NS::atom_element_abbrev_to_Z( const string& element_name)
 {
