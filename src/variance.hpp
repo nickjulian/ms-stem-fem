@@ -47,6 +47,7 @@
 #include "radial_discretization.hpp"
 #include "io_netcdf.hpp"
 #include "io_txt.hpp"
+#include "tem_io.hpp"
 
 
 namespace TEM_NS
@@ -96,19 +97,27 @@ namespace TEM_NS
          MPI_Comm comm
          );
 
-   int integrate_out_theta_fftw(
+   int integrate_out_phi_fftw(
          const fftw_complex* const psi,   // 2-D data input
+         const input_flags& flags,
          const double* const kx_local, const size_t& Nx_local,
          const double* const ky, const size_t& Ny,
-         const std::vector<double>& binning_boundaries,
-         int* bin_counts,
-         double* f_of_k_magnitudes//,  // 1-D data output
+         const std::vector<indexed_vector_magnitude_sqr>& 
+            indexed_magnitudes,
+         const std::vector<double>& k_binning_boundaries,
+         int* k_bin_counts,
+         const std::vector<double>& phi_binning_boundaries,
+         int* phi_bin_counts,
+         double* data1D_local, // output, 
+         double* intensity_in_radial_coords // output, 
          );
 
-   int integrate_out_theta_double(
+   int integrate_out_phi_double(
          const double* const psi,   // 2-D data input
          const double* const kx_local, const size_t& Nx_local,
          const double* const ky, const size_t& Ny,
+         const std::vector<indexed_vector_magnitude_sqr>& 
+            indexed_magnitudes,
          const std::vector<double>& binning_boundaries,
          int* bin_counts,
          double* f_of_k_magnitudes//,  // 1-D data output

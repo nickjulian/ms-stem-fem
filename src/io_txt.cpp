@@ -93,6 +93,83 @@ int TEM_NS::output_variance_to_txt(
 }
 
 
+int TEM_NS::output_correlograph_to_txt(
+      const double* const outDataRaw,  // array of range elements
+      const std::vector<double>& k_binning_boundaries,
+      const std::vector<double>& phi_binning_boundaries,
+      const string& outFilePrefix
+      )
+{
+   // Create the txt file, if the file exists it will be overwritten
+   string outFileName = outFilePrefix + ".txt";
+   //std::vector<double>::const_iterator 
+   //   k_bdy_itr = k_binning_boundaries.begin();
+   //std::vector<double>::const_iterator 
+   //   phi_bdy_itr = phi_binning_boundaries.begin();
+
+   // open the output file
+   std::ofstream outputFile;
+   outputFile.open( outFileName.c_str(), std::ios::out);
+   if ( outputFile.is_open() && outputFile.good()) 
+   {
+      outputFile << std::scientific;
+      outputFile << std::setprecision(10); 
+
+      size_t Nx = k_binning_boundaries.size() - 1;
+      size_t Ny = phi_binning_boundaries.size() - 1;
+      // ii indexes k, jj indexes phi
+      if ( outputFile.good() ) outputFile << "0 ";// (0,0) element, not data
+      for (size_t jj=0; jj < Ny; ++jj)
+      {  // write phi domain to the first line
+         if ( outputFile.good() )
+         {
+            outputFile << phi_binning_boundaries[jj] << " ";
+         }
+         else
+         {
+            cerr << "Failure while writing correlograph to file: " 
+               << outFileName 
+               << ", phi_binning_boundaries[" << jj << "] : "
+               << phi_binning_boundaries[jj] << endl;
+            return EXIT_FAILURE;
+         }
+      }
+      if ( outputFile.good() ) outputFile << endl;
+
+      for (size_t ii=0; ii < Nx ; ++ii) // index of k
+      {  // write k domain to first column and data to remaining columns
+         outputFile << k_binning_boundaries[ii] << " ";
+         for ( size_t jj=0; jj < Ny ; ++jj) // indexx of phi
+         {
+            if( outputFile.good() )
+            {
+               //outputFile << outDataRaw[jj + ii * Ny] << " ";
+               outputFile << outDataRaw[ii + jj * Nx] << " ";
+            }
+            else
+            {
+               cerr << "Failure while writing correlograph to file: " 
+                  << outFileName 
+                  << ", outDataRaw[" << ii << "+" << jj << "*" << Nx << "] : " 
+                  << outDataRaw[ii + jj * Nx] << endl;
+               return EXIT_FAILURE;
+            }
+         }
+         outputFile << endl;
+      }
+
+      outputFile.close();
+   }
+   else
+   {
+      cerr << "Unable to write variance to file: " << outFileName << endl;
+      return EXIT_FAILURE;
+   }
+
+   return EXIT_SUCCESS;
+}
+
+
 //int TEM_NS::output_variance_to_txt(
 //      const double* const outDataRaw,  // array of range elements
 //      const radial_discretization& sample_rotations, // domain bdy elements

@@ -90,6 +90,12 @@ namespace TEM_NS
       unsigned int microscope_voltage;// = 0;
       unsigned int debug;// = 0;
       unsigned int complex_realspace_sum;// = 0;
+      unsigned int correlograph;// = 0;
+      unsigned int correlograph_images;// = 0;
+      unsigned int correlograph_variance;// = 0;
+      unsigned int correlograph_everyimage;
+      unsigned int correlograph_everytxt;
+      //unsigned int correlograph_everynetcdf;
       input_flags()  // constructor
       {
          m = 0;
@@ -107,6 +113,7 @@ namespace TEM_NS
          d2 = 0;
          d3 = 0;
          d4 = 0;
+         rva = 0;
          scherzer_defocus = 0;
          scherzer_alphamax = 0;
          scherzer_cs3 = 0;
@@ -125,6 +132,10 @@ namespace TEM_NS
          microscope_voltage = 0;
          debug = 0;
          complex_realspace_sum = 0;
+         correlograph = 0;
+         correlograph_variance = 0;
+         correlograph_everyimage = 0;
+         correlograph_everytxt = 0;
       }
    };
 

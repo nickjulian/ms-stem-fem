@@ -488,17 +488,6 @@ namespace TEM_NS
          const size_t& Nx, const size_t& Ny
          );
 
-//   int integrate_out_theta(
-//         const double* const psi,
-//         const double* const kx_local, const size_t& Nx_local,
-//         const double* const kx_joined, const size_t& Nx_joined, 
-//         const double* const ky, const size_t& Ny,
-//         const std::list<double>& variance_domain,
-//         const double& delta_k,
-//         double* f_of_k_magnitudes,
-//         const size_t& Nk
-//         );
-
    // to_string has been moved to its own header file
    //template < typename T > string to_string( const T& n )
    //{

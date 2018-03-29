@@ -700,4 +700,63 @@ int TEM_NS::output_psi_mag_reciprocalspace_to_netcdf(
    return EXIT_SUCCESS;
 }
 
+// TODO: fix the following function
+//int TEM_NS::append_correlograph_to_netcdf(
+//   const double* const outDataRaw,
+//   const std::vector<double>& k_binning_boundaries,
+//   const std::vector<double>& phi_binning_boundaries,
+//   const string& outFilePrefix
+//   )
+//{
+//   size_t Nx = k_binning_boundaries.size() - 1;
+//   size_t Ny = phi_binning_boundaries.size() - 1;
+//   double myXDomain[ Nx ];
+//   double myYDomain[ Ny ];
+//   std::vector<double>::const_iterator 
+//      k_bdy_itr = k_binning_boundaries.begin();
+//   std::vector<double>::const_iterator 
+//      phi_bdy_itr = phi_binning_boundaries.begin();
+//   for ( size_t i=0; i < Nx ; ++i)
+//   {
+//      myXDomain[i] = *k_bdy_itr;
+//      ++k_bdy_itr;
+//   }
+//   for ( size_t i=0; i < Ny ; ++i)
+//   {
+//      myYDomain[i] = *phi_bdy_itr;
+//      ++phi_bdy_itr;
+//   }
+//
+//   // Since row/column major data doesn't work with netcdf put methods,
+//   //  copy the output to a 2-D array
+//   double twoDimData[ Nx ][ Ny ];
+//   for (size_t i=0; i<Nx; ++i)
+//      for (size_t j=0; j<Ny; ++j)
+//         twoDimeData[i][j] = outDataRaw[j + i * Ny];
+//
+//   string outFileName = outFilePrefix + ".nc";
+//   NcFile dataFile( outFileName.c_str(), NcFile::Write );
+//   if ( ! dataFile.is_valid() ) 
+//   {
+//      cerr << "failed to open file : " << outFileName << endl;
+//      return EXIT_FAILURE;
+//   }
+//
+//   NcDim* kxDimension = dataFile.add_dim("k", Nx);
+//   NcVar* kxVariable = dataFile.add_var("k", ncDouble, kxDimension);
+//   kxVariable->add_att("units", "\305^-1");
+//
+//   NcDim* phiDimension = dataFile.add_dim("phi", Ny);
+//   NcVar* phiVariable = dataFile.add_var("phi", ncDouble, phiDimension);
+//   phiVariable->add_att("units", "radian");
+//
+//
+//   kxVariable->put( &myXDomain[0], Nx );
+//   phiVariable->put( &myYDomain[0], Ny );
+//
+//   Variable->put( &outDataRaw[0], Nx );
+//
+//   return EXIT_SUCCESS;
+//}
+
 #endif

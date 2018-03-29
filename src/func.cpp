@@ -2586,8 +2586,8 @@ double TEM_NS::sum_detected_intensity(
    //  times. 
    //  This algorithm has been implemented in the variation 
    //  calculation using a vector<indexed_vector_magnitude_sqr> 
-   //  in the integrate_out_theta() function. 
-   //  Modify the current function to work like integrate_out_theta() .
+   //  in the integrate_out_phi() function. 
+   //  Modify the current function to work like integrate_out_phi() .
    //
    // Until a more efficient algorithm is implemented, just scan the
    //  entire kx, ky domain and accumulate the detected intensity when

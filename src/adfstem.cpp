@@ -92,7 +92,8 @@ int TEM_NS::adfstem(
    size_t resolutionUnit, resolutionUnit_recip;
    double xResolution, yResolution,             // for real space images
           xResolution_stem, yResolution_stem,   // for real space images
-          xResolution_recip, yResolution_recip; // for diffraction images
+          xResolution_recip, yResolution_recip, // for diffraction images
+          kResolution_correlograph, phiResolution_correlograph;
 
    double diffraction_scale_factor;
 
@@ -642,7 +643,39 @@ int TEM_NS::adfstem(
    // Instantiate the first and second moment of diffracted intensity
    //  for FTEM calculation.
    ///////////////////////////////////////////////////////////////////
-   unsigned int number_of_bins;  // azimuthal integration subintervals
+   // NOTES:
+   // Correlograph is a plot of the normalized autocorrelation function
+   //  along the azumuthal \phi axis:
+   // G(R, \vec{r}_{p}, k, \phi) = \frac{ 
+   //    \left\langle 
+   //       I(R, \vec{r}_{p}, k, \phi)I(R, \vec{r}_{p}, k, \phi + \Delta)
+   //    \right\rangle_{\Delta}
+   //    }{
+   //    \left\langle \left\langle 
+   //       I(R, \vec{r}_{p}, k, \phi)I(R, \vec{r}_{p}, k, \phi + \Delta)
+   //    \right\rangle_{\Delta} \right\rangle_{\phi}
+   //    } - 1
+   //  = \frac{
+   //       n_{\phi} I(k,\phi)
+   //    }{
+   //       \sum_{i=1}^{n_{\phi}} \{ I(k): k \in (r_{i}, r_{i+1}] \}
+   //    }
+   // G(k_{i}, \phi_{j}) 
+   //    = \frac{
+   //       \|{\phi: \phi \in (\phi_{j},\phi_{j+1}] }\| 
+   //          \sum_{(k, \phi) \in (k_{i}, k_{i+1}]x(\phi_{j}, \phi_{j+1}]}
+   //             I(k, \phi)
+   //       }{
+   //      \sum_{k \in (k_{i}, k_{i+1}] \sum_{\phi \in (0, 2\pi]} I(k,\phi)
+   //       } -1
+   //    = \frac{ 
+   //             I(\|\vec{k}_{i}\|, \phi_{j})
+   //          }{
+   //             \langle I(\|\vec{k}_{i}\|, \phi) \rangle_{\phi}
+   //          } - 1
+
+   unsigned int number_of_k_bins;  // azimuthal integration subintervals
+   unsigned int number_of_phi_bins = 0;
 
    double* diffracted_wave_mag_sum;
    double* diffracted_wave_mag_sum_sqr;
@@ -663,8 +696,8 @@ int TEM_NS::adfstem(
    double* diffracted_wave_mag_sum_radial_intensity_total; // d3 & rva
 
    double* diffracted_wave_mag_sqr;  // d1 & d2
-   double* diffracted_wave_mag_radial_intensity_local; // d1 & d2
-   double* diffracted_wave_mag_radial_intensity_total; // d1 & d2
+   double* diffracted_wave_mag_radial_intensity_local; // d1 & d2 & corr.
+   double* diffracted_wave_mag_radial_intensity_total; // d1 & d2 & corr.
 
    double* diffracted_wave_mag_radial_intensity_total_sum; // d1
    //double* diffracted_wave_mag_radial_intensity_sqr_local; // d1
@@ -678,6 +711,15 @@ int TEM_NS::adfstem(
    double* diffracted_wave_mag_variance_radial_intensity_local; // d4
    double* diffracted_wave_mag_variance_radial_intensity_total; // d4
 
+   double* diffracted_wave_mag_in_radial_coords_local; // correlograph
+   double* diffracted_wave_mag_in_radial_coords_total; // correlograph
+   double* diffracted_wave_mag_in_radial_coords_sum; // correlograph
+
+   double* correlograph;
+   double* correlograph_sum; 
+   double* correlograph_sqr_sum; // correlograph_variance
+   //double* correlograph_variance;
+
    double* ftem_gt17;
    double* ftem_d1;
    //double* ftem_d2;
@@ -686,27 +728,30 @@ int TEM_NS::adfstem(
    double* ftem_d4;
    double* ftem_rva;
 
-   int* bin_counts_local;
-   int* bin_counts_aggregated;
-   int* bin_counts_sqr_sum_aggregated;
-   int* bin_counts_sum_sqr_aggregated;
+   int* k_bin_counts_local;
+   int* k_bin_counts_aggregated;
+   int* k_bin_counts_sqr_sum_aggregated;
+   int* k_bin_counts_sum_sqr_aggregated;
+   
+   int* phi_bin_counts_local;
+   int* phi_bin_counts_aggregated;
 
-   //int* bin_counts_mag_local;  // not size_t since MPI datatype required
-   //int* bin_counts_mag_aggregated; // d1 & d2
+   //int* k_bin_counts_mag_local;  // not size_t since MPI datatype required
+   //int* k_bin_counts_mag_aggregated; // d1 & d2
 
-   //int* bin_counts_mag_d2_local;
-   //int* bin_counts_mag_d2_aggregated;
-   //int* bin_counts_mag_sqr_local;
-   //int* bin_counts_mag_sqr_aggregated;
+   //int* k_bin_counts_mag_d2_local;
+   //int* k_bin_counts_mag_d2_aggregated;
+   //int* k_bin_counts_mag_sqr_local;
+   //int* k_bin_counts_mag_sqr_aggregated;
 
-   // TODO: reuse bin_counts variables and elliminate the rest
-   //int* bin_counts_sqr_sum_local; // gt17 & d3
-   //int* bin_counts_sqr_sum_aggregated; // gt17 & d3
-   //int* bin_counts_sum_local; // gt17 & d3
-   //int* bin_counts_sum_aggregated; // gt17 & d3
+   // TODO: reuse k_bin_counts variables and elliminate the rest
+   //int* k_bin_counts_sqr_sum_local; // gt17 & d3
+   //int* k_bin_counts_sqr_sum_aggregated; // gt17 & d3
+   //int* k_bin_counts_sum_local; // gt17 & d3
+   //int* k_bin_counts_sum_aggregated; // gt17 & d3
 
-   //int* bin_counts_sum_sqr_local; // gt17
-   //int* bin_counts_sum_sqr_aggregated; // gt17
+   //int* k_bin_counts_sum_sqr_local; // gt17
+   //int* k_bin_counts_sum_sqr_aggregated; // gt17
 
    //int* bin_count_variance_local; // d4
    //int* bin_count_variance_aggregated; // d4
@@ -716,11 +761,14 @@ int TEM_NS::adfstem(
    double* diffracted_wave_complex_sum_mag;
 
    double delta_k;   // length of aziumthal integration subintervals
-   std::vector<double> binning_boundaries;
+   std::vector<double> k_binning_boundaries;
+   std::vector<double> phi_binning_boundaries;
+   double delta_phi; // TODO: make this an input parameter
+   vector<indexed_vector_magnitude_sqr> indexed_magnitudes;
 
    if ( flags.fem )
    {
-      // Initalize binning_boundaries for azimuthal integration.
+      // Initalize k_binning_boundaries for azimuthal integration.
       //
       // TODO: determine a good separation between binning boundaries,
       //        delta_k. The current value is just a guess.
@@ -732,58 +780,182 @@ int TEM_NS::adfstem(
              + (ky[1] - ky[0]) * (ky[1] - ky[0])
             );
 
-      if ( mynode == rootnode ) number_of_bins = bwcutoff_t / delta_k;
-      MPI_Bcast( &number_of_bins, 1, MPI_UNSIGNED, rootnode, comm);
+      unsigned int* number_of_bins;
+      number_of_bins = new unsigned int[2];
 
-      if ( mynode == rootnode )
-         for ( unsigned int ii=0; ii < number_of_bins + 1; ++ii)
-            binning_boundaries.push_back( ii * delta_k );
-      else
-         binning_boundaries.resize(number_of_bins + 1);
+      if ( mynode == rootnode ) 
+      {
+         // NOTE: why not duplicate the following on all nodes?
+         //       I want to be certain that the number of bins 
+         //       are all identical.
+         unsigned int phi_bdy_count = 0;
+         number_of_k_bins = bwcutoff_t / delta_k;
 
-      MPI_Bcast( &binning_boundaries[0], number_of_bins + 1, 
-                  MPI_DOUBLE, rootnode, comm);
+         for ( unsigned int ii=0; ii < number_of_k_bins + 1; ++ii)
+         {  // count the number of k bins between 0.2 and 1.0,
+            //  and use that as the number of phi bins
+            double k_bdy = ii * delta_k;
+            k_binning_boundaries.push_back( k_bdy );
+            if ( flags.correlograph ) // is this inefficient?
+               if (( k_bdy >= 0.2) && (k_bdy <= 1.0) ) ++phi_bdy_count;
+         }
+
+         if ( flags.correlograph ) // is this inefficient?
+            number_of_phi_bins = phi_bdy_count - 1;
+
+         number_of_bins[0] = number_of_k_bins;
+         number_of_bins[1] = number_of_phi_bins;
+         if ( flags.debug && (mynode == rootnode) )
+         {
+            cout << "number_of_bins[] : (" << number_of_bins[0] 
+               << ", " << number_of_bins[1] << ")" << endl;
+         }
+      }
+
+      MPI_Bcast( number_of_bins, 2, MPI_UNSIGNED, rootnode, comm);
+
+      if ( mynode != rootnode ) 
+      {
+         number_of_k_bins = number_of_bins[0];
+         number_of_phi_bins = number_of_bins[1];
+      }
+
+      if ( flags.debug && (mynode != rootnode) )
+      {
+         cout << "node : " << mynode << "number_of_bins[] : (" << number_of_bins[0] 
+            << ", " << number_of_bins[1] << ")" << endl;
+      }
+
+      delete[] number_of_bins;
+
+      if ( flags.correlograph ) // is this inefficient?
+         delta_phi = 2*PI/number_of_phi_bins;
+
+      if ( mynode != rootnode )
+      {
+         for ( unsigned int ii=0; ii < number_of_k_bins + 1; ++ii)
+         {
+            k_binning_boundaries.push_back( ii * delta_k );
+         }
+      }
+      if ( flags.correlograph ) // is this inefficient?
+         for ( unsigned int ii=0; ii < number_of_phi_bins + 1; ++ii)
+            phi_binning_boundaries.push_back( ii * delta_phi );
+      //// NOTE: it's probably faster to push_back on each node rather
+      ////        than broadcast the values, even though it's possible
+      ////        that they may slightly vary between nodes.
+      //}
+      //else
+      //{
+      //   k_binning_boundaries.resize(number_of_k_bins + 1);
+      //   phi_binning_boundaries.resize(number_of_phi_bins + 1);
+      //}
+
+      //MPI_Bcast( &k_binning_boundaries[0], number_of_k_bins + 1, 
+      //            MPI_DOUBLE, rootnode, comm);
+      //MPI_Bcast( &phi_binning_boundaries[0], number_of_phi_bins + 1, 
+      //            MPI_DOUBLE, rootnode, comm);
+
+      // Initialize the vector of indexed_vector_magitude_sqr for re-use
+      for ( ptrdiff_t i=0; i<Nx_local; ++i)
+         for ( ptrdiff_t j=0; j<Ny; ++j)
+         {
+            indexed_magnitudes.push_back(
+                  indexed_vector_magnitude_sqr( 
+                        i, j,
+                        kx_local[i] * kx_local[i] + ky[j] * ky[j],
+                        PI + atan2(ky[j], kx_local[i]) // TODO: improve?
+                     )
+                  );
+         }
+      //for (size_t i=0; i < indexed_magnitudes.size(); ++i)
+      //   cout << "indexed_magnitudes[" << i << "].phi: " << indexed_magnitudes[i].phi << endl;; // debug
+
+      // sort the indexed_magnitudes by the magnitude of their |k|^2 values
+      std::sort(
+            indexed_magnitudes.begin(),
+            indexed_magnitudes.end(),
+            indexed_vector_magnitude_sqr_lt   // pointer to "<" function 
+            );
+      //cout << "min |k|^2 of indexed_magnitudes : "  // debug
+      //   << indexed_magnitudes.front().v_mag_sqr << endl; // debug
+      //cout << "max |k|^2 of indexed_magnitudes : "  // debug
+      //   << indexed_magnitudes.back().v_mag_sqr << endl; // debug
 
       // Allocate variables for the various FTEM modes
 
-      if ( flags.d1 || flags.d2  || flags.d3 
+      if ( flags.d1 || flags.d2  || flags.d3 || flags.correlograph
             || flags.d4 || flags.gt17 || flags.rva )
-      {
-         bin_counts_local = new int[ number_of_bins ];
-         //bin_counts_sqr_local = new int[ number_of_bins ];
-         // Initiallization to 0 will be done by integrate_out_theta_...()
-         //for ( ptrdiff_t ii=0; ii < number_of_bins; ++ii )
+      {  
+         k_bin_counts_local = new int[ number_of_k_bins ];
+         if ( flags.correlograph ) // is this inefficient?
+            phi_bin_counts_local = new int[ number_of_phi_bins ];
+         //k_bin_counts_sqr_local = new int[ number_of_k_bins ];
+         // Initiallization to 0 will be done by integrate_out_phi_...()
+         //for ( ptrdiff_t ii=0; ii < number_of_k_bins; ++ii )
          //{
-         //   bin_counts_local[ii] = 0;
-         //   bin_counts_sqr_local[ii] = 0;
+         //   k_bin_counts_local[ii] = 0;
+         //   k_bin_counts_sqr_local[ii] = 0;
          //}
          if ( mynode == rootnode )
          {
-            bin_counts_aggregated
-               = new int[ number_of_bins ];
-            bin_counts_sqr_sum_aggregated
-               = new int[ number_of_bins ];
-            bin_counts_sum_sqr_aggregated
-               = new int[ number_of_bins ];
-            for ( size_t ii=0; ii < number_of_bins; ++ii)
+            k_bin_counts_aggregated
+               = new int[ number_of_k_bins ];
+            k_bin_counts_sqr_sum_aggregated
+               = new int[ number_of_k_bins ];
+            k_bin_counts_sum_sqr_aggregated
+               = new int[ number_of_k_bins ];
+            for ( size_t ii=0; ii < number_of_k_bins; ++ii)
             {
-               bin_counts_aggregated[ii] = 0;
-               bin_counts_sqr_sum_aggregated[ii] = 0;
-               bin_counts_sum_sqr_aggregated[ii] = 0;
+               k_bin_counts_aggregated[ii] = 0;
+               k_bin_counts_sqr_sum_aggregated[ii] = 0;
+               k_bin_counts_sum_sqr_aggregated[ii] = 0;
+            }
+            if ( flags.correlograph )
+            {
+               phi_bin_counts_aggregated
+                  = new int[ number_of_phi_bins ];
+               for ( size_t ii=0; ii < number_of_phi_bins; ++ii)
+               {
+                  phi_bin_counts_aggregated[ii] = 0;
+               }
             }
          }
       }
 
-      if ( flags.d1 || flags.d2 )
+      if ( flags.d1 || flags.d2 || flags.correlograph)
       {
          diffracted_wave_mag_radial_intensity_local
-            = new double[ number_of_bins ];
-         //bin_counts_mag_local = new int[number_of_bins];
-
-         for ( ptrdiff_t ii=0; ii < number_of_bins; ++ii )
+            = new double[number_of_k_bins];
+         //k_bin_counts_mag_local = new int[number_of_k_bins];
+         for ( ptrdiff_t ii=0; ii < number_of_k_bins; ++ii )
          {
-            //bin_counts_mag_local[ii] = 0;
+            //k_bin_counts_mag_local[ii] = 0;
             diffracted_wave_mag_radial_intensity_local[ii] = 0.0;
+         }
+
+         if ( flags.correlograph )
+         {
+            // total of this variable is held at the root node
+            //  but every node needs to accumulate its own under the
+            //  same name
+            diffracted_wave_mag_in_radial_coords_local
+               = new double[ number_of_k_bins * number_of_phi_bins ];
+            correlograph 
+               = new double[ number_of_phi_bins * number_of_k_bins];
+            correlograph_sum
+               = new double[ number_of_phi_bins * number_of_k_bins];
+            if ( flags.correlograph_variance )
+               correlograph_sqr_sum
+                  = new double[ number_of_phi_bins * number_of_k_bins];
+            for ( ptrdiff_t ii=0; 
+                  ii < number_of_k_bins * number_of_phi_bins;
+                  ++ii)
+            {
+               correlograph_sum[ii] = 0.0;
+               if ( flags.correlograph_variance )
+                  correlograph_sqr_sum[ii] = 0.0;
+            }
          }
 
          if ( flags.d2 )
@@ -791,11 +963,11 @@ int TEM_NS::adfstem(
             diffracted_wave_mag_sqr
                = new double[local_alloc_size_fftw];
             diffracted_wave_mag_sqr_radial_intensity_local
-               = new double[ number_of_bins ];
-            //bin_counts_mag_sqr_local = new int[number_of_bins];
-            for ( ptrdiff_t ii=0; ii < number_of_bins; ++ii )
+               = new double[ number_of_k_bins ];
+            //k_bin_counts_mag_sqr_local = new int[number_of_k_bins];
+            for ( ptrdiff_t ii=0; ii < number_of_k_bins; ++ii )
             {
-               //bin_counts_mag_sqr_local[ii] = 0;
+               //k_bin_counts_mag_sqr_local[ii] = 0;
                diffracted_wave_mag_sqr_radial_intensity_local[ii] 
                   = 0.0;
             }
@@ -808,22 +980,22 @@ int TEM_NS::adfstem(
          if ( mynode == rootnode )
          {
             diffracted_wave_mag_radial_intensity_total//temporary storage
-               = new double[ number_of_bins ];        // to allow squaring
-            //bin_counts_mag_aggregated = new int[ number_of_bins ];
-            for ( ptrdiff_t ii=0; ii < number_of_bins; ++ii )
+               = new double[ number_of_k_bins ];     // to allow squaring
+            //k_bin_counts_mag_aggregated = new int[ number_of_k_bins ];
+            for ( ptrdiff_t ii=0; ii < number_of_k_bins; ++ii )
             { // quantities common to both d1 & d2
                diffracted_wave_mag_radial_intensity_total[ii] = 0.0;
-               //bin_counts_mag_aggregated[ii] = 0;
+               //k_bin_counts_mag_aggregated[ii] = 0;
             }
 
             if ( flags.d1 )
             {
-               ftem_d1 = new double[ number_of_bins ];
+               ftem_d1 = new double[ number_of_k_bins ];
                diffracted_wave_mag_radial_intensity_total_sum
-                  = new double[ number_of_bins ];
+                  = new double[ number_of_k_bins ];
                diffracted_wave_mag_radial_intensity_total_sqr_sum
-                  = new double[ number_of_bins ];
-               for ( ptrdiff_t ii=0; ii < number_of_bins; ++ii )
+                  = new double[ number_of_k_bins ];
+               for ( ptrdiff_t ii=0; ii < number_of_k_bins; ++ii )
                {
                   diffracted_wave_mag_radial_intensity_total_sum[ii]
                      = 0.0;
@@ -834,10 +1006,10 @@ int TEM_NS::adfstem(
             if ( flags.d2 )
             {
                diffracted_wave_mag_sqr_radial_intensity_total
-                  = new double[ number_of_bins ];
+                  = new double[ number_of_k_bins ];
                diffracted_wave_variance_sum
-                  = new double[ number_of_bins ];
-               for ( ptrdiff_t ii=0; ii < number_of_bins; ++ii )
+                  = new double[ number_of_k_bins ];
+               for ( ptrdiff_t ii=0; ii < number_of_k_bins; ++ii )
                {
                   diffracted_wave_mag_sqr_radial_intensity_total[ii]
                      = 0.0;
@@ -845,8 +1017,23 @@ int TEM_NS::adfstem(
                      = 0.0;
                }
             }
+            if ( flags.correlograph )
+            {
+               // average correlograph will be computed at root node
+               diffracted_wave_mag_in_radial_coords_sum
+                  = new double[ number_of_k_bins * number_of_phi_bins ];
+               diffracted_wave_mag_in_radial_coords_total
+                  = new double[ number_of_k_bins * number_of_phi_bins ];
+               for ( ptrdiff_t ii=0; 
+                     ii < number_of_k_bins * number_of_phi_bins;
+                     ++ii)
+               {
+                  diffracted_wave_mag_in_radial_coords_sum[ii] = 0.0;
+                  diffracted_wave_mag_in_radial_coords_total[ii] = 0.0;
+               }
+            }
          }
-      } // ( flags.d1 || flags.d2 )
+      } // ( flags.d1 || flags.d2 || flags.correlograph )
  
       if ( flags.gt17 || flags.d3 || flags.d4 
             || flags.rva ) 
@@ -906,26 +1093,26 @@ int TEM_NS::adfstem(
          if ( flags.gt17 || flags.d3 ) 
          {
             diffracted_wave_mag_sqr_sum_radial_intensity_local
-               = new double[ number_of_bins ];
-            //bin_counts_sqr_sum_local
-            //   = new double[ number_of_bins ];
-            for ( size_t ii=0; ii < number_of_bins; ++ii)
+               = new double[ number_of_k_bins ];
+            //k_bin_counts_sqr_sum_local
+            //   = new double[ number_of_k_bins ];
+            for ( size_t ii=0; ii < number_of_k_bins; ++ii)
             {
                diffracted_wave_mag_sqr_sum_radial_intensity_local[ii]
                   = 0.0;
-               //bin_counts_sqr_sum_local = 0;
+               //k_bin_counts_sqr_sum_local = 0;
             }
             if (mynode == rootnode)
             {
                diffracted_wave_mag_sqr_sum_radial_intensity_total
-                  = new double[ number_of_bins ];
-               //bin_counts_mag_sqr_sum_aggregated
-               //   = new double[ number_of_bins ];
-               for ( size_t ii=0; ii < number_of_bins; ++ii)
+                  = new double[ number_of_k_bins ];
+               //k_bin_counts_mag_sqr_sum_aggregated
+               //   = new double[ number_of_k_bins ];
+               for ( size_t ii=0; ii < number_of_k_bins; ++ii)
                {
                   diffracted_wave_mag_sqr_sum_radial_intensity_total[ii]
                      = 0.0;
-                  //bin_counts_sqr_sum_aggregated = 0;
+                  //k_bin_counts_sqr_sum_aggregated = 0;
                }
             }
          } // ( flags.gt17 || flags.d3 ) 
@@ -933,27 +1120,27 @@ int TEM_NS::adfstem(
          if ( flags.gt17 )
          {
             diffracted_wave_mag_sum_sqr_radial_intensity_local
-               = new double[ number_of_bins ];
-            //bin_counts_sum_sqr_local   // TODO: rename
-            //   = new double[ number_of_bins ];
-            //for ( size_t ii=0; ii < number_of_bins; ++ii)
+               = new double[ number_of_k_bins ];
+            //k_bin_counts_sum_sqr_local   // TODO: rename
+            //   = new double[ number_of_k_bins ];
+            //for ( size_t ii=0; ii < number_of_k_bins; ++ii)
             //{
             //   diffracted_wave_mag_sum_sqr_radial_intensity_local[ii]
             //      = 0.0;
-            //   bin_counts_sum_sqr_local[ii] = 0;
+            //   k_bin_counts_sum_sqr_local[ii] = 0;
             //}
             if ( mynode == rootnode )
             {
-               ftem_gt17 = new double[ number_of_bins ];
+               ftem_gt17 = new double[ number_of_k_bins ];
                diffracted_wave_mag_sum_sqr_radial_intensity_total
-                  = new double[ number_of_bins ];
-               //bin_counts_sum_sqr_aggregated // TODO: rename
-               //   = new double[ number_of_bins ];
-               for ( size_t ii=0; ii < number_of_bins; ++ii)
+                  = new double[ number_of_k_bins ];
+               //k_bin_counts_sum_sqr_aggregated // TODO: rename
+               //   = new double[ number_of_k_bins ];
+               for ( size_t ii=0; ii < number_of_k_bins; ++ii)
                {
                   diffracted_wave_mag_sum_sqr_radial_intensity_total[ii] 
                      = 0.0;
-                  //bin_counts_sum_sqr_aggregated[ii] = 0;
+                  //k_bin_counts_sum_sqr_aggregated[ii] = 0;
                }
             }
          } // flags.gt17 
@@ -961,32 +1148,32 @@ int TEM_NS::adfstem(
          if ( flags.d3 || flags.rva )
          {
             diffracted_wave_mag_sum_radial_intensity_local
-               = new double[ number_of_bins ];
-            //bin_counts_sum_local // TODO: rename
-            //   = new double[ number_of_bins ];
-            for ( size_t ii=0; ii < number_of_bins; ++ii)
+               = new double[ number_of_k_bins ];
+            //k_bin_counts_sum_local // TODO: rename
+            //   = new double[ number_of_k_bins ];
+            for ( size_t ii=0; ii < number_of_k_bins; ++ii)
             {
                diffracted_wave_mag_sum_radial_intensity_local[ii] = 0.0;
-               //bin_counts_sum_local[ii] = 0;
+               //k_bin_counts_sum_local[ii] = 0;
             }
             if ( mynode == rootnode )
             {
                diffracted_wave_mag_sum_radial_intensity_total
-                  = new double[ number_of_bins ];
-               //bin_counts_sum_aggregated // TODO: rename
-               //   = new double[ number_of_bins ];
-               for ( size_t ii=0; ii < number_of_bins; ++ii)
+                  = new double[ number_of_k_bins ];
+               //k_bin_counts_sum_aggregated // TODO: rename
+               //   = new double[ number_of_k_bins ];
+               for ( size_t ii=0; ii < number_of_k_bins; ++ii)
                {
                   diffracted_wave_mag_sum_radial_intensity_total[ii] = 0.0;
-                  //bin_counts_sum_aggregated[ii] = 0;
+                  //k_bin_counts_sum_aggregated[ii] = 0;
                }
                if ( flags.d3 )
                {
-                  ftem_d3 = new double[ number_of_bins ];
+                  ftem_d3 = new double[ number_of_k_bins ];
                }
                if ( flags.rva )
                {
-                  ftem_rva = new double[ number_of_bins ];
+                  ftem_rva = new double[ number_of_k_bins ];
                }
             }
          } // flags.d3 || flags.rva
@@ -996,10 +1183,10 @@ int TEM_NS::adfstem(
             diffracted_wave_mag_variance
                = new double[ local_alloc_size_fftw ];
             diffracted_wave_mag_variance_radial_intensity_local
-               = new double[ number_of_bins ];
+               = new double[ number_of_k_bins ];
             //bin_count_variance_local
-            //   = new double[ number_of_bins ];
-            //for ( size_t ii=0; ii < number_of_bins; ++ii)
+            //   = new double[ number_of_k_bins ];
+            //for ( size_t ii=0; ii < number_of_k_bins; ++ii)
             //{
             //   diffracted_wave_mag_variance[ii]
             //      = 0.0;
@@ -1008,12 +1195,12 @@ int TEM_NS::adfstem(
 
             if ( mynode == rootnode )
             {
-               ftem_d4 = new double[ number_of_bins ];
+               ftem_d4 = new double[ number_of_k_bins ];
                diffracted_wave_mag_variance_radial_intensity_total
-                  = new double[ number_of_bins ];
+                  = new double[ number_of_k_bins ];
                //bin_count_variance_aggregated 
-               //   = new int[ number_of_bins ];
-               for ( size_t ii=0; ii < number_of_bins; ++ii)
+               //   = new int[ number_of_k_bins ];
+               for ( size_t ii=0; ii < number_of_k_bins; ++ii)
                {
                   diffracted_wave_mag_variance_radial_intensity_total[ii]
                      = 0.0;
@@ -1134,7 +1321,7 @@ int TEM_NS::adfstem(
          //       beam position instead of using x_p and y_p. 
 
          // debug
-         //if ( mynode == rootnode )
+         //if ( mynode == rootnode && flags.debug)
          //{
          ////cout << "node : " << mynode << ", ";
          //   cout << "probing position : " 
@@ -1506,93 +1693,31 @@ int TEM_NS::adfstem(
             {
                for ( ptrdiff_t j=0; j < Ny; j++)
                {
-                  //if (
-                  //      (pow(xx_joined[0] - xx_local[i],2) 
-                  //          + pow(yy[0] - yy[j],2)
-                  //         > pow(probecutoff * xperiod_duped,2) 
-                  //            + pow(probecutoff * yperiod_duped,2)
-                  //      )
-                  //      &&
-                  //      (pow(xx_joined[0] + xperiod_duped - xx_local[i],2) 
-                  //          + pow(yy[0] - yy[j],2)
-                  //         > pow(probecutoff * xperiod_duped,2) 
-                  //            + pow(probecutoff *yperiod_duped,2)
-                  //      )
-                  //      &&
-                  //      (pow(xx_joined[0] - xx_local[i],2) 
-                  //          + pow(yy[0] + yperiod_duped - yy[j],2)
-                  //         > pow(probecutoff * xperiod_duped,2) 
-                  //            + pow(probecutoff * yperiod_duped,2)
-                  //      )
-                  //      &&
-                  //      (pow(xx_joined[0] + xperiod_duped - xx_local[i],2) 
-                  //          + pow(yy[0] + yperiod_duped - yy[j],2)
-                  //         > pow(probecutoff * xperiod_duped,2) 
-                  //            + pow(probecutoff * yperiod_duped,2)
-                  //      )
-                  //      &&
-                  //      (pow(xx_joined[0] - xperiod_duped - xx_local[i],2) 
-                  //          + pow(yy[0] - yy[j],2)
-                  //         > pow(probecutoff * xperiod_duped,2) 
-                  //            + pow(probecutoff * yperiod_duped,2)
-                  //      )
-                  //      &&
-                  //      (pow(xx_joined[0] - xx_local[i],2) 
-                  //          + pow(yy[0] - yperiod_duped - yy[j],2)
-                  //         > pow(probecutoff * xperiod_duped,2) 
-                  //            + pow(probecutoff * yperiod_duped,2)
-                  //      )
-                  //      &&
-                  //      (pow(xx_joined[0] - xperiod_duped - xx_local[i],2) 
-                  //          + pow(yy[0] - yperiod_duped - yy[j],2)
-                  //         > pow(probecutoff * xperiod_duped,2) 
-                  //            + pow(probecutoff * yperiod_duped,2)
-                  //      )
-                  //      &&
-                  //      (pow(xx_joined[0] + xperiod_duped - xx_local[i],2) 
-                  //          + pow(yy[0] - yperiod_duped - yy[j],2)
-                  //         > pow(probecutoff * xperiod_duped,2) 
-                  //            + pow(probecutoff * yperiod_duped,2)
-                  //      )
-                  //      &&
-                  //      (pow(xx_joined[0] - xperiod_duped - xx_local[i],2) 
-                  //          + pow(yy[0] + yperiod_duped - yy[j],2)
-                  //         > pow(probecutoff * xperiod_duped,2) 
-                  //            + pow(probecutoff * yperiod_duped,2)
-                  //      )
-                  //   )
-                  //{
-                  //   psi[j + i*Ny][0] = 0.0;
-                  //   psi[j + i*Ny][1] = 0.0;
-                  //}
-                  //else
-                  //{
+                  // complex multiplication of the transmission 
+                  //  function and psi
+                  // (a + ib)(c + id) = ac - bd + i(ad + bc)
+                  psi[(j + i * Ny)][0]
+                     = (
+                        (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][0] 
+                        * psi[(j + i * Ny)][0]
+                        - 
+                        (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
+                        * psi[(j + i * Ny)][1]
+                       ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
+                  // normalizing due to pf_c2c_t, pb_c2c_t, pf_c2c_psi, 
+                  //  pb_c2c_psi
+                  // NOTE: transmission_function_ms() already has a 
+                  //       factor of 1/sqrtNxNy
 
-                     // complex multiplication of the transmission 
-                     //  function and psi
-                     // (a + ib)(c + id) = ac - bd + i(ad + bc)
-                     psi[(j + i * Ny)][0]
-                        = (
-                           (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][0] 
-                           * psi[(j + i * Ny)][0]
-                           - 
-                           (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
-                           * psi[(j + i * Ny)][1]
-                          ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
-                     // normalizing due to pf_c2c_t, pb_c2c_t, pf_c2c_psi, 
-                     //  pb_c2c_psi
-                     // NOTE: transmission_function_ms() already has a 
-                     //       factor of 1/sqrtNxNy
-
-                     psi[(j + i * Ny)][1]
-                        = (
-                           (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][0] 
-                           * psi[(j + i * Ny)][1]
-                           + 
-                           (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
-                           * psi[(j + i * Ny)][0]
-                          ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
-                  //}
+                  psi[(j + i * Ny)][1]
+                     = (
+                        (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][0] 
+                        * psi[(j + i * Ny)][1]
+                        + 
+                        (*sliceList_itr)->exp_i_sigma_v[j + i * Ny][1] 
+                        * psi[(j + i * Ny)][0]
+                       ) / sqrtNxNy;// NxNy; // / NxNy_sqr; 
+                  
                }
             }
 
@@ -1682,9 +1807,6 @@ int TEM_NS::adfstem(
                   Nx_local, kx_local, Ny, ky,
                   bwcutoff_t   
                   );
-
-            // TODO: double check that propagate() bandwidth limits psi
-            // // .... it appears to.
 
             (*sliceList_itr)->propagate(
                   lambda,
@@ -1805,6 +1927,7 @@ int TEM_NS::adfstem(
 
             // scale factor for logarithmic scaling of diffraction images
             
+            // TODO: make the scale factor tunable by run-time parameter
             diffraction_scale_factor = 1.0e-5;
             output_diffraction(
                   psi,
@@ -1881,27 +2004,36 @@ int TEM_NS::adfstem(
 
          if ( flags.fem )
          {
-            if ( flags.d1 || flags.d2 )
+            if ( flags.d1 || flags.d2 || flags.correlograph )
             {
                // Azimuthally integrate diffraction for 1-D variance.
-               integrate_out_theta_fftw(
+               if (integrate_out_phi_fftw(
                      psi,
+                     flags,
                      kx_local, Nx_local,
                      ky, Ny,
-                     binning_boundaries, 
-                     bin_counts_local,
-                     diffracted_wave_mag_radial_intensity_local
-                     );
+                     indexed_magnitudes,
+                     k_binning_boundaries, 
+                     k_bin_counts_local,
+                     phi_binning_boundaries, 
+                     phi_bin_counts_local,
+                     diffracted_wave_mag_radial_intensity_local,
+                     diffracted_wave_mag_in_radial_coords_local
+                     ) == EXIT_FAILURE)
+               {
+                  cerr << "integrate_out_phi_fftw failed" << endl;
+                  return EXIT_FAILURE;
+               }
 
                // TODO: is the following initialization necessary?
                // No.
                //if ( mynode == rootnode )
-               //   for (unsigned int ii=0; ii < number_of_bins; ++ii)
+               //   for (unsigned int ii=0; ii < number_of_k_bins; ++ii)
                //      diffracted_wave_radial_intensity_sum_d1_tmp[ii]=0.0;
-               if ( number_of_bins != binning_boundaries.size() - 1)//debug
+               if ( number_of_k_bins != k_binning_boundaries.size() - 1)//debug
                {//debug
-                  cerr << "Error - number_of_bins != "
-                     << "binning_boundaries.size() - 1" << endl;//debug
+                  cerr << "Error - number_of_k_bins != "
+                     << "k_binning_boundaries.size() - 1" << endl;//debug
                   // TODO: make a function to release memory for a clean 
                   //        exit
                }//debug
@@ -1909,37 +2041,139 @@ int TEM_NS::adfstem(
                MPI_Reduce(
                      diffracted_wave_mag_radial_intensity_local,
                      diffracted_wave_mag_radial_intensity_total,
-                     number_of_bins,
+                     number_of_k_bins,
                      MPI_DOUBLE, MPI_SUM,
                      rootnode, comm
                      );
 
                MPI_Reduce(
-                     bin_counts_local,
-                     bin_counts_aggregated,
-                     number_of_bins,
+                     k_bin_counts_local,
+                     k_bin_counts_aggregated,
+                     number_of_k_bins,
                      MPI_INT, MPI_SUM,
                      rootnode, comm
                      );
 
+               if ( flags.correlograph )
+               {
+                  MPI_Reduce(
+                        diffracted_wave_mag_in_radial_coords_local,
+                        diffracted_wave_mag_in_radial_coords_total,
+                        number_of_k_bins * number_of_phi_bins,
+                        MPI_DOUBLE, MPI_SUM,
+                        rootnode, comm
+                        );
+
+                  MPI_Reduce(
+                        phi_bin_counts_local,
+                        phi_bin_counts_aggregated,
+                        number_of_phi_bins,
+                        MPI_INT, MPI_SUM,
+                        rootnode, comm
+                        );
+               }
 
                if ( mynode == rootnode )
                {
                   if ( flags.d1 )
                   {
-                     for ( unsigned int ii=0; ii < number_of_bins; ++ii)
+                     for ( unsigned int ii=0; ii < number_of_k_bins; ++ii)
                      {
-                        // division by bin_counts_aggregated implements 
+                        // division by k_bin_counts_aggregated implements 
                         //  azimuthal averaging 
                     diffracted_wave_mag_radial_intensity_total_sqr_sum[ii]
                        += (diffracted_wave_mag_radial_intensity_total[ii]
                         * diffracted_wave_mag_radial_intensity_total[ii])
-                                 / (bin_counts_aggregated[ii] 
-                                       * bin_counts_aggregated[ii]);
+                                 / (k_bin_counts_aggregated[ii] 
+                                       * k_bin_counts_aggregated[ii]);
                         
                     diffracted_wave_mag_radial_intensity_total_sum[ii]
                        += diffracted_wave_mag_radial_intensity_total[ii] 
-                              / bin_counts_aggregated[ii];
+                              / k_bin_counts_aggregated[ii];
+                     }
+                  }
+
+                  if ( flags.correlograph ) // at rootnode
+                  {
+                     // k_binning_boundaries,
+                     // k_bin_counts_aggregated, // # of points in rings
+                     // phi_binning_boundaries,
+                     // phi_bin_counts_aggregated,// points of small areas
+                     // diffracted_wave_mag_radial_intensity_local
+                     // diffracted_wave_mag_in_radial_coords_local
+                     // jj indexes phi, ii indexes k
+                     size_t idx; // TODO: is this efficient?
+                     size_t c_idx;
+                     double tmpdbl;
+                     for (size_t ii=0; ii < number_of_k_bins; ++ii)
+                     {
+                        for (size_t jj=0; jj < number_of_phi_bins; ++jj)
+                        {
+                           idx = jj + ii * number_of_phi_bins;
+                           c_idx = ii + jj * number_of_k_bins;
+                           tmpdbl 
+                                 = (k_bin_counts_aggregated[ii] 
+                        * diffracted_wave_mag_in_radial_coords_total[idx]
+                        / diffracted_wave_mag_radial_intensity_total[ii]);
+
+                           if ( (tmpdbl >= 1) 
+                                 && (k_bin_counts_aggregated[ii] !=0) 
+                      && (diffracted_wave_mag_in_radial_coords_total[idx] 
+                                    !=0)
+                      && (diffracted_wave_mag_radial_intensity_total[ii] 
+                                    !=0)
+                           )
+                           {
+                              correlograph[c_idx]
+                                 = (k_bin_counts_aggregated[ii] 
+                         * diffracted_wave_mag_in_radial_coords_total[idx]
+                         / diffracted_wave_mag_radial_intensity_total[ii])
+                                 - 1;
+                           }
+                           else
+                              correlograph[c_idx] = 0.0;
+
+                           // accumulate average correlograph
+                           correlograph_sum[c_idx] += correlograph[c_idx];
+                           if ( flags.correlograph_variance )
+                              correlograph_sqr_sum[c_idx] 
+                                 += (correlograph[c_idx]) 
+                                    * (correlograph[c_idx]);
+                        }
+                     }
+                     kResolution_correlograph //limiting domain to (0.2,1)
+                        = ( number_of_k_bins / (1.0 - 0.2)) * 1.0e8;
+                     phiResolution_correlograph 
+                        = number_of_phi_bins / (360);// degrees for output
+
+                     if ( (mynode == rootnode) 
+                           && flags.correlograph_everyimage )
+                     {
+                        output_correlograph_image(
+                              correlograph,
+                              number_of_phi_bins,
+                              number_of_k_bins,
+                              resolutionUnit,
+                              phiResolution_correlograph,
+                              kResolution_correlograph,
+                              outFileName_prefix
+                              + "_" + to_string(pixel_number_x) 
+                              + "_" + to_string(pixel_number_y),
+                              0
+                              );
+                     }
+
+                     if ( (mynode == rootnode) 
+                           && flags.correlograph_everytxt )
+                     {
+                        output_correlograph_to_txt(
+                              correlograph,
+                              phi_binning_boundaries,
+                              k_binning_boundaries,
+                              outFileName_prefix 
+                                 + "_" + to_string(pixel_number_x) 
+                                 + "_" + to_string(pixel_number_y)
+                              );
                      }
                   }
                }
@@ -1953,51 +2187,52 @@ int TEM_NS::adfstem(
                               + (psi[ii][1] * psi[ii][1]);
                   }
 
-                  integrate_out_theta_double(
+                  integrate_out_phi_double(
                         diffracted_wave_mag_sqr,
                         kx_local, Nx_local,
                         ky, Ny,
-                        binning_boundaries, 
-                        bin_counts_local,
+                        indexed_magnitudes,
+                        k_binning_boundaries, 
+                        k_bin_counts_local,
                         diffracted_wave_mag_sqr_radial_intensity_local
                         );
 
                   MPI_Reduce(
                         diffracted_wave_mag_sqr_radial_intensity_local,
                         diffracted_wave_mag_sqr_radial_intensity_total,
-                        number_of_bins,
+                        number_of_k_bins,
                         MPI_DOUBLE, MPI_SUM,
                         rootnode, comm
                         );
 
                   MPI_Reduce(
-                        bin_counts_local,
-                        bin_counts_sqr_sum_aggregated,
-                        number_of_bins,
+                        k_bin_counts_local,
+                        k_bin_counts_sqr_sum_aggregated,
+                        number_of_k_bins,
                         MPI_INT, MPI_SUM,
                         rootnode, comm
                         );
                   if ( mynode == rootnode )
                   {
-                     for ( unsigned int ii=0; ii<number_of_bins; ++ii)
+                     for ( unsigned int ii=0; ii<number_of_k_bins; ++ii)
                      {
                         diffracted_wave_variance_sum[ii] += 
                    ((diffracted_wave_mag_sqr_radial_intensity_total[ii]
-                           / bin_counts_sqr_sum_aggregated[ii])
+                           / k_bin_counts_sqr_sum_aggregated[ii])
                            /
                            (
                    (diffracted_wave_mag_radial_intensity_total[ii]
                      * diffracted_wave_mag_radial_intensity_total[ii])
-                           / (bin_counts_aggregated[ii] 
-                              * bin_counts_aggregated[ii])
+                           / (k_bin_counts_aggregated[ii] 
+                              * k_bin_counts_aggregated[ii])
                            )) - 1.0;
 
-                        bin_counts_aggregated[ii] = 0;
-                        bin_counts_sqr_sum_aggregated[ii] = 0;
+                        k_bin_counts_aggregated[ii] = 0;
+                        k_bin_counts_sqr_sum_aggregated[ii] = 0;
                      }
                   }
                } // flags.d2
-            } // flags.d1 || flags.d2
+            } // flags.d1 || flags.d2 || flags.correlograph
 
             if ( flags.gt17 || flags.d3 || flags.d4
                   || flags.rva ) 
@@ -2106,7 +2341,7 @@ int TEM_NS::adfstem(
 
          if ( mynode == rootnode )
          {
-            for ( size_t idx=0; idx < number_of_bins; ++idx)
+            for ( size_t idx=0; idx < number_of_k_bins; ++idx)
             {
                if ( diffracted_wave_mag_radial_intensity_total_sum[idx] 
                      == 0.0 )
@@ -2141,7 +2376,7 @@ int TEM_NS::adfstem(
                if ( 
                      output_variance_to_netcdf(
                         ftem_d1,
-                        binning_boundaries,
+                        k_binning_boundaries,
                         outFileName_prefix + "_fem_d1"
                      ) != EXIT_SUCCESS)
                {
@@ -2152,7 +2387,7 @@ int TEM_NS::adfstem(
                if ( 
                   output_variance_to_txt(
                         ftem_d1,
-                        binning_boundaries,
+                        k_binning_boundaries,
                         outFileName_prefix + "_fem_d1"
                      ) != EXIT_SUCCESS)
                {
@@ -2167,7 +2402,7 @@ int TEM_NS::adfstem(
       {
          if ( mynode == rootnode )
          {
-            for (size_t ii=0; ii < number_of_bins; ++ii)
+            for (size_t ii=0; ii < number_of_k_bins; ++ii)
             {
                diffracted_wave_variance_sum[ii]
                   = diffracted_wave_variance_sum[ii] 
@@ -2187,7 +2422,7 @@ int TEM_NS::adfstem(
                if (
                      output_variance_to_netcdf(
                         diffracted_wave_variance_sum,
-                        binning_boundaries,
+                        k_binning_boundaries,
                         outFileName_prefix + "_fem_d2"
                      ) != EXIT_SUCCESS)
                {
@@ -2198,7 +2433,7 @@ int TEM_NS::adfstem(
                if (
                   output_variance_to_txt(
                         diffracted_wave_variance_sum,
-                        binning_boundaries,
+                        k_binning_boundaries,
                         outFileName_prefix + "_fem_d2"
                      ) != EXIT_SUCCESS)
                {
@@ -2234,7 +2469,6 @@ int TEM_NS::adfstem(
          //       diffracted_wave_mag_sum and diffracted_wave_mag_sqr_sum
          //       between k_{i} and k_{i+1}
          
-         // TODO: covariance 
 
          // Divide the sum by the number of points to obtain the average
          //  2-D diffracted intensity.
@@ -2430,19 +2664,20 @@ int TEM_NS::adfstem(
             // Azimuthally average and MPI_Reduce the 2-D averages 
             //    of intensity and intensity squared.
 
-            integrate_out_theta_double(
+            integrate_out_phi_double(
                   diffracted_wave_mag_sqr_sum,
                   kx_local, Nx_local,
                   ky, Ny,
-                  binning_boundaries,
-                  bin_counts_local,
+                  indexed_magnitudes,
+                  k_binning_boundaries,
+                  k_bin_counts_local,
                   diffracted_wave_mag_sqr_sum_radial_intensity_local
                   );
 
             MPI_Reduce(
-                  bin_counts_local,
-                  bin_counts_sqr_sum_aggregated,
-                  number_of_bins,
+                  k_bin_counts_local,
+                  k_bin_counts_sqr_sum_aggregated,
+                  number_of_k_bins,
                   MPI_INT, MPI_SUM,
                   rootnode, comm
                   );
@@ -2450,7 +2685,7 @@ int TEM_NS::adfstem(
             MPI_Reduce(
                   diffracted_wave_mag_sqr_sum_radial_intensity_local,
                   diffracted_wave_mag_sqr_sum_radial_intensity_total,
-                  number_of_bins,
+                  number_of_k_bins,
                   MPI_DOUBLE, MPI_SUM,
                   rootnode, comm
                   );
@@ -2458,19 +2693,20 @@ int TEM_NS::adfstem(
 
          if ( flags.gt17 || flags.rva )
          {
-            integrate_out_theta_double(
+            integrate_out_phi_double(
                   diffracted_wave_mag_sum_sqr,
                   kx_local, Nx_local,
                   ky, Ny,
-                  binning_boundaries,
-                  bin_counts_local,
+                  indexed_magnitudes,
+                  k_binning_boundaries,
+                  k_bin_counts_local,
                   diffracted_wave_mag_sum_sqr_radial_intensity_local
                   );
 
             MPI_Reduce(
-                  bin_counts_local,
-                  bin_counts_sum_sqr_aggregated,
-                  number_of_bins,
+                  k_bin_counts_local,
+                  k_bin_counts_sum_sqr_aggregated,
+                  number_of_k_bins,
                   MPI_INT, MPI_SUM,
                   rootnode, comm
                   );
@@ -2478,33 +2714,33 @@ int TEM_NS::adfstem(
             MPI_Reduce(
                   diffracted_wave_mag_sum_sqr_radial_intensity_local,
                   diffracted_wave_mag_sum_sqr_radial_intensity_total,
-                  number_of_bins,
+                  number_of_k_bins,
                   MPI_DOUBLE, MPI_SUM,
                   rootnode, comm
                   );
 
             if ( mynode == rootnode && flags.gt17 )
             {
-               for( size_t ii=0; ii < number_of_bins; ++ii)
+               for( size_t ii=0; ii < number_of_k_bins; ++ii)
                {
                   // Caculate the ratio  to obtain 
                   //  \frac{\langle \langle I^{2}(\vec{k})\rangle_{\vec{r}} \rangle_{\phi}}{\langle \langle I(\vec{k})\rangle_{\vec{r}}^{2} \rangle_{\phi}}
                   ftem_gt17[ii] 
             = (   diffracted_wave_mag_sqr_sum_radial_intensity_total[ii]
-                           / bin_counts_sqr_sum_aggregated[ii])
+                           / k_bin_counts_sqr_sum_aggregated[ii])
                            / 
               (   diffracted_wave_mag_sum_sqr_radial_intensity_total[ii]
-                               / bin_counts_sum_sqr_aggregated[ii]);
+                               / k_bin_counts_sum_sqr_aggregated[ii]);
 
                   if ( ! flags.rva )
                   {
-                     bin_counts_aggregated[ii] = 0;
+                     k_bin_counts_aggregated[ii] = 0;
                   }
                   if (! flags.d3  )
                   {
-                     bin_counts_sqr_sum_aggregated[ii] = 0;
-                     // NOTE: bin_counts_sqr_sum_aggregated and
-                     //       bin_counts_aggregated 
+                     k_bin_counts_sqr_sum_aggregated[ii] = 0;
+                     // NOTE: k_bin_counts_sqr_sum_aggregated and
+                     //       k_bin_counts_aggregated 
                      //       should be equal, and might not be 
                      //       needed here.
                   }
@@ -2516,7 +2752,7 @@ int TEM_NS::adfstem(
                   if ( 
                         output_variance_to_netcdf(
                            ftem_gt17,
-                           binning_boundaries,
+                           k_binning_boundaries,
                            outFileName_prefix 
                               + "_fem_gt17"
                         ) != EXIT_SUCCESS)
@@ -2531,13 +2767,13 @@ int TEM_NS::adfstem(
                   // debug
                   //output_variance_to_txt(
                   //   diffracted_wave_radial_intensity_sqr_avg_gt17,
-                  //   binning_boundaries,
+                  //   k_binning_boundaries,
                   //   outFileName_prefix 
                   //      + "_radial_intensity_sqr_avg_gt17"
                   //   );
                   //output_variance_to_txt(
                   //   diffracted_wave_radial_intensity_avg_sqr_gt17,
-                  //   binning_boundaries,
+                  //   k_binning_boundaries,
                   //   outFileName_prefix 
                   //      + "_radial_intensity_avg_sqr_gt17"
                   //   );
@@ -2545,7 +2781,7 @@ int TEM_NS::adfstem(
                   if ( 
                      output_variance_to_txt(
                            ftem_gt17,
-                           binning_boundaries,
+                           k_binning_boundaries,
                            outFileName_prefix 
                               + "_fem_gt17"
                         ) != EXIT_SUCCESS)
@@ -2562,19 +2798,20 @@ int TEM_NS::adfstem(
 
          if ( flags.d3 || flags.rva )
          {
-            integrate_out_theta_double(
+            integrate_out_phi_double(
                   diffracted_wave_mag_sum,
                   kx_local, Nx_local,
                   ky, Ny,
-                  binning_boundaries,
-                  bin_counts_local,
+                  indexed_magnitudes,
+                  k_binning_boundaries,
+                  k_bin_counts_local,
                   diffracted_wave_mag_sum_radial_intensity_local
                   );
 
             MPI_Reduce(
-                  bin_counts_local,
-                  bin_counts_aggregated,
-                  number_of_bins,
+                  k_bin_counts_local,
+                  k_bin_counts_aggregated,
+                  number_of_k_bins,
                   MPI_INT, MPI_SUM,
                   rootnode, comm
                   );
@@ -2582,26 +2819,26 @@ int TEM_NS::adfstem(
             MPI_Reduce(
                   diffracted_wave_mag_sum_radial_intensity_local,
                   diffracted_wave_mag_sum_radial_intensity_total,
-                  number_of_bins,
+                  number_of_k_bins,
                   MPI_DOUBLE, MPI_SUM,
                   rootnode, comm
                   );
 
             if ( mynode == rootnode )
             {
-               for (size_t ii=0; ii < number_of_bins; ++ii)
+               for (size_t ii=0; ii < number_of_k_bins; ++ii)
                {
                   if ( flags.d3 ) 
                   {
                      ftem_d3[ii] =
                         ((
               diffracted_wave_mag_sqr_sum_radial_intensity_total[ii]
-                     / bin_counts_sqr_sum_aggregated[ii]
+                     / k_bin_counts_sqr_sum_aggregated[ii]
                         ) / (
               diffracted_wave_mag_sum_radial_intensity_total[ii]
               * diffracted_wave_mag_sum_radial_intensity_total[ii]
               / (
-                 bin_counts_aggregated[ii] * bin_counts_aggregated[ii]
+                 k_bin_counts_aggregated[ii] * k_bin_counts_aggregated[ii]
                 )
                         )) - 1.0;
                   }
@@ -2609,13 +2846,13 @@ int TEM_NS::adfstem(
                   {
                      ftem_rva[ii] 
                 = ((diffracted_wave_mag_sum_sqr_radial_intensity_total[ii]
-                     / bin_counts_sum_sqr_aggregated[ii])  
+                     / k_bin_counts_sum_sqr_aggregated[ii])  
                   / (
                         diffracted_wave_mag_sum_radial_intensity_total[ii]
                         *
                         diffracted_wave_mag_sum_radial_intensity_total[ii]
-                        / (bin_counts_aggregated[ii] 
-                           * bin_counts_aggregated[ii])
+                        / (k_bin_counts_aggregated[ii] 
+                           * k_bin_counts_aggregated[ii])
                     )) - 1.0;
                   }
                }
@@ -2627,7 +2864,7 @@ int TEM_NS::adfstem(
                      if ( 
                            output_variance_to_netcdf(
                               ftem_d3,
-                              binning_boundaries,
+                              k_binning_boundaries,
                               outFileName_prefix 
                                  + "_fem_d3"
                            ) != EXIT_SUCCESS)
@@ -2642,7 +2879,7 @@ int TEM_NS::adfstem(
                      if ( 
                         output_variance_to_txt(
                               ftem_d3,
-                              binning_boundaries,
+                              k_binning_boundaries,
                               outFileName_prefix 
                                  + "_fem_d3"
                            ) != EXIT_SUCCESS)
@@ -2663,7 +2900,7 @@ int TEM_NS::adfstem(
                      if ( 
                            output_variance_to_netcdf(
                               ftem_rva,
-                              binning_boundaries,
+                              k_binning_boundaries,
                               outFileName_prefix 
                                  + "_fem_rva"
                            ) != EXIT_SUCCESS)
@@ -2678,7 +2915,7 @@ int TEM_NS::adfstem(
                      if ( 
                         output_variance_to_txt(
                               ftem_rva,
-                              binning_boundaries,
+                              k_binning_boundaries,
                               outFileName_prefix 
                                  + "_fem_rva"
                            ) != EXIT_SUCCESS)
@@ -2746,36 +2983,37 @@ int TEM_NS::adfstem(
             }
 
             // azimuthally average 2-D variance to obtain d4
-            integrate_out_theta_double(
+            integrate_out_phi_double(
                   diffracted_wave_mag_variance,
                   kx_local, Nx_local,
                   ky, Ny,
-                  binning_boundaries,
-                  bin_counts_local,
+                  indexed_magnitudes,
+                  k_binning_boundaries,
+                  k_bin_counts_local,
                   diffracted_wave_mag_variance_radial_intensity_local
                   );
 
             MPI_Reduce(
                   diffracted_wave_mag_variance_radial_intensity_local,
                   ftem_d4,
-                  number_of_bins,
+                  number_of_k_bins,
                   MPI_DOUBLE, MPI_SUM,
                   rootnode, comm
                   );
 
             MPI_Reduce(
-                  bin_counts_local,
-                  bin_counts_aggregated,
-                  number_of_bins,
+                  k_bin_counts_local,
+                  k_bin_counts_aggregated,
+                  number_of_k_bins,
                   MPI_INT, MPI_SUM,
                   rootnode, comm
                   );
 
             if ( mynode == rootnode )
             {
-               for (size_t ii=0; ii < number_of_bins; ++ii)
+               for (size_t ii=0; ii < number_of_k_bins; ++ii)
                {
-                  ftem_d4[ii] = ftem_d4[ii] / bin_counts_aggregated[ii];
+                  ftem_d4[ii] = ftem_d4[ii] / k_bin_counts_aggregated[ii];
                }
                // save output of d4
                if( flags.netcdf_variance )
@@ -2783,7 +3021,7 @@ int TEM_NS::adfstem(
                   if ( 
                         output_variance_to_netcdf(
                            ftem_d4,
-                           binning_boundaries,
+                           k_binning_boundaries,
                            outFileName_prefix 
                               + "_fem_d4"
                         ) != EXIT_SUCCESS)
@@ -2798,7 +3036,7 @@ int TEM_NS::adfstem(
                   if ( 
                      output_variance_to_txt(
                            ftem_d4,
-                           binning_boundaries,
+                           k_binning_boundaries,
                            outFileName_prefix 
                               + "_fem_d4"
                         ) != EXIT_SUCCESS)
@@ -2816,6 +3054,134 @@ int TEM_NS::adfstem(
       } // flags.gt17 || flags.d3 || flags.d4 
          // flags.rva
 
+      if ( flags.correlograph && (mynode == rootnode) )
+      {
+         size_t idx;
+         size_t c_idx;
+         size_t d_idx;
+         for ( size_t ii=0; ii < number_of_k_bins; ++ii)
+         {
+            for ( size_t jj=0; jj < number_of_phi_bins; ++jj)
+            {
+               //idx = jj + ii * number_of_phi_bins;
+               //c_idx = jj + ii * number_of_phi_bins;
+               c_idx = ii + jj * number_of_k_bins;
+               correlograph_sum[c_idx]
+                  = correlograph_sum[c_idx] / number_of_raster_points;
+            }
+         }
+         output_correlograph_to_txt(
+               correlograph_sum,
+               phi_binning_boundaries,
+               k_binning_boundaries,
+               outFileName_prefix 
+                  + "_avg"
+               );
+         output_correlograph_image(
+               correlograph_sum,
+               number_of_phi_bins,
+               number_of_k_bins,
+               resolutionUnit,
+               phiResolution_correlograph,
+               kResolution_correlograph,
+               outFileName_prefix + "_avg",
+               0
+               );
+         // iterate through k and phi bins to determine dimensions of 
+         //  the variance image having k \in [0.2, 1.0]
+         if ( flags.correlograph_variance )
+         {
+            size_t k_correlograph_start_idx, k_correlograph_end_idx;
+            for ( size_t ii=0; ii < number_of_k_bins; ++ii)
+            {
+               if ( (k_binning_boundaries[ii] <= 0.2) 
+                     && (k_binning_boundaries[ii+1] > 0.2))
+                  k_correlograph_start_idx = ii;
+
+               if ( (k_binning_boundaries[ii] <= 1.0) 
+                     && (k_binning_boundaries[ii+1] > 1.0))
+                  k_correlograph_end_idx = ii;
+            }
+            double* correlograph_variance;
+            double tmpdbl;
+            size_t number_of_reducedk_bins
+                  = (k_correlograph_end_idx - k_correlograph_start_idx +1);
+            correlograph_variance 
+               = new double[number_of_reducedk_bins * number_of_phi_bins];
+            //for ( size_t ii = 0; ii < number_of_k_bins; ++ii)
+            for ( size_t ii = k_correlograph_start_idx; 
+                  ii < k_correlograph_end_idx + 1; 
+                  ++ii)
+            {
+               for ( size_t jj=0; jj < number_of_phi_bins; ++jj)
+               {
+                  //idx = jj + ii * number_of_phi_bins;
+                  c_idx = ii + jj * number_of_k_bins;
+                  //d_idx = jj + (ii - k_correlograph_start_idx) 
+                  //               * number_of_phi_bins;
+                  d_idx = (ii - k_correlograph_start_idx)
+                           + jj * number_of_reducedk_bins;
+                  //correlograph_variance[idx]
+                  tmpdbl = 
+                         correlograph_sqr_sum[c_idx]
+                           / (
+                              number_of_raster_points 
+                           * correlograph_sum[c_idx] 
+                           * correlograph_sum[c_idx]);
+                  if ( (correlograph_sqr_sum[c_idx] != 0)
+                        && (number_of_raster_points != 0)
+                        && (correlograph_sum[c_idx] != 0)
+                        && (tmpdbl >= 1))
+                  {
+                     correlograph_variance[ d_idx ] = tmpdbl - 1;
+                     //   jj + c_idx * number_of_phi_bins]
+                     //correlograph_sqr_sum[idx]
+                        //(
+                        // correlograph_sqr_sum[c_idx]
+                        //   / (
+                        //      number_of_raster_points 
+                        //   * correlograph_sum[idx] * correlograph_sum[idx]
+                        //   )
+                        //) - 1;
+                  }
+                  else
+                     correlograph_variance[
+                        jj + d_idx * number_of_phi_bins] = 0;
+                     //correlograph_sqr_sum[idx] = 0;
+               }
+            }
+            output_correlograph_to_txt(
+                  correlograph_sqr_sum,   // correlograph_variance
+                  phi_binning_boundaries,
+                  k_binning_boundaries,
+                  outFileName_prefix 
+                     + "_correlograph_variance"
+                  );
+            output_correlograph_image(
+                  //correlograph_sqr_sum,   // correlograph_variance
+                  correlograph_variance,   // correlograph_variance
+                  //number_of_k_bins,
+                  number_of_phi_bins,
+                  number_of_reducedk_bins,
+                  resolutionUnit,
+                  phiResolution_correlograph,
+                  kResolution_correlograph,
+                  outFileName_prefix + "_correlograph_variance",
+                  1  // flag to indicate logscale
+                  );
+            output_correlograph_image(
+                  correlograph_variance,   // correlograph_variance
+                  number_of_phi_bins,
+                  number_of_reducedk_bins,
+                  resolutionUnit,
+                  phiResolution_correlograph,
+                  kResolution_correlograph,
+                  outFileName_prefix + "_correlograph_variance",
+                  0  // flag to indicate logscale
+                  );
+            delete[] correlograph_variance;
+         }
+      }
    }// end fem specific commands
 
    ////////////////////////////////////////////////////////////////
@@ -2967,6 +3333,8 @@ int TEM_NS::adfstem(
    // clean up
    ///////////////////////////////////////////////////////////////////
 
+   if ( mynode == rootnode && flags.debug )
+            cout << "cleaning up memory ..." << endl; // debug
    //if ( mynode == rootnode )
    //   if ( ! flag_wisdomFile )
    //   {
@@ -3006,21 +3374,30 @@ int TEM_NS::adfstem(
 
    if ( flags.fem )
    {
+      indexed_magnitudes.clear();
       if ( flags.d1 || flags.d2  || flags.d3 
             || flags.d4 || flags.gt17 || flags.rva )
       {
-         delete[] bin_counts_local;
-         //delete[] bin_counts_sqr_local;
+         delete[] k_bin_counts_local;
+         //delete[] k_bin_counts_sqr_local;
          if ( mynode == rootnode )
          {
-            delete[] bin_counts_aggregated;
-            delete[] bin_counts_sqr_sum_aggregated;
-            delete[] bin_counts_sum_sqr_aggregated;
+            delete[] k_bin_counts_aggregated;
+            delete[] k_bin_counts_sqr_sum_aggregated;
+            delete[] k_bin_counts_sum_sqr_aggregated;
          }
       }
-      if ( flags.d1 || flags.d2 )
+      if ( flags.d1 || flags.d2 || flags.correlograph )
       {
          delete[] diffracted_wave_mag_radial_intensity_local;
+         if ( flags.correlograph )
+         {
+            delete[] diffracted_wave_mag_in_radial_coords_local;
+            delete[] correlograph;
+            delete[] correlograph_sum;
+            if ( flags.correlograph_variance )
+               delete[] correlograph_sqr_sum;
+         }
          if ( flags.d2 )
          {
             delete[] diffracted_wave_mag_sqr_radial_intensity_local;
@@ -3028,6 +3405,11 @@ int TEM_NS::adfstem(
          if ( mynode == rootnode )
          {
             delete[] diffracted_wave_mag_radial_intensity_total;
+            if ( flags.correlograph )
+            {
+               delete[] diffracted_wave_mag_in_radial_coords_sum;
+               delete[] diffracted_wave_mag_in_radial_coords_total;
+            }
             if ( flags.d1 )
             {
                delete[] ftem_d1;

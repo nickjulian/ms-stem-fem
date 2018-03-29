@@ -438,5 +438,15 @@ void output_stem_image(
       const string& outFileName_prefix
       );
 
+void output_correlograph_image(
+      const double* const correlograph,
+      const ptrdiff_t& Nx,
+      const ptrdiff_t& Ny,
+      const size_t& resolutionUnit,
+      const double& xResolution, 
+      const double& yResolution, 
+      const string& outFileName_prefix,
+      const unsigned int& logflag
+      );
 } // TEM_NS
 #endif

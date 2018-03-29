@@ -2978,6 +2978,30 @@ int TEM_NS::read_parameter_file(
          {
             flags.netcdf_variance = 1;
          }
+         else if ( ! data_descriptor.compare("correlograph") )
+         {
+            flags.correlograph = 1;
+         }
+         else if ( ! data_descriptor.compare("correlograph_variance") )
+         {
+            flags.correlograph_variance = 1;
+            flags.correlograph = 1;
+         }
+         else if ( ! data_descriptor.compare("correlograph_everyimage") )
+         {
+            flags.correlograph_everyimage = 1;
+            flags.correlograph = 1;
+         }
+         else if ( ! data_descriptor.compare("correlograph_everytxt") )
+         {
+            flags.correlograph_everytxt = 1;
+            flags.correlograph = 1;
+         }
+         //else if ( ! data_descriptor.compare("correlograph_everynetcdf") )
+         //{
+         //   flags.correlograph_everynetcdf = 1;
+         //   flags.correlograph = 1;
+         //}
          else
          {
             if ( mynode == rootnode )
@@ -3008,6 +3032,11 @@ int TEM_NS::read_parameter_file(
                   << "  d3" << endl
                   << "  d4" << endl
                   << "  rva" << endl
+                  << "  correlograph" << endl
+                  << "  correlograph_variance" << endl
+                  << "  correlograph_everyimage" << endl
+                  << "  correlograph_everytxt" << endl
+                  //<< "  correlograph_everynetcdf" << endl
                   << "  adfstemcorr" << endl
                   << "  adfstemuncorr" << endl
                   //<< "  bfctemcorr" << endl
@@ -3034,6 +3063,11 @@ int TEM_NS::read_parameter_file(
    }
    data_file.close();
    //} // rootnode
+
+   if ( flags.fem && (!( flags.d1  || flags.d2 || flags.d3 || flags.d4 || flags.gt17 || flags.rva || flags.correlograph)) )
+   {
+      flags.d1 = 1; // default fem mode
+   }
 
    //// Broadcast results to the remaining nodes
    //
@@ -4066,6 +4100,30 @@ unsigned int TEM_NS::read_cmdline_options(
       {
          flags.netcdf_variance = 1;
       }
+      else if ( args[idx] == "--correlograph" )
+      {
+         flags.correlograph = 1;
+      }
+      else if ( args[idx] == "--correlograph_variance" )
+      {
+         flags.correlograph_variance = 1;
+         flags.correlograph = 1;
+      }
+      else if ( args[idx] == "--correlograph_everyimage" )
+      {
+         flags.correlograph_everyimage = 1;
+         flags.correlograph = 1;
+      }
+      else if ( args[idx] == "--correlograph_everytxt" )
+      {
+         flags.correlograph_everytxt = 1;
+         flags.correlograph = 1;
+      }
+      //else if ( args[idx] == "--correlograph_everynetcdf" )
+      //{
+      //   flags.correlograph_everynetcdf = 1;
+      //   flags.correlograph = 1;
+      //}
       else
       {
          if ( mynode == rootnode )
@@ -4079,7 +4137,7 @@ unsigned int TEM_NS::read_cmdline_options(
    if ( (! flags.gt17 ) 
          && (! flags.d1 ) && (! flags.d2 ) 
          && (! flags.d3 ) && (! flags.d4 )
-         && (! flags.rva) )
+         && (! flags.rva) && (! flags.correlograph) )
    {
       flags.d1 = 1; // default variance calculation mode
    }
@@ -4158,6 +4216,16 @@ unsigned int TEM_NS::check_runtime_flags(
       flags.aberration_correction << endl <<
       "flags.raster_spacing " << 
       flags.raster_spacing << endl <<
+      "flags.correlograph " << 
+      flags.correlograph << endl <<
+      "flags.correlograph_variance" << 
+      flags.correlograph_variance << endl <<
+      "flags.correlograph_everyimage " << 
+      flags.correlograph_everyimage << endl <<
+      "flags.correlograph_everytxt" << 
+      flags.correlograph_everytxt << endl <<
+      //"flags.correlograph_everynetcdf" << 
+      //flags.correlograph_everynetcdf << endl <<
       "flags.debug " << 
       flags.debug 
       << endl;
@@ -4299,10 +4367,10 @@ unsigned int TEM_NS::check_runtime_flags(
          ! flags.adfstem_uncorrected
          &&
          ! flags.adfstem_corrected
-         &&
-         ! flags.bfctem_corrected
-         &&
-         ! flags.bfctem_uncorrected
+         //&&
+         //! flags.bfctem_corrected
+         //&&
+         //! flags.bfctem_uncorrected
       )
    {
       if ( mynode == rootnode )
@@ -4315,10 +4383,10 @@ unsigned int TEM_NS::check_runtime_flags(
             << "   [--adfstemcorr] simulate aberration corrected adfstem" 
             << endl 
             << "   [--adfstemuncorr] simulate adfstem mode without aberration correction" 
-            << endl 
-            << "   [--bfctemcorr] simulate bright field TEM with aberration correction" 
-            << endl 
-            << "   [--bfctemuncorr] simulate bright field TEM without aberration correction" 
+            //<< endl 
+            //<< "   [--bfctemcorr] simulate bright field TEM with aberration correction" 
+            //<< endl 
+            //<< "   [--bfctemuncorr] simulate bright field TEM without aberration correction" 
             << endl;
       }
       failflag = 1;

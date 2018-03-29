@@ -73,26 +73,26 @@ class cylindrical_coordinates
 
          double delta_ss = 1.0;
          double number_of_delta_ss;
-         double delta_theta;// = delta_ss/radius;
+         double delta_phi;// = delta_ss/radius;
          number_of_delta_ss = floor( 2 * PI * rr / delta_s );
          if ( radius == 0.0 )
          {
             //delta_ss = 1.0;
-            delta_theta = 2 * PI ;
+            delta_phi = 2 * PI ;
          }
          else
          {
             delta_ss = 2 * PI * rr / number_of_delta_ss;
-            delta_theta = delta_ss/radius;
+            delta_phi = delta_ss/radius;
          }
 
 
-         for( double theta = 0.0; //delta_theta; 
-               theta < 2 * PI ; 
-               theta += delta_theta )
+         for( double phi = 0.0; //delta_phi; 
+               phi < 2 * PI ; 
+               phi += delta_phi )
          {
-            //cerr << "theta, 2*PI : " << theta << ", " << 2*PI << endl; // debug
-            vector_of_angles.push_back( theta );
+            //cerr << "phi, 2*PI : " << phi << ", " << 2*PI << endl; // debug
+            vector_of_angles.push_back( phi );
          }
       }
 
@@ -133,7 +133,7 @@ class radial_discretization : public list< cylindrical_coordinates >
          //   double number_of_delta_ss;
          //   number_of_delta_ss = floor( 2 * PI * rr / delta_s );
          //   delta_ss = 2 * PI * rr / number_of_delta_ss;
-         //double theta;
+         //double phi;
          //if( delta_ss > 2 * PI * (r0 + delta_rr) )
          //{
          //   cerr << "Error : radial_discretization( r0: " 
@@ -157,8 +157,8 @@ class radial_discretization : public list< cylindrical_coordinates >
 
             //for( double ss = 0.0; ss < 2 * PI * rr; ss += delta_ss )
             //{
-            //   theta = ss / rr ;
-            //   push_back( radial_coordinate( rr, theta ) );
+            //   phi = ss / rr ;
+            //   push_back( radial_coordinate( rr, phi ) );
             //}
          }
       }

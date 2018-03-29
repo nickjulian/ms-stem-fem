@@ -944,4 +944,53 @@ void TEM_NS::output_stem_image(
    return;
 } // output_stem_image
 
+void TEM_NS::output_correlograph_image(
+      const double* const correlograph,
+      const ptrdiff_t& Nx,
+      const ptrdiff_t& Ny,
+      const size_t& resolutionUnit,
+      const double& xResolution, 
+      const double& yResolution, 
+      const string& outFileName_prefix,
+      const unsigned int& logflag
+      )
+{
+
+   writeImage imageWriter;
+
+   double min_image;
+   double max_image;
+   
+   // Determine the max and min intensities
+   min_image = correlograph[0];
+   max_image = min_image;
+   for ( ptrdiff_t i = 0; i < Nx * Ny; i++)
+   {  
+      if( correlograph[i] > max_image ) max_image = correlograph[i]; 
+      if( correlograph[i] < min_image ) min_image = correlograph[i];
+   }
+   cout << "correlograph " << outFileName_prefix << " (max, min) : (" << max_image << ", " << min_image << ")" << endl; // debug
+
+   if ( ! logflag )
+      imageWriter.write_tif_grayscale16(
+            correlograph,
+            min_image,
+            max_image,
+            Nx, Ny,
+            resolutionUnit,
+            xResolution, yResolution,
+            outFileName_prefix);
+ 
+   if ( logflag )
+      imageWriter.write_tif_grayscale16_logscale(
+            correlograph,
+            min_image,
+            max_image,
+            Nx, Ny,
+            resolutionUnit,
+            xResolution, yResolution,
+            outFileName_prefix 
+               + "_logscale" );
+   return;
+} // output_correlograph_image
 #endif

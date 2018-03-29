@@ -49,6 +49,7 @@
 #include "variance.hpp"
 #include "io_netcdf.hpp"
 #include "tem_io.hpp"
+#include "indexed_vector_magnitude_sqr.hpp"
 
 #ifndef PI
 #define PI 3.14159265369

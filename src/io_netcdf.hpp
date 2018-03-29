@@ -109,5 +109,13 @@ int output_psi_mag_reciprocalspace_to_netcdf(
       MPI_Comm comm
       );
 
+
+int append_correlograph_to_netcdf(
+      const double* const outDataRaw,
+      const std::vector<double>& k_binning_boundaries,
+      const std::vector<double>& phi_binning_boundaries,
+      const string& outFilePrefix
+      );
+
 } // TEM_NS
 #endif

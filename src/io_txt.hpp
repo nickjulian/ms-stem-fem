@@ -59,6 +59,13 @@ int output_variance_to_txt(
       const string& outFilePrefix
       );
 
+int output_correlograph_to_txt(
+      const double* const outDataRaw,
+      const std::vector<double>& k_binning_boundaries,
+      const std::vector<double>& phi_binning_boundaries,
+      const string& outFilePrefix
+      );
+
 //int output_psi_realspace_to_txt( 
 //      const fftw_complex* const psi,  // array of range elements
 //      const ptrdiff_t& local_alloc_size_fftw,

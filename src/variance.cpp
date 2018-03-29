@@ -61,25 +61,30 @@ using std::list;
 //#endif
 
 
-int TEM_NS::integrate_out_theta_fftw( 
+int TEM_NS::integrate_out_phi_fftw( 
       // integrate to make f( \vec{k} ) into f( | \vec{k} | )
       //const double** const psi,// data to be binned,[][0] real,[][1] im
       const fftw_complex* const psi,//data to be integrated azimuthally
+      const input_flags& flags,
       const double* const kx_local, const size_t& Nx_local,
       const double* const ky, const size_t& Ny,
-      const std::vector<double>& binning_boundaries,// bin boundaries
-      int* bin_counts,
-      double* data1D_local // output, 
+      const std::vector<indexed_vector_magnitude_sqr>& indexed_magnitudes,
+      const std::vector<double>& k_binning_boundaries,// bin boundaries
+      int* k_bin_counts,
+      const std::vector<double>& phi_binning_boundaries, // bin boundaries
+      int* phi_bin_counts,
+      double* data1D_local, // output, 
+      double* intensity_in_radial_coords // output, 
              // having binning_boundaries.size() - 1 allocated elements
       )
 {
    // Precondition : 
    // // - data1D_local has been allocated to have 
-   // //    number_of_bins == bwcutoff_t / delta_k  
-   // //       == binning_boundaries.size() - 1
-   // //       == number of elements of bin_counts[]
+   // //    number_of_k_bins == bwcutoff_t / delta_k  
+   // //       == k_binning_boundaries.size() - 1
+   // //       == number of elements of k_bin_counts[]
    // //    elements
-   // - binning boundaries do not exceed the maximum or minimum of the
+   // - k binning boundaries do not exceed the maximum or minimum of the
    //    domain kx, ky of the data to be binned, but the non-zero data may 
    //    lie entirely within the bounds of the binning
    
@@ -95,37 +100,10 @@ int TEM_NS::integrate_out_theta_fftw(
    //    If v_mag_sqr is between the upper and lower boundaries 
    //    (squared) then increment data1D_local[i] by psi[j+i*Ny] 
 
-   vector<indexed_vector_magnitude_sqr> indexed_magnitudes;
 
-   for ( ptrdiff_t i=0; i<Nx_local; ++i)
-      for ( ptrdiff_t j=0; j<Ny; ++j)
-      { //if ( kx[i] * kx[i] + ky[j] * ky[j] == 16.0 ) // debug
-         //{ // debug
-         //   cout << "kx[" << i << "]^2 + ky[" << j << "]^2 == 16 == " 
-         //      << kx[i] << "^2 + " << ky[j] << "^2 " << endl;
-         //} // debug
-         indexed_magnitudes.push_back(
-               indexed_vector_magnitude_sqr( 
-                     i, j,
-                     kx_local[i] * kx_local[i] + ky[j] * ky[j] // |k|^2
-                     // |k|^{2}, not |k|
-                  )
-               );
-      }  // size of indexed_vector_magnitude : Nx_local * Ny
 
-   // sort the indexed_magnitudes by the magnitude of their |k|^2 values
-   std::sort(
-         indexed_magnitudes.begin(),
-         indexed_magnitudes.end(),
-         indexed_vector_magnitude_sqr_lt   // pointer to "<" function 
-         );
-   //cout << "min |k|^2 of indexed_magnitudes : "  // debug
-   //   << indexed_magnitudes.front().v_mag_sqr << endl; // debug
-   //cout << "max |k|^2 of indexed_magnitudes : "  // debug
-   //   << indexed_magnitudes.back().v_mag_sqr << endl; // debug
-
-   //cout << "max of binning_boundaries : " 
-   //   << binning_boundaries.back() << endl; // debug
+   //cout << "max of k_binning_boundaries : " 
+   //   << k_binning_boundaries.back() << endl; // debug
 
    // Iterate over psi using indices sorted by corresponding domain 
    //  magnitudes,
@@ -140,13 +118,32 @@ int TEM_NS::integrate_out_theta_fftw(
    //       - increment to the next indexed_vector_magnitude
 
 
+   size_t number_of_k_bins = k_binning_boundaries.size()-1;
+
    // zero the data1D_local[]
-   for ( size_t i=0; i < binning_boundaries.size() - 1; ++i) 
+   for ( size_t i=0; i < k_binning_boundaries.size() - 1; ++i) 
    {
       data1D_local[i] = 0.0;
-      bin_counts[i] = 0;
+      k_bin_counts[i] = 0;
    }
-
+   size_t number_of_phi_bins;
+   size_t number_of_radial_coords;
+   if ( flags.correlograph )
+   {
+      if ( phi_binning_boundaries.size() == 0)
+      {
+         cerr << "integrate_out_phi_fftw() failed: "
+            << "phi_binning_boundaries.size() == 0" << endl;
+         return EXIT_FAILURE;
+      }
+      number_of_phi_bins = phi_binning_boundaries.size()-1;
+      number_of_radial_coords 
+         = number_of_phi_bins * number_of_k_bins;
+      for ( size_t i=0; i < number_of_phi_bins; ++i)
+         phi_bin_counts[i] = 0;
+      for ( size_t i=0; i < number_of_radial_coords; ++i)
+         intensity_in_radial_coords[i] = 0.0;
+   }
    // - starting with the lowest bin (upper/lower boundary pair), iterate 
    //    through the sorted indexed_vector_magnitude elements, if 
    //    their v_mag_sqr exceeds the bin's upper boundary, move to the next
@@ -154,21 +151,20 @@ int TEM_NS::integrate_out_theta_fftw(
    //    If v_mag_sqr is between the upper and lower boundaries 
    //    (squared) then increment data1D_local[i] by psi[j+i*Ny] 
 
-   std::vector<indexed_vector_magnitude_sqr>::iterator 
+   std::vector<indexed_vector_magnitude_sqr>::const_iterator 
          mag_itr = indexed_magnitudes.begin(); // the values to be binned
 
-   size_t number_of_points_binned = 0;
+   size_t k_number_of_points_binned = 0;
    //double bin_element_count; // number of elements encountered in one bin
 
-   //double lower_bound = binning_boundaries.front();
+   //double lower_bound = k_binning_boundaries.front();
    double upper_bound;
-   size_t ii=0; // index of bin ( data1D_local[ii] )
+   size_t ii=0; // index of k bin ( data1D_local[ii] )
 
-   double tmp_re, tmp_im;
-
+   double tmp_re, tmp_im, intensity, phi_lower_bound;
    for ( std::vector<double>::const_iterator
-        binning_boundary_itr = ++(binning_boundaries.begin());
-        binning_boundary_itr != binning_boundaries.end();
+        binning_boundary_itr = ++(k_binning_boundaries.begin());
+        binning_boundary_itr != k_binning_boundaries.end();
         ++binning_boundary_itr )
    {
       upper_bound = *binning_boundary_itr;
@@ -176,9 +172,9 @@ int TEM_NS::integrate_out_theta_fftw(
       //cout << "binning between : "  // debug
       //   << lower_bound << ", " << upper_bound << endl; // debug
 
-      if ( ii >= binning_boundaries.size() )
+      if ( ii >= number_of_k_bins )
       {
-         cerr << "Error: integrate_out_theta() oob for data1D_local[]"
+         cerr << "Error: integrate_out_phi() oob for data1D_local[]"
             << endl;
          return EXIT_FAILURE;
       }
@@ -187,21 +183,21 @@ int TEM_NS::integrate_out_theta_fftw(
       {
          // This situation might occur if psi is split over nodes by MPI,
          //  in which case kx_local will be smaller than Nx.
-         cerr << "Warning : integrate_out_theta() hit end of "  // debug
+         cerr << "Warning : integrate_out_phi() hit end of "  // debug
             << "indexed_magnitudes before hitting the end of " // debug
-            << "binning_boundaries" // debug
+            << "k_binning_boundaries" // debug
             << endl; // debug
-         cerr << "indexed_magnitudes.size(), binning_boundaries.size(), "
-           << "number_of_points_binned : " 
+         cerr << "indexed_magnitudes.size(), k_binning_boundaries.size(), "
+           << "k_number_of_points_binned : " 
             << indexed_magnitudes.size() << ", "
-            << binning_boundaries.size() << ", "
-            << number_of_points_binned
+            << k_binning_boundaries.size() << ", "
+            << k_number_of_points_binned
             << endl;
          cerr << "kx_local[Nx_local/2 -1], ky[Ny/2 -1] : "
             << kx_local[Nx_local/2 -1] << ", " <<  ky[Ny/2 -1] << endl;
          cerr << "current upper_bound : " << upper_bound << endl;
          cerr << "final upper_bound : " 
-            << binning_boundaries.back() << endl;
+            << k_binning_boundaries.back() << endl;
          break;
       }
 
@@ -222,12 +218,37 @@ int TEM_NS::integrate_out_theta_fftw(
 
          tmp_re = psi[ (mag_itr->j) + Ny * (mag_itr->i) ][0];
          tmp_im = psi[ (mag_itr->j) + Ny * (mag_itr->i) ][1];
-         data1D_local[ii] 
-            += sqrt( (tmp_re * tmp_re) + (tmp_im * tmp_im) );
-         ++number_of_points_binned; // debug
-         bin_counts[ii] += 1;
+         intensity = sqrt( (tmp_re * tmp_re) + (tmp_im * tmp_im) );
+         data1D_local[ii] += intensity;
+         ++k_number_of_points_binned; // debug
+         k_bin_counts[ii] += 1;
          //++bin_element_count; 
 
+         if ( flags.correlograph )
+         {
+            phi_lower_bound = phi_binning_boundaries[0];
+            // iterate over phi_binning_boundaries
+            for ( size_t jj=0; jj < number_of_phi_bins; ++jj)
+            //for ( std::vector<double>::const_iterator
+            //     phi_boundary_itr = ++(phi_binning_boundaries.begin());
+            //     phi_boundary_itr != phi_binning_boundaries.end();
+            //     ++phi_boundary_itr )
+            {
+               //upper_bound = phi_binning_boundaries[jj+1];
+               if ( (mag_itr->phi > phi_lower_bound)
+                     && (mag_itr->phi < phi_binning_boundaries[jj+1]) )
+               {
+                  intensity_in_radial_coords[
+                        jj + ii*(number_of_phi_bins)
+                        //ii + jj*(number_of_k_bins)
+                     ] += intensity;
+                  phi_bin_counts[jj] += 1;
+                  break; // move on to next increment of mag_itr
+               }
+               phi_lower_bound = phi_binning_boundaries[jj];
+               // if current phi is within the phi bin, add it to intensity_in_radial_coords[phi_bin_number + ii*(number_of_k_bins)]
+            }
+         }
       }
 
       ++ii;
@@ -239,7 +260,7 @@ int TEM_NS::integrate_out_theta_fftw(
 //   double tmp_prev=data1D_local[0];
 //   double avg= 0.0;//tmp_prev;
 //   double avg_sqr = 0.0;// = avg * avg;
-//   for ( size_t i=1; i < binning_boundaries.size() - 1; ++i)
+//   for ( size_t i=1; i < k_binning_boundaries.size() - 1; ++i)
 //   {
 //     avg += (data1D_local[i] - tmp_prev); 
 //     // cout << "data1D_local[" << i << "] : " 
@@ -256,34 +277,35 @@ int TEM_NS::integrate_out_theta_fftw(
 //   }
 //
 //   cout << "sum : " << avg << endl;//debug
-//   avg = avg / (binning_boundaries.size() - 1);
+//   avg = avg / (k_binning_boundaries.size() - 1);
 //   cout << "avg : " << avg << endl;//debug
-//   avg_sqr = avg_sqr / (binning_boundaries.size() - 1);
+//   avg_sqr = avg_sqr / (k_binning_boundaries.size() - 1);
 //   cout << "avg_sqr : " << avg_sqr << endl;//debug
 //
 //
 //   double deviation = sqrt( avg_sqr - avg * avg );
 //
 //   cout << "Average change : " 
-//      << avg // /(binning_boundaries.size() - 1) // debug
-//      << " +/- " << deviation // /(binning_boundaries.size() - 1) // debug
+//      << avg // /(k_binning_boundaries.size() - 1) // debug
+//      << " +/- " << deviation // /(k_binning_boundaries.size() - 1) // debug
 //      << endl;// debug
 //
 //   cout << "Average change relative to number of points binned : " 
-//      << avg / number_of_points_binned 
-//      // /(binning_boundaries.size() - 1) // debug
-//      << " +/- " << deviation / number_of_points_binned // debug
+//      << avg / k_number_of_points_binned 
+//      // /(k_binning_boundaries.size() - 1) // debug
+//      << " +/- " << deviation / k_number_of_points_binned // debug
 //      << endl;// debug
 
    return EXIT_SUCCESS;
 }
 
 
-int TEM_NS::integrate_out_theta_double( 
+int TEM_NS::integrate_out_phi_double( 
       // integrate to make f( \vec{k} ) into f( | \vec{k} | )
       const double* const psi,//data to be integrated azimuthally
       const double* const kx_local, const size_t& Nx_local,
       const double* const ky, const size_t& Ny,
+      const std::vector<indexed_vector_magnitude_sqr>& indexed_magnitudes,
       const std::vector<double>& binning_boundaries,// bin boundaries
       int* bin_counts,
       double* data1D_local // output, 
@@ -311,30 +333,30 @@ int TEM_NS::integrate_out_theta_double(
    //    next bin.
    //    If v_mag_sqr is between the upper and lower boundaries 
    //    (squared) then increment data1D_local[i] by psi[j+i*Ny] 
-   vector<indexed_vector_magnitude_sqr> indexed_magnitudes;
+   //vector<indexed_vector_magnitude_sqr> indexed_magnitudes;
 
-   for ( ptrdiff_t i=0; i<Nx_local; ++i)
-      for ( ptrdiff_t j=0; j<Ny; ++j)
-      { //if ( kx[i] * kx[i] + ky[j] * ky[j] == 16.0 ) // debug
-         //{ // debug
-         //   cout << "kx[" << i << "]^2 + ky[" << j << "]^2 == 16 == " 
-         //      << kx[i] << "^2 + " << ky[j] << "^2 " << endl;
-         //} // debug
-         indexed_magnitudes.push_back(
-               indexed_vector_magnitude_sqr( 
-                     i, j,
-                     kx_local[i] * kx_local[i] + ky[j] * ky[j] // |k|^2
-                     // |k|^{2}, not |k|
-                  )
-               );
-      }  // size of indexed_vector_magnitude : Nx_local * Ny
+   //for ( ptrdiff_t i=0; i<Nx_local; ++i)
+   //   for ( ptrdiff_t j=0; j<Ny; ++j)
+   //   { //if ( kx[i] * kx[i] + ky[j] * ky[j] == 16.0 ) // debug
+   //      //{ // debug
+   //      //   cout << "kx[" << i << "]^2 + ky[" << j << "]^2 == 16 == " 
+   //      //      << kx[i] << "^2 + " << ky[j] << "^2 " << endl;
+   //      //} // debug
+   //      indexed_magnitudes.push_back(
+   //            indexed_vector_magnitude_sqr( 
+   //                  i, j,
+   //                  kx_local[i] * kx_local[i] + ky[j] * ky[j] // |k|^2
+   //                  // |k|^{2}, not |k|
+   //               )
+   //            );
+   //   }  // size of indexed_vector_magnitude : Nx_local * Ny
 
    // sort the indexed_magnitudes by the magnitude of their |k|^2 values
-   std::sort(
-         indexed_magnitudes.begin(),
-         indexed_magnitudes.end(),
-         indexed_vector_magnitude_sqr_lt   // pointer to "<" function 
-         );
+   //std::sort(
+   //      indexed_magnitudes.begin(),
+   //      indexed_magnitudes.end(),
+   //      indexed_vector_magnitude_sqr_lt   // pointer to "<" function 
+   //      );
    //cout << "min |k|^2 of indexed_magnitudes : "  // debug
    //   << indexed_magnitudes.front().v_mag_sqr << endl; // debug
    //cout << "max |k|^2 of indexed_magnitudes : "  // debug
@@ -370,7 +392,7 @@ int TEM_NS::integrate_out_theta_double(
    //    If v_mag_sqr is between the upper and lower boundaries 
    //    (squared) then increment data1D_local[i] by psi[j+i*Ny] 
 
-   std::vector<indexed_vector_magnitude_sqr>::iterator 
+   std::vector<indexed_vector_magnitude_sqr>::const_iterator 
          mag_itr = indexed_magnitudes.begin(); // the values to be binned
 
    size_t number_of_points_binned = 0;
@@ -392,7 +414,7 @@ int TEM_NS::integrate_out_theta_double(
 
       if ( ii >= binning_boundaries.size() )
       {
-         cerr << "Error: integrate_out_theta() oob for data1D_local[]"
+         cerr << "Error: integrate_out_phi() oob for data1D_local[]"
             << endl;
          return EXIT_FAILURE;
       }
@@ -401,7 +423,7 @@ int TEM_NS::integrate_out_theta_double(
       {
          // This situation might occur if psi is split over nodes by MPI,
          //  in which case kx_local will be smaller than Nx.
-         cerr << "Warning : integrate_out_theta() hit end of "  // debug
+         cerr << "Warning : integrate_out_phi() hit end of "  // debug
             << "indexed_magnitudes before hitting the end of " // debug
             << "binning_boundaries" // debug
             << endl; // debug
@@ -621,7 +643,7 @@ int TEM_NS::variance_2D_STEM(
 
    // NOTE: The following is not appropriate for V(|k|), only for 
    //        V( \vec{k} )
-   //   - integrate_out_theta() for both data2D_avgs_local and 
+   //   - integrate_out_phi() for both data2D_avgs_local and 
    //      data2D_sqr_avgs_local
    //   - assign the variance of each pixel 
    //      variance[i] 
@@ -629,7 +651,7 @@ int TEM_NS::variance_2D_STEM(
 
    // NOTE: appropriate plan
    //    - determine binning boundaries on the root node and broadcast them
-   //    - integrate w.r.t. \theta in polar coordinates to yield 1-D 
+   //    - integrate w.r.t. \phi in polar coordinates to yield 1-D 
    //       data1D_sqr_avgs_local and data1D_avgs_local
    //    - MPI_Reduce() to sum each 
    //    - calculate variance from data1D_avgs_reduced and 
@@ -849,7 +871,7 @@ int TEM_NS::variance_2D_STEM(
    //   //variance = new double[number_of_bins];
    //}
    //if (
-   //      integrate_out_theta_double(
+   //      integrate_out_phi_double(
    //            data2D_avgs_local,
    //            kx_local, Nx_local,
    //            ky, Ny,
@@ -860,12 +882,12 @@ int TEM_NS::variance_2D_STEM(
    //            != EXIT_SUCCESS
    //   )
    //{
-   //   cerr << "Error, node " << mynode << ": integrate_out_theta() failed" 
+   //   cerr << "Error, node " << mynode << ": integrate_out_phi() failed" 
    //      << endl;
    //   return EXIT_FAILURE;
    //}
    //if (
-   //      integrate_out_theta_double(
+   //      integrate_out_phi_double(
    //            data2D_sqr_avgs_local,
    //            kx_local, Nx_local,
    //            ky, Ny,
@@ -876,7 +898,7 @@ int TEM_NS::variance_2D_STEM(
    //            != EXIT_SUCCESS
    //   )
    //{
-   //   cerr << "Error, node " << mynode << ": integrate_out_theta() failed" 
+   //   cerr << "Error, node " << mynode << ": integrate_out_phi() failed" 
    //      << endl;
    //   return EXIT_FAILURE;
    //}

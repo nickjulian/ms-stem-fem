@@ -47,17 +47,19 @@ class indexed_vector_magnitude_sqr
       ptrdiff_t i;
       ptrdiff_t j;
       double v_mag_sqr;
+      double phi;
 
    // Constructor should take i, j, and the square of the magnitude of a two
    //  element array.
    indexed_vector_magnitude_sqr(  const ptrdiff_t& ii, const ptrdiff_t& jj, 
-         const double& kk_sqr
+         const double& kk_sqr, const double& theta
          )
    {
       i = ii;
       j = jj;
       //v_mag_sqr = (v[0] * v[0] ) + (v[1] * v[1]);
       v_mag_sqr = kk_sqr;
+      phi = theta;
    }
 
    // copy constructor
