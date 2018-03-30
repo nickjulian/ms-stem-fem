@@ -969,7 +969,6 @@ void TEM_NS::output_correlograph_image(
       if( correlograph[i] > max_image ) max_image = correlograph[i]; 
       if( correlograph[i] < min_image ) min_image = correlograph[i];
    }
-   cout << "correlograph " << outFileName_prefix << " (max, min) : (" << max_image << ", " << min_image << ")" << endl; // debug
 
    if ( ! logflag )
       imageWriter.write_tif_grayscale16(

@@ -95,8 +95,8 @@ int TEM_NS::output_variance_to_txt(
 
 int TEM_NS::output_correlograph_to_txt(
       const double* const outDataRaw,  // array of range elements
-      const std::vector<double>& k_binning_boundaries,
       const std::vector<double>& phi_binning_boundaries,
+      const std::vector<double>& k_binning_boundaries,
       const string& outFilePrefix
       )
 {
