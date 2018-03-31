@@ -105,6 +105,10 @@ int adfstem(
       const string& outFileName_prefix,
       const ptrdiff_t& local_alloc_size_fftw,
       const ptrdiff_t& local_0_start_fftw,
+      const int* const Nx_strides,       // const int sendcounts[]
+      const int* const Nx_displacements, // const int displacements[]
+      const int* const psi_mag_strides,       // const int sendcounts[]
+      const int* const psi_mag_displacements, // const int displacements[]
       //const ptrdiff_t& probe_idx_local_start_x,
       //const int& threads_ok,
       //const int& nthreads,

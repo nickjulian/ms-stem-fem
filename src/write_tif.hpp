@@ -393,6 +393,8 @@ int output_diffraction_with_renormalization(
       const size_t& resolutionUnit,
       const double& xResolution, const double& yResolution,
       const string& outFileName_prefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm 
@@ -408,6 +410,8 @@ int output_diffraction(
       const size_t& resolutionUnit,
       const double& xResolution, const double& yResolution,
       const string& outFileName_prefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm 
@@ -423,6 +427,8 @@ int output_diffraction(
       const size_t& resolutionUnit,
       const double& xResolution, const double& yResolution,
       const string& outFileName_prefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm 

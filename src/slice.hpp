@@ -120,8 +120,8 @@ class slice
             const double& bwcutoff_t,
             //const double& bwcutoff_pap,
             //const scatterer_pap_LUT& myScattererPapLUT,
-            const double* const kx_split,
-            const ptrdiff_t& Nx_split,
+            const double* const kx_local,
+            const ptrdiff_t& Nx_local,
             const double* const kx_joined,// reciprocal space x-domain
             const double* const xx_joined, // real space x-domain
             const ptrdiff_t& Nx_joined,
@@ -135,6 +135,8 @@ class slice
             const size_t& sliceNumber,//debug
             const ptrdiff_t& local_alloc_size_fftw,//debug
             const ptrdiff_t& local_0_start_fftw,
+            const int* const psi_mag_strides,
+            const int* const psi_mag_displacements,
             const int& mynode,//debug
             const int& rootnode,//debug
             MPI_Comm comm

@@ -62,13 +62,16 @@ class scatterer_pap_LUT
                      const double& lambda, const double& gamma, 
                      const double& ab_inv, 
                      const double& cutoff,
-                     const double* const kx_split,
-                     const ptrdiff_t& Nx_split,
+                     const double* const kx_local,
+                     const ptrdiff_t& Nx_local,
                      //const double* kx_joined,
                      const ptrdiff_t& Nx_joined,
                      const double& xmin,
                      const double* const ky, const ptrdiff_t& Ny,
                      const double& ymin,
+                     const ptrdiff_t& local_alloc_size_fftw,
+                     const int* const pap_strides,
+                     const int* const pap_displacements,
                      const int& mynode,
                      const int& rootnode,
                      MPI_Comm comm )
@@ -96,18 +99,17 @@ class scatterer_pap_LUT
                               *Z_list_itr,
                               myScattererParamLUT,
                               lambda, gamma, ab_inv, cutoff,
-                              kx_split, Nx_split,
+                              kx_local, Nx_local,
                               //kx_joined,
                               Nx_joined,
                               xmin,
                               ky, Ny,
                               ymin,
+                              local_alloc_size_fftw,
+                              pap_strides,
+                              pap_displacements,
                               mynode, rootnode, comm )
                   );
-            //cout << "LUT constructor: pap_lut_re[0] : " // debug
-            //   << pap_list.back()->projected_atomic_potential_local_joined_re[0] // debug
-            //<< "LUT constructor: pap_lut_im[0] : " // debug
-            //   << pap_list.back()->projected_atomic_potential_local_joined_im[0] << endl; // debug
          }
       }
 

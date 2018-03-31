@@ -161,6 +161,8 @@ int TEM_NS::output_psi_realspace_to_netcdf(
       const double* const ky, // ky domain elements
       const ptrdiff_t Ny,     // number of elements in ky
       const string& outFilePrefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -230,14 +232,32 @@ int TEM_NS::output_psi_realspace_to_netcdf(
    }
 
    //cout << "output_psi_realspace_to_netcdf() line 186" << endl; // debug
-   MPI_Gather( psi_mag_local, local_alloc_size_fftw, MPI_DOUBLE,
-         psi_mag_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_mag_local, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         psi_mag_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
-   MPI_Gather( psi_re_local, local_alloc_size_fftw, MPI_DOUBLE,
-         psi_re_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_re_local, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         psi_re_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
-   MPI_Gather( psi_im_local, local_alloc_size_fftw, MPI_DOUBLE,
-         psi_im_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_im_local, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         psi_im_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
    //cout << "output_psi_realspace_to_netcdf() line 196" << endl; // debug
 
@@ -338,6 +358,8 @@ int TEM_NS::output_psi_reciprocalspace_to_netcdf(
       const double* const ky, // ky domain elements
       const ptrdiff_t Ny,     // number of elements in ky
       const string& outFilePrefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -410,14 +432,32 @@ int TEM_NS::output_psi_reciprocalspace_to_netcdf(
    //psi_re_joined = new double[ Nx ][ Ny ];
    //psi_im_joined = new double[ Nx ][ Ny ];
 
-   MPI_Gather( psi_mag_local, local_alloc_size_fftw, MPI_DOUBLE,
-         psi_mag_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_mag_local, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         psi_mag_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
-   MPI_Gather( psi_re_local, local_alloc_size_fftw, MPI_DOUBLE,
-         psi_re_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_re_local, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         psi_re_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
-   MPI_Gather( psi_im_local, local_alloc_size_fftw, MPI_DOUBLE,
-         psi_im_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_im_local, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         psi_im_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
 
    if ( mynode == rootnode )
@@ -572,6 +612,8 @@ int TEM_NS::output_psi_mag_reciprocalspace_to_netcdf(
       const double* const ky, // ky domain elements
       const ptrdiff_t Ny,     // number of elements in ky
       const string& outFilePrefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -602,8 +644,14 @@ int TEM_NS::output_psi_mag_reciprocalspace_to_netcdf(
       psi_mag_joined = new double[ Nx * Ny ];
    }
  
-   MPI_Gather( psi_mag_local_nonconst, local_alloc_size_fftw, MPI_DOUBLE,
-         psi_mag_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_mag_local_nonconst, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         psi_mag_joined, 
+         psi_mag_strides,
+         psi_mag_displacements,
+         MPI_DOUBLE,
          rootnode, comm);
 
    delete[] psi_mag_local_nonconst;

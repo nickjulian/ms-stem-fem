@@ -349,7 +349,7 @@ int TEM_NS::integrate_out_phi_double(
    //                  // |k|^{2}, not |k|
    //               )
    //            );
-   //   }  // size of indexed_vector_magnitude : Nx_local * Ny
+   //   }  // size of indexed_vector_magnitude : local_alloc_size_fftw
 
    // sort the indexed_magnitudes by the magnitude of their |k|^2 values
    //std::sort(
@@ -625,12 +625,15 @@ int TEM_NS::variance_2D_STEM(
       const double* const kx_local, const size_t& Nx_local, 
       const double* const kx_joined, // non-null address only on rootnode
       const size_t& Nx_joined, 
+      const ptrdiff_t& local_alloc_size_fftw,
       const double* const ky, const size_t& Ny, 
       const size_t& resolutionUnit_recip,
       const double& xResolution_recip, const double& yResolution_recip,
       const double& delta_k,
       const double& bwcutoff_t, // data known to be 0 beyond this |k|
       const string& outFilePrefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -674,10 +677,10 @@ int TEM_NS::variance_2D_STEM(
    //  variance of diffraction.
    ///////////////////////////////////////////////////////////////////
    //double* diffracted_wave_mag_variance_2D;
-   //diffracted_wave_mag_variance_2D = new double[ Nx_local * Ny ];
+   //diffracted_wave_mag_variance_2D = new double[ local_alloc_size_fftw];
 
    //debug  check the input to see if the numerator < denominator
-   for ( ptrdiff_t i=0; i< Nx_local * Ny; ++i)
+   for ( ptrdiff_t i=0; i< local_alloc_size_fftw; ++i)
    {
       //diffracted_wave_mag_variance_2D[i]
       //   =  data2D_sqr_avgs_local[i] 
@@ -727,110 +730,130 @@ int TEM_NS::variance_2D_STEM(
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0e-40,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
 
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0e-30,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
 
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0e-20,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
 
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0e-15,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
 
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0e-10,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
 
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0e-5,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
 
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0e-2,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
 
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0e-1,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
 
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       1.0,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
 
    output_diffraction(
       diffracted_wave_mag_variance_2D,
       10.0,
-      Nx_local * Ny,
+      local_alloc_size_fftw,
       Nx_local, Nx_joined, Ny,
       resolutionUnit_recip,
       xResolution_recip, yResolution_recip,
       outFilePrefix + "_variance2D",
+      psi_mag_strides,
+      psi_mag_displacements,
       mynode, rootnode, comm
       );
    // TODO: output data as netcdf and elliminate most of the above

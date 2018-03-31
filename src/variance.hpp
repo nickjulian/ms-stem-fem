@@ -74,12 +74,15 @@ namespace TEM_NS
          const double* const kx_local, const size_t& Nx_local,
          const double* const kx_joined, // only non-null on rootnode
          const size_t& Nx_joined,
+         const ptrdiff_t& local_alloc_size_fftw,
          const double* const ky, const size_t& Ny,
          const size_t& resolutionUnit_recip,
          const double& xResolution_recip, const double& yResolution_recip,
          const double& delta_r,
          const double& bwcutoff_t, //data known to be 0 beyond this |k|
          const string& outFilePrefix,
+         const int* const psi_mag_strides,
+         const int* const psi_mag_displacements,
          const int& mynode,
          const int& rootnode,
          MPI_Comm comm

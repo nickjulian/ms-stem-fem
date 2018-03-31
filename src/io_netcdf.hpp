@@ -76,6 +76,8 @@ int output_psi_realspace_to_netcdf(
       const double* const ky, // domain elements
       const ptrdiff_t Ny,
       const string& outFilePrefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -90,6 +92,8 @@ int output_psi_reciprocalspace_to_netcdf(
       const double* const ky, // domain elements
       const ptrdiff_t Ny,
       const string& outFilePrefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -104,6 +108,8 @@ int output_psi_mag_reciprocalspace_to_netcdf(
       const double* const ky, // domain elements
       const ptrdiff_t Ny,
       const string& outFilePrefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm

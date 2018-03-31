@@ -76,6 +76,10 @@ int TEM_NS::adfstem(
       const string& outFileName_prefix,
       const ptrdiff_t& local_alloc_size_fftw,
       const ptrdiff_t& local_0_start_fftw,
+      const int* const Nx_strides,       // const int sendcounts[]
+      const int* const Nx_displacements, // const int displacements[]
+      const int* const psi_mag_strides,       // const int sendcounts[]
+      const int* const psi_mag_displacements, // const int displacements[]
       //const ptrdiff_t& probe_idx_local_start_x,
       //const int& threads_ok,
       //const int& nthreads,
@@ -229,101 +233,108 @@ int TEM_NS::adfstem(
 
    //////////////////////////////////////////////////////////////////
    // Allocate local variables and domains required for the large probe 
-   const ptrdiff_t large_probe_factor = 1;
+   //const ptrdiff_t large_probe_factor = 1;
 
-   const ptrdiff_t Nx_large = large_probe_factor * Nx;
-   const ptrdiff_t Ny_large = large_probe_factor * Ny;
-   ptrdiff_t Nx_large_local;
-   ptrdiff_t local_alloc_size_fftw_large;
-   ptrdiff_t local_0_start_fftw_large;
+   //const ptrdiff_t Nx_large = large_probe_factor * Nx;
+   //const ptrdiff_t Ny_large = large_probe_factor * Ny;
+   //ptrdiff_t Nx_large_local;
+   //ptrdiff_t local_alloc_size_fftw_large;
+   //ptrdiff_t local_0_start_fftw_large;
 
-   local_alloc_size_fftw_large
-      = fftw_mpi_local_size_2d(     // fftw will be 2-D here
-            Nx_large, Ny_large,
-            MPI_COMM_WORLD,
-            &Nx_large_local,
-            &local_0_start_fftw_large );
+   //local_alloc_size_fftw_large
+   //   = fftw_mpi_local_size_2d(     // fftw will be 2-D here
+   //         Nx_large, Ny_large,
+   //         MPI_COMM_WORLD,
+   //         &Nx_large_local,
+   //         &local_0_start_fftw_large );
 
-   const double xperiod_duped_large 
-                  = large_probe_factor * xperiod_duped;
-   const double yperiod_duped_large 
-                  = large_probe_factor * yperiod_duped;
+   //const double xperiod_duped_large 
+   //               = large_probe_factor * xperiod_duped;
+   //const double yperiod_duped_large 
+   //               = large_probe_factor * yperiod_duped;
 
-   double* kx_large_joined; kx_large_joined = new double[ Nx_large ];
-   double* xx_large_joined; xx_large_joined = new double[ Nx_large ];
-   double* kx_large_local; kx_large_local = new double[ Nx_large_local ];
-   double* xx_large_local; xx_large_local = new double[ Nx_large_local ];
-   double* ky_large; ky_large = new double[ Ny_large ];
-   double* yy_large; yy_large = new double[ Ny_large ];
+   //double* kx_large_joined; kx_large_joined = new double[ Nx_large ];
+   //double* xx_large_joined; xx_large_joined = new double[ Nx_large ];
+   //double* kx_large_local; kx_large_local = new double[ Nx_large_local ];
+   //double* xx_large_local; xx_large_local = new double[ Nx_large_local ];
+   //double* ky_large; ky_large = new double[ Ny_large ];
+   //double* yy_large; yy_large = new double[ Ny_large ];
 
    double delta_x, delta_y, delta_kx, delta_ky;
-   delta_x = xperiod_duped_large / Nx; 
-   delta_y = yperiod_duped_large / Ny; 
-   delta_kx = 1.0/xperiod_duped_large;
-   delta_ky = 1.0/yperiod_duped_large;
+   delta_x = xperiod_duped / Nx; 
+   delta_y = yperiod_duped / Ny; 
+   delta_kx = 1.0/xperiod_duped;
+   delta_ky = 1.0/yperiod_duped;
 
-   //const double kxperiod_large = Nx_large / xperiod_duped; 
-   //const double kyperiod_large = Ny_large / yperiod_duped;
-   const double kxperiod_large = Nx_large / xperiod_duped_large; 
-   const double kyperiod_large = Ny_large / yperiod_duped_large;
+   //delta_x = xperiod_duped_large / Nx; 
+   //delta_y = yperiod_duped_large / Ny; 
+   //delta_kx = 1.0/xperiod_duped_large;
+   //delta_ky = 1.0/yperiod_duped_large;
+
+   const double kxperiod = Nx / xperiod_duped; 
+   const double kyperiod = Ny / yperiod_duped;
+   //const double kxperiod_large = Nx_large / xperiod_duped_large; 
+   //const double kyperiod_large = Ny_large / yperiod_duped_large;
 
    // larger probe than used in stem
-   fftw_complex* large_probe;
-   large_probe = fftw_alloc_complex( local_alloc_size_fftw_large );
+   //fftw_complex* large_probe;
+   //large_probe = fftw_alloc_complex( local_alloc_size_fftw_large );
+   fftw_complex* init_probe;
+   init_probe = fftw_alloc_complex( local_alloc_size_fftw );
 
    // fftw plan is required to transform the cached probe into realspace
-   fftw_plan pb_c2c_large_probe_split;
+   fftw_plan pb_c2c_probe_split;
 
    // c2c in-place reverse fft
-   pb_c2c_large_probe_split = fftw_mpi_plan_dft_2d( 
-                           Nx_large, Ny_large,
-                           large_probe, large_probe,
+   pb_c2c_probe_split = fftw_mpi_plan_dft_2d( 
+                           Nx, Ny,
+                           init_probe, init_probe,
                            //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
                            //comm, FFTW_BACKWARD, FFTW_PATIENT );
                            //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
                            comm, FFTW_BACKWARD, FFTW_MEASURE );
    ////////////////////////////////////////////////////////////////////
-
-   // TODO: Compensate for periodic boundary conditions on the probe
-   // TODO: Evaluate the probe on a much larger domain to reduce
-   //       boundary effects, then transform it into realspace, 
-   //       copy a subsection of the probe into a smaller domain and 
-   //       transform it back into reciprocal space.
+   // TODO: THE FOLLOWING IS NOT USED, CREATES BOUNDARY DISCONTINUITIES
+   // //TODO: Compensate for periodic boundary conditions on the probe
+   // //TODO: Evaluate the probe on a much larger domain to reduce
+   // //      boundary effects, then transform it into realspace, 
+   // //      copy a subsection of the probe into a smaller domain and 
+   // //      transform it back into reciprocal space.
 
    ////////////////////////////////////////////////////////////////////
    // evaluate and scatter large domains needed to create large probe
-   if ( mynode == rootnode )
-   {
-      // The reciprocal space domain my be restricted to 2-D, since the
-      //  Fourier projection theorem is being used.
+   //if ( mynode == rootnode )
+   //{
+   //   // The reciprocal space domain my be restricted to 2-D, since the
+   //   //  Fourier projection theorem is being used.
 
-      domain_2D_periodic_recip( Nx_large, Ny_large, 
-            xperiod_duped_large, yperiod_duped_large, 
-            kxperiod_large, kyperiod_large, 
-            delta_kx, delta_ky,
-            kx_large_joined, ky_large
-            );
+   //   domain_2D_periodic_recip( Nx_large, Ny_large, 
+   //         xperiod_duped_large, yperiod_duped_large, 
+   //         kxperiod_large, kyperiod_large, 
+   //         delta_kx, delta_ky,
+   //         kx_large_joined, ky_large
+   //         );
 
-      domain_2D_periodic( Nx_large, Ny_large, 
-            xperiod_duped_large, yperiod_duped_large, 
-            xmin, ymin, 
-            delta_x, delta_y,
-            xx_large_joined, yy_large
-            );
-   }
+   //   domain_2D_periodic( Nx_large, Ny_large, 
+   //         xperiod_duped_large, yperiod_duped_large, 
+   //         xmin, ymin, 
+   //         delta_x, delta_y,
+   //         xx_large_joined, yy_large
+   //         );
+   //}
 
-   MPI_Scatter( xx_large_joined, Nx_large_local, MPI_DOUBLE, // 2-D
-               xx_large_local, Nx_large_local, MPI_DOUBLE,
-               rootnode, MPI_COMM_WORLD);
-   MPI_Scatter( kx_large_joined, Nx_large_local, MPI_DOUBLE, // 2-D
-               kx_large_local, Nx_large_local, MPI_DOUBLE,
-               rootnode, MPI_COMM_WORLD);
-   MPI_Bcast( ky_large, Ny_large, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-   MPI_Bcast( yy_large, Ny_large, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-   MPI_Bcast( kx_large_joined, Nx_large, 
-         MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-   MPI_Bcast( xx_large_joined, Nx_large, 
-         MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   //MPI_Scatter( xx_large_joined, Nx_large_local, MPI_DOUBLE, // 2-D
+   //            xx_large_local, Nx_large_local, MPI_DOUBLE,
+   //            rootnode, MPI_COMM_WORLD);
+   //MPI_Scatter( kx_large_joined, Nx_large_local, MPI_DOUBLE, // 2-D
+   //            kx_large_local, Nx_large_local, MPI_DOUBLE,
+   //            rootnode, MPI_COMM_WORLD);
+   //MPI_Bcast( ky_large, Ny_large, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   //MPI_Bcast( yy_large, Ny_large, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   //MPI_Bcast( kx_large_joined, Nx_large, 
+   //      MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   //MPI_Bcast( xx_large_joined, Nx_large, 
+   //      MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
    ////////////////////////////////////////////////////////////////////
 
    ////////////////////////////////////////////////////////////////////
@@ -343,17 +354,17 @@ int TEM_NS::adfstem(
             << endl << "   lambda, lambda_sqr : "
             << lambda << ", " << lambda_sqr
             << endl << "   position : ("
-            << xx_large_joined[0] << ", " << yy_large[0] << ")" 
-            << endl << "   Nx_large_local, Ny_large : "
-            << Nx_large_local << ", " << Ny_large
+            << xx_joined[0] << ", " << yy[0] << ")" 
+            << endl << "   Nx_local, Ny : "
+            << Nx_local << ", " << Ny
             << endl;
 
       probe_wavefunction_correctedtoCs5_unnormalized(
-            xx_large_joined[0], yy_large[0],
-            kx_large_local, Nx_large_local, ky_large, Ny_large, 
+            xx_joined[0], yy[0],
+            kx_local, Nx_local, ky, Ny, 
             Cs3, Cs5, defocus, alpha_max_sqr, 
             lambda, lambda_sqr,
-            large_probe
+            init_probe
             );
 
       if ( flags.debug )
@@ -372,29 +383,29 @@ int TEM_NS::adfstem(
             << endl << "   lambda, lambda_sqr : "
             << lambda << ", " << lambda_sqr
             << endl << "   position : ("
-            << xx_large_joined[0] << ", " << yy_large[0] << ")" 
-            << endl << "   Nx_large_local, Ny_large : "
-            << Nx_large_local << ", " << Ny_large
+            << xx_joined[0] << ", " << yy[0] << ")" 
+            << endl << "   Nx_local, Ny: "
+            << Nx_local << ", " << Ny
             << endl;
 
       probe_wavefunction_uncorrected_unnormalized(
-            xx_large_joined[0], yy_large[0],
-            kx_large_local, Nx_large_local, ky_large, Ny_large, 
+            xx_joined[0], yy[0],
+            kx_local, Nx_local, ky, Ny, 
             Cs3, defocus, alpha_max_sqr, 
             lambda, lambda_sqr,
-            large_probe
+            init_probe
             );
 
       if ( flags.debug )
          cout << "Evaluated probe ..." << endl;// debug
    }
 
-   delete[] kx_large_joined;
-   delete[] xx_large_joined;
-   delete[] kx_large_local;
-   delete[] xx_large_local;
-   delete[] ky_large;
-   delete[] yy_large;
+   //delete[] kx_joined;
+   //delete[] xx_large_joined;
+   //delete[] kx_large_local;
+   //delete[] xx_large_local;
+   //delete[] ky_large;
+   //delete[] yy_large;
    ////////////////////////////////////////////////////////////////////
 
    ///////////////////////////////////////////////////////////////////
@@ -422,143 +433,65 @@ int TEM_NS::adfstem(
    //   psi[i][0] = Ap * psi[i][0];
    //   psi[i][1] = Ap * psi[i][1];
    //}
-   //if (mynode == rootnode ) // debug
-   //   cout << "Probe norm in reciprocal space : " << Ap << endl; // debug
 
    ///////////////////////////////////////////////////////////////////
    // Transform the split probe into realspace
    if ( mynode == rootnode && flags.debug )
       cout << "Transforming probe to realspace ..." << endl;
 
-   fftw_execute( pb_c2c_large_probe_split );
+   fftw_execute( pb_c2c_probe_split );
    ///////////////////////////////////////////////////////////////////
 
    ///////////////////////////////////////////////////////////////////
-   // Gather the large probe realspace wavefunction onto each node
+   // Gather the probe realspace wavefunction onto each node
    ///////////////////////////////////////////////////////////////////
 
-   double* large_probe_split_re;
-   large_probe_split_re = new double[ local_alloc_size_fftw_large ];
-   double* large_probe_split_im;
-   large_probe_split_im = new double[ local_alloc_size_fftw_large ];
+   double* probe_split_re;
+   probe_split_re = new double[ local_alloc_size_fftw ];
+   double* probe_split_im;
+   probe_split_im = new double[ local_alloc_size_fftw ];
 
 
-   // TODO: limit the probe in realspace, to avoid aliasing 
-   //       artifacts in reciprocal space image. Since this is multiplied
-   //       against the transmission function in realspace, there is no
-   //       need to limit the transmission function in realspace.
-   ///////////////////////////////////////////////////////////////////
-   // Limit the STEM probe extent in realspace
-   ///////////////////////////////////////////////////////////////////
-   // TODO: the following is just a test and should be deleted
-   //  Also try realspace limiting the propagator and 
-   //   transmission functions.
-   //if ( mynode == rootnode && flags.debug )
-   //   cout << "Cutting probe in realspace, centering at" 
-   //      << "  (xx_local[0], yy[0]): ("
-   //         << xx_local[0] << ", " << yy[0] << ")" << endl;
-
-   //double probecutoff; probecutoff = 0.125;
-   //for ( ptrdiff_t i=0; i<Nx_local; ++i)
-   //   for ( ptrdiff_t j=0; j<Ny; ++j)
-   //   {
-   //      if (
-   //            (pow(xx_joined[0] - xx_local[i],2) 
-   //                + pow(yy[0] - yy[j],2)
-   //               > pow(probecutoff * xperiod_duped,2) 
-   //                  + pow(probecutoff * yperiod_duped,2)
-   //            )
-   //            &&
-   //            (pow(xx_joined[0] + xperiod_duped - xx_local[i],2) 
-   //                + pow(yy[0] - yy[j],2)
-   //               > pow(probecutoff * xperiod_duped,2) 
-   //                  + pow(probecutoff *yperiod_duped,2)
-   //            )
-   //            &&
-   //            (pow(xx_joined[0] - xx_local[i],2) 
-   //                + pow(yy[0] + yperiod_duped - yy[j],2)
-   //               > pow(probecutoff * xperiod_duped,2) 
-   //                  + pow(probecutoff * yperiod_duped,2)
-   //            )
-   //            &&
-   //            (pow(xx_joined[0] + xperiod_duped - xx_local[i],2) 
-   //                + pow(yy[0] + yperiod_duped - yy[j],2)
-   //               > pow(probecutoff * xperiod_duped,2) 
-   //                  + pow(probecutoff * yperiod_duped,2)
-   //            )
-   //            &&
-   //            (pow(xx_joined[0] - xperiod_duped - xx_local[i],2) 
-   //                + pow(yy[0] - yy[j],2)
-   //               > pow(probecutoff * xperiod_duped,2) 
-   //                  + pow(probecutoff * yperiod_duped,2)
-   //            )
-   //            &&
-   //            (pow(xx_joined[0] - xx_local[i],2) 
-   //                + pow(yy[0] - yperiod_duped - yy[j],2)
-   //               > pow(probecutoff * xperiod_duped,2) 
-   //                  + pow(probecutoff * yperiod_duped,2)
-   //            )
-   //            &&
-   //            (pow(xx_joined[0] - xperiod_duped - xx_local[i],2) 
-   //                + pow(yy[0] - yperiod_duped - yy[j],2)
-   //               > pow(probecutoff * xperiod_duped,2) 
-   //                  + pow(probecutoff * yperiod_duped,2)
-   //            )
-   //            &&
-   //            (pow(xx_joined[0] + xperiod_duped - xx_local[i],2) 
-   //                + pow(yy[0] - yperiod_duped - yy[j],2)
-   //               > pow(probecutoff * xperiod_duped,2) 
-   //                  + pow(probecutoff * yperiod_duped,2)
-   //            )
-   //            &&
-   //            (pow(xx_joined[0] - xperiod_duped - xx_local[i],2) 
-   //                + pow(yy[0] + yperiod_duped - yy[j],2)
-   //               > pow(probecutoff * xperiod_duped,2) 
-   //                  + pow(probecutoff * yperiod_duped,2)
-   //            )
-   //         )
-   //      {
-   //         psi[j + i*Ny][0] = 0.0;
-   //         psi[j + i*Ny][1] = 0.0;
-   //      }
-   //   }
-   // TODO: the above is just a test and should be deleted
-
-
-   for (ptrdiff_t i=0; i < local_alloc_size_fftw_large; ++i)
+   for (ptrdiff_t i=0; i < local_alloc_size_fftw; ++i)
    {  // reassign probe values for MPI_Allgather while removing fftw scale
       //  factor
-      large_probe_split_re[i] = large_probe[i][0] / sqrtNxNy;
-      large_probe_split_im[i] = large_probe[i][1] / sqrtNxNy;
+      probe_split_re[i] = init_probe[i][0] / sqrtNxNy;
+      probe_split_im[i] = init_probe[i][1] / sqrtNxNy;
    }
 
    if ( mynode == rootnode && flags.debug )
-      cout << "Allgathering enlarged probe ..." << endl;
+      cout << "Allgathering probe ..." << endl;
 
-   double* large_probe_joined_re;
-   large_probe_joined_re = new double[Nx_large * Ny_large];
-   double* large_probe_joined_im;
-   large_probe_joined_im = new double[Nx_large * Ny_large];
+   double* probe_joined_re;
+   probe_joined_re = new double[Nx * Ny];
+   double* probe_joined_im;
+   probe_joined_im = new double[Nx * Ny];
 
-   MPI_Allgather(
-         large_probe_split_re,
-         local_alloc_size_fftw_large, MPI_DOUBLE,
-         large_probe_joined_re,
-         local_alloc_size_fftw_large, MPI_DOUBLE,
-         comm);
+   MPI_Allgatherv(
+         probe_split_re,         // sendbuf
+         Nx_local * Ny, //local_alloc_size_fftw,  // sendcount
+         MPI_DOUBLE,             // sendtype
+         probe_joined_re,        // recvbuf
+         psi_mag_strides,        // recvcounts[]
+         psi_mag_displacements,  // displs[]
+         MPI_DOUBLE,             // recvtype
+         comm);                  // MPI_Comm comm
 
-   MPI_Allgather(
-         large_probe_split_im,
-         local_alloc_size_fftw_large, MPI_DOUBLE,
-         large_probe_joined_im,
-         local_alloc_size_fftw_large, MPI_DOUBLE,
-         comm);
+   MPI_Allgatherv(
+         probe_split_im,         // sendbuf
+         Nx_local * Ny, //local_alloc_size_fftw,  // sendcount
+         MPI_DOUBLE,             // sendtype
+         probe_joined_im,        // recvbuf
+         psi_mag_strides,        // recvcounts[]
+         psi_mag_displacements,  // displs[]
+         MPI_DOUBLE,             // recvtype
+         comm);                  // MPI_Comm comm
 
-   delete[] large_probe_split_re;
-   delete[] large_probe_split_im;
+   delete[] probe_split_re;
+   delete[] probe_split_im;
 
    ///////////////////////////////////////////////////////////////////
-   // Copy a reduced portion of large probe onto the wavefunction
+   // Copy a translation of the probe onto the wavefunction
    ///////////////////////////////////////////////////////////////////
 
    // stem_probe_joined_re, stem_probe_joined_im : will hold cached
@@ -573,16 +506,16 @@ int TEM_NS::adfstem(
       for ( ptrdiff_t j=0; j < Ny/2; ++j)
       {
          stem_probe_joined_re[j + i*Ny] 
-            = large_probe_joined_re[j + i*Ny_large];
+            = probe_joined_re[j + i*Ny];
          stem_probe_joined_im[j + i*Ny] 
-            = large_probe_joined_im[j + i*Ny_large];
+            = probe_joined_im[j + i*Ny];
       }
       for ( ptrdiff_t j=Ny/2; j < Ny; ++j)
       {
          stem_probe_joined_re[j + i*Ny] 
-            = large_probe_joined_re[(Ny_large - Ny + j) + i*Ny_large];
+            = probe_joined_re[(Ny - Ny + j) + i*Ny];
          stem_probe_joined_im[j + i*Ny] 
-            = large_probe_joined_im[(Ny_large - Ny + j) + i*Ny_large];
+            = probe_joined_im[(Ny - Ny + j) + i*Ny];
       }
    }
    for ( ptrdiff_t i=Nx/2; i<Nx; ++i)
@@ -590,28 +523,28 @@ int TEM_NS::adfstem(
       for ( ptrdiff_t j=0; j < Ny/2; ++j)
       {
          stem_probe_joined_re[j + i*Ny] 
-            = large_probe_joined_re[j + (Nx_large - Nx + i)*Ny_large];
+            = probe_joined_re[j + (Nx - Nx + i)*Ny];
          stem_probe_joined_im[j + i*Ny] 
-            = large_probe_joined_im[j + (Nx_large - Nx + i)*Ny_large];
+            = probe_joined_im[j + (Nx - Nx + i)*Ny];
       }
       for ( ptrdiff_t j=Ny/2; j < Ny; ++j)
       {
          stem_probe_joined_re[j + i*Ny] 
-            = large_probe_joined_re[
-                  (Ny_large - Ny + j) + (Nx_large - Nx + i)*Ny_large
+            = probe_joined_re[
+                  (Ny - Ny + j) + (Nx - Nx + i)*Ny
                ];
          stem_probe_joined_im[j + i*Ny] 
-            = large_probe_joined_im[
-                  (Ny_large - Ny + j) + (Nx_large - Nx + i)*Ny_large
+            = probe_joined_im[
+                  (Ny - Ny + j) + (Nx - Nx + i)*Ny
                ];
       }
    }
 
-   delete[] large_probe_joined_re;
-   delete[] large_probe_joined_im;
+   delete[] probe_joined_re;
+   delete[] probe_joined_im;
 
-   fftw_destroy_plan( pb_c2c_large_probe_split );
-   fftw_free( large_probe );
+   fftw_destroy_plan( pb_c2c_probe_split );
+   fftw_free( init_probe );
 
    ///////////////////////////////////////////////////////////////////
    // Normalize the probe in real space
@@ -801,7 +734,12 @@ int TEM_NS::adfstem(
          }
 
          if ( flags.correlograph ) // is this inefficient?
-            number_of_phi_bins = phi_bdy_count - 1;
+         {
+            if (phi_bdy_count > 0)
+               number_of_phi_bins = phi_bdy_count - 1;
+            else
+               number_of_phi_bins = 0;
+         }
 
          number_of_bins[0] = number_of_k_bins;
          number_of_bins[1] = number_of_phi_bins;
@@ -1549,6 +1487,8 @@ int TEM_NS::adfstem(
             //         resolutionUnit_recip,
             //         xResolution_recip, yResolution_recip,
             //         outFileName_prefix + "_initial_probe",
+            //         psi_mag_strides,
+            //         psi_mag_displacements,
             //         mynode, rootnode, comm
             //         );
             //}
@@ -1577,6 +1517,8 @@ int TEM_NS::adfstem(
                   xResolution, yResolution,
                   outFileName_prefix 
                   + "_initial_probe_realspace",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm);
             }
 
@@ -1591,6 +1533,8 @@ int TEM_NS::adfstem(
                      Nx_local, kx_joined, Nx, ky, Ny,
                      outFileName_prefix 
                         + "_initial_probe_realspace",
+                     psi_mag_strides,
+                     psi_mag_displacements,
                      mynode, rootnode, comm
                      ) == EXIT_FAILURE)
                   cout << "output_psi_realspace_to_netcdf() failed" 
@@ -1627,6 +1571,8 @@ int TEM_NS::adfstem(
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix + "_initial_probe_recip_",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
          }
@@ -1674,6 +1620,8 @@ int TEM_NS::adfstem(
             //         xResolution, yResolution,
             //         outFileName_prefix 
             //           + "_probe_" + TEM_NS::to_string(sliceNumber),
+            //         psi_mag_strides,
+            //         psi_mag_displacements,
             //         mynode, rootnode, comm
             //         );
 
@@ -1742,6 +1690,8 @@ int TEM_NS::adfstem(
             //         xResolution, yResolution,
             //         outFileName_prefix 
             //            + "_slice_" + TEM_NS::to_string(sliceNumber),
+            //         psi_mag_strides,
+            //         psi_mag_displacements,
             //         mynode, rootnode, comm
             //         );
             //}
@@ -1855,6 +1805,8 @@ int TEM_NS::adfstem(
             //      Nx_local, Nx, Ny,
             //      outFileName_prefix 
             //         + "_slice_" + TEM_NS::to_string(sliceNumber),
+            //      psi_mag_strides,
+            //      psi_mag_displacements,
             //      mynode, rootnode, comm
             //      );
             //fftw_execute( pf_c2c_psi );
@@ -1917,6 +1869,8 @@ int TEM_NS::adfstem(
                         + "_first" 
                         + TEM_NS::to_string(*x_itr) 
                         + "_" + TEM_NS::to_string(*y_itr),
+                     psi_mag_strides,
+                     psi_mag_displacements,
                      mynode, rootnode, comm
                      ) == EXIT_FAILURE )
                {
@@ -1937,6 +1891,8 @@ int TEM_NS::adfstem(
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix + "_first",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
             diffraction_scale_factor = 1.0e-1;
@@ -1948,6 +1904,8 @@ int TEM_NS::adfstem(
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix + "_first",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
             diffraction_scale_factor = 1.0e0;
@@ -1959,6 +1917,8 @@ int TEM_NS::adfstem(
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix + "_first",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
             diffraction_scale_factor = 1.0e10;
@@ -1970,6 +1930,8 @@ int TEM_NS::adfstem(
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix + "_first",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
             diffraction_scale_factor = 1.0e+20;//1e-20;
@@ -1981,6 +1943,8 @@ int TEM_NS::adfstem(
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix + "_first",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
          }
@@ -2004,6 +1968,9 @@ int TEM_NS::adfstem(
 
          if ( flags.fem )
          {
+            if ( (mynode == rootnode) && flags.debug )
+               cout << "calculating and accumulating FTEM quanitites ..." 
+                  << endl;
             if ( flags.d1 || flags.d2 || flags.correlograph )
             {
                // Azimuthally integrate diffraction for 1-D variance.
@@ -2318,6 +2285,8 @@ int TEM_NS::adfstem(
    //         resolutionUnit_recip,
    //         xResolution_recip, yResolution_recip,
    //         outFileName_prefix + "_final_0_",
+   //         psi_mag_strides,
+   //         psi_mag_displacements,
    //         mynode, rootnode, comm
    //         );
    //}
@@ -2329,6 +2298,9 @@ int TEM_NS::adfstem(
    ////////////////////////////////////////////////////////////////
    if ( flags.fem )
    {
+      if ((mynode == rootnode) && flags.debug)
+         cout << "calculating post-raster FTEM quanitites ..." 
+            << endl;
       if ( flags.d1 )
       {
          // V(|\vec{k}|,K_{aperture})
@@ -2580,6 +2552,8 @@ int TEM_NS::adfstem(
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix + "_diffracted_wave_avg",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
             if ( flags.gt17 || flags.d3 || flags.d4) 
@@ -2593,6 +2567,8 @@ int TEM_NS::adfstem(
                      resolutionUnit_recip,
                      xResolution_recip, yResolution_recip,
                      outFileName_prefix + "_diffracted_wave_sqr_avg",
+                     psi_mag_strides,
+                     psi_mag_displacements,
                      mynode, rootnode, comm
                      );
             }
@@ -2609,6 +2585,8 @@ int TEM_NS::adfstem(
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix + "_diffracted_wave_re_sum",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
 
@@ -2620,6 +2598,8 @@ int TEM_NS::adfstem(
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix + "_diffracted_wave_im_sum",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
 
@@ -2632,6 +2612,8 @@ int TEM_NS::adfstem(
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix 
                      + "_diffracted_wave_complex_sum_mag_avg",
+                  psi_mag_strides,
+                  psi_mag_displacements,
                   mynode, rootnode, comm
                   );
 
@@ -2641,15 +2623,17 @@ int TEM_NS::adfstem(
          {
            if(
               output_psi_reciprocalspace_to_netcdf(
-                    diffracted_wave_fftw_complex_sum,
-                    local_alloc_size_fftw,
-                    Nx_local,
-                    kx_joined, Nx,
-                    ky, Ny,
-                    outFileName_prefix 
-                       + "_diffracted_wave_fftw_complex_sum",
-                    mynode, rootnode, comm
-                    ) == EXIT_FAILURE
+                     diffracted_wave_fftw_complex_sum,
+                     local_alloc_size_fftw,
+                     Nx_local,
+                     kx_joined, Nx,
+                     ky, Ny,
+                     outFileName_prefix 
+                        + "_diffracted_wave_fftw_complex_sum",
+                     psi_mag_strides,
+                     psi_mag_displacements,
+                     mynode, rootnode, comm
+                     ) == EXIT_FAILURE
            )
            {
               cout << "output_psi_reciprocalspace_to_netcdf() failed" 
@@ -2956,6 +2940,8 @@ int TEM_NS::adfstem(
                      resolutionUnit_recip,
                      xResolution_recip, yResolution_recip,
                      outFileName_prefix + "_variance_2-D",
+                     psi_mag_strides,
+                     psi_mag_displacements,
                      mynode, rootnode, comm
                      );
                diffraction_scale_factor = 1.0e-10;
@@ -2967,6 +2953,8 @@ int TEM_NS::adfstem(
                      resolutionUnit_recip,
                      xResolution_recip, yResolution_recip,
                      outFileName_prefix + "_variance_2-D",
+                     psi_mag_strides,
+                     psi_mag_displacements,
                      mynode, rootnode, comm
                      );
                //diffraction_scale_factor = 1.0e-25;
@@ -3075,7 +3063,7 @@ int TEM_NS::adfstem(
                phi_binning_boundaries,
                k_binning_boundaries,
                outFileName_prefix 
-                  + "_avg"
+                  + "_correlograph_avg"
                );
          output_correlograph_image(
                correlograph_sum,
@@ -3084,16 +3072,27 @@ int TEM_NS::adfstem(
                resolutionUnit,
                phiResolution_correlograph,
                kResolution_correlograph,
-               outFileName_prefix + "_avg",
+               outFileName_prefix + "_correlograph_avg",
                0
                );
          // iterate through k and phi bins to determine dimensions of 
          //  the variance image having k \in [0.2, 1.0]
          if ( flags.correlograph_variance )
          {
+            if ( (mynode == rootnode) && flags.debug)
+               cout << "calculating variance of correlographs ..." 
+                  << endl;
             size_t k_correlograph_start_idx, k_correlograph_end_idx;
+            k_correlograph_start_idx=0;
+            k_correlograph_end_idx = number_of_k_bins - 1;
             for ( size_t ii=0; ii < number_of_k_bins; ++ii)
             {
+               //if ( flags.debug )
+               //   cout << "k_binning_boundaries[" << ii << "]: "
+               //      << k_binning_boundaries[ii] 
+               //      << " k_binning_boundaries[" << ii + 1 << "]: "
+               //      << k_binning_boundaries[ii + 1] << endl;
+
                if ( (k_binning_boundaries[ii] <= 0.2) 
                      && (k_binning_boundaries[ii+1] > 0.2))
                   k_correlograph_start_idx = ii;
@@ -3104,8 +3103,14 @@ int TEM_NS::adfstem(
             }
             double* correlograph_variance;
             double tmpdbl;
-            size_t number_of_reducedk_bins
-                  = (k_correlograph_end_idx - k_correlograph_start_idx +1);
+            size_t number_of_reducedk_bins;
+            if ( k_correlograph_end_idx >= k_correlograph_start_idx )
+               number_of_reducedk_bins
+                  = (k_correlograph_end_idx 
+                     - k_correlograph_start_idx +1);
+            else 
+               number_of_reducedk_bins = 0;
+
             correlograph_variance 
                = new double[number_of_reducedk_bins * number_of_phi_bins];
             //for ( size_t ii = 0; ii < number_of_k_bins; ++ii)
@@ -3145,8 +3150,7 @@ int TEM_NS::adfstem(
                         //) - 1;
                   }
                   else
-                     correlograph_variance[
-                        jj + d_idx * number_of_phi_bins] = 0;
+                     correlograph_variance[ d_idx ] = 0;
                      //correlograph_sqr_sum[idx] = 0;
                }
             }
@@ -3216,6 +3220,8 @@ int TEM_NS::adfstem(
             resolutionUnit_recip,
             xResolution_recip, yResolution_recip,
             outFileName_prefix + "_final",
+            psi_mag_strides,
+            psi_mag_displacements,
             mynode, rootnode, comm
             );
 
@@ -3228,6 +3234,8 @@ int TEM_NS::adfstem(
       //      xResolution, yResolution,
       //      outFileName_prefix + "_diffraction_" 
       //         + TEM_NS::to_string(sliceNumber),
+      //      psi_mag_strides,
+      //      psi_mag_displacements,
       //      mynode, rootnode, comm
       //      );
    }
@@ -3274,6 +3282,8 @@ int TEM_NS::adfstem(
          resolutionUnit,
          xResolution, yResolution,
          outFileName_prefix + "_slice_" + TEM_NS::to_string(sliceNumber),
+         psi_mag_strides,
+         psi_mag_displacements,
          mynode, rootnode, comm
          );
  
@@ -3294,6 +3304,8 @@ int TEM_NS::adfstem(
          resolutionUnit,
          xResolution, yResolution,
          outFileName_prefix + "_slice_" + TEM_NS::to_string(sliceNumber),
+         psi_mag_strides,
+         psi_mag_displacements,
          mynode, rootnode, comm
          );
 

@@ -206,6 +206,8 @@ int TEM_NS::output_diffraction_with_renormalization(
       const size_t& resolutionUnit,
       const double& xResolution, const double& yResolution,
       const string& outFileName_prefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -328,8 +330,14 @@ int TEM_NS::output_diffraction_with_renormalization(
       //psi_im_joined = new double[ Nx * Ny ]; // debug
    }
 
-   MPI_Gather( psi_mag, local_alloc_size_fftw, MPI_DOUBLE, 
-         psi_mag_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_mag, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE, 
+         psi_mag_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
 
    MPI_Reduce( &max_psi_mag, &max_psi_mag_joined, 
@@ -493,6 +501,8 @@ int TEM_NS::output_diffraction(
       const size_t& resolutionUnit,
       const double& xResolution, const double& yResolution,
       const string& outFileName_prefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -603,8 +613,14 @@ int TEM_NS::output_diffraction(
       //psi_im_joined = new double[ Nx * Ny ]; // debug
    }
 
-   MPI_Gather( psi_mag, local_alloc_size_fftw, MPI_DOUBLE, 
-         psi_mag_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_mag, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE, 
+         psi_mag_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
 
    MPI_Reduce( &max_psi_mag, &max_psi_mag_joined, 
@@ -768,6 +784,8 @@ int TEM_NS::output_diffraction(
       const size_t& resolutionUnit,
       const double& xResolution, const double& yResolution,
       const string& outFileName_prefix,
+      const int* const psi_mag_strides,
+      const int* const psi_mag_displacements,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -824,8 +842,14 @@ int TEM_NS::output_diffraction(
       psi_mag_joined = new double[ Nx * Ny ];
    }
 
-   MPI_Gather( psi_mag, local_alloc_size_fftw, MPI_DOUBLE, 
-         psi_mag_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         psi_mag, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE, 
+         psi_mag_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
 
    MPI_Reduce( &max_psi_mag, &max_psi_mag_joined, 

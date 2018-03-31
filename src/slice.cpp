@@ -1444,8 +1444,8 @@ int TEM_NS::slice::update_transmission_function(
             //const double& bwcutoff_pap,
             const double& bwcutoff_t,
             //const scatterer_pap_LUT& myScattererPapLUT,
-            const double* const kx_split,
-            const ptrdiff_t& Nx_split,
+            const double* const kx_local,
+            const ptrdiff_t& Nx_local,
             const double* const kx_joined,
             const double* const xx_joined,
             const ptrdiff_t& Nx_joined,
@@ -1459,6 +1459,8 @@ int TEM_NS::slice::update_transmission_function(
             const size_t& sliceNumber,//debug
             const ptrdiff_t& local_alloc_size_fftw,
             const ptrdiff_t& local_0_start_fftw,
+            const int* const psi_mag_strides,
+            const int* const psi_mag_displacements,
             const int& mynode,
             const int& rootnode,
             MPI_Comm comm
@@ -1524,7 +1526,7 @@ int TEM_NS::slice::update_transmission_function(
 
    // debug
    //  Determine the value of idx_local_start_x such that
-   //   kx_joined[i + idx_local_start_x] == kx_split[i]
+   //   kx_joined[i + idx_local_start_x] == kx_local[i]
    //   and thus
    //   pap_joined_x[i + idx_local_start_x] == pap_split_x[i]
    size_t idx_local_start_x; 
@@ -1532,7 +1534,7 @@ int TEM_NS::slice::update_transmission_function(
    {
       // NOTE: comparing reciprocal space domains to determine real space
       //  splitting location ...
-      if ( kx_joined[idx] == kx_split[0] )
+      if ( kx_joined[idx] == kx_local[0] )
       {
          idx_local_start_x = idx;
          break;
@@ -1617,7 +1619,7 @@ int TEM_NS::slice::update_transmission_function(
 
 
       // iterate over the domains
-      for ( size_t i=0; i < Nx_split; ++i)
+      for ( size_t i=0; i < Nx_local; ++i)
       {
          //   pap_joined_x[i + idx_local_start_x] == pap_split_x[i]
          
@@ -1708,11 +1710,13 @@ int TEM_NS::slice::update_transmission_function(
             exp_i_sigma_v, 
             1, 
             local_alloc_size_fftw,
-            Nx_split, Nx_joined, Ny,
+            Nx_local, Nx_joined, Ny,
             3, // resolutionUnit = 3 indicates centimeters
             xResolution, yResolution,
             outFileName + "_pap_slice" 
                + TEM_NS::to_string(sliceNumber),
+            psi_mag_strides,
+            psi_mag_displacements,
             mynode, rootnode, comm
             );
    }
@@ -1725,7 +1729,7 @@ int TEM_NS::slice::update_transmission_function(
    double exp_neg_pap_im;
    double sigma_v_re;
 
-   for ( ptrdiff_t i=0; i<Nx_split; ++i)
+   for ( ptrdiff_t i=0; i<Nx_local; ++i)
       for ( ptrdiff_t j=0; j<Ny; ++j)
       {
          // TODO: double check that you don't need to divide by sqrtNxNy
@@ -1759,7 +1763,7 @@ int TEM_NS::slice::update_transmission_function(
 
    bw_limit(
          exp_i_sigma_v,
-         Nx_split, kx_split,
+         Nx_local, kx_local,
          Ny, ky,
          bwcutoff_t
          );

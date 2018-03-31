@@ -2031,6 +2031,8 @@ void TEM_NS::debug_output_complex_fftw_operand(
       const double& xResolution,
       const double& yResolution,
       const string& outFileName_prefix,
+      const int* const psi_mag_strides,       // const int sendcounts[]
+      const int* const psi_mag_displacements, // const int displacements[]
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm )
@@ -2113,18 +2115,48 @@ void TEM_NS::debug_output_complex_fftw_operand(
       complex_fftw_operand_re_joined = new double[Nx * Ny];
       complex_fftw_operand_im_joined = new double[Nx * Ny];
    }
+
  
-   MPI_Gather( complex_fftw_operand_mag, local_alloc_size_fftw, MPI_DOUBLE,
-         complex_fftw_operand_mag_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         complex_fftw_operand_mag, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         complex_fftw_operand_mag_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
  
-   MPI_Gather( complex_fftw_operand_re, local_alloc_size_fftw, MPI_DOUBLE,
-         complex_fftw_operand_re_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         complex_fftw_operand_re, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         complex_fftw_operand_re_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
  
-   MPI_Gather( complex_fftw_operand_im, local_alloc_size_fftw, MPI_DOUBLE,
-         complex_fftw_operand_im_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   MPI_Gatherv( 
+         complex_fftw_operand_im, 
+         Nx_local* Ny, //local_alloc_size_fftw, 
+         MPI_DOUBLE,
+         complex_fftw_operand_im_joined, 
+         psi_mag_strides,       // recvcount[]
+         psi_mag_displacements, // displs[]
+         MPI_DOUBLE,
          rootnode, comm);
+   //MPI_Gather( complex_fftw_operand_mag, local_alloc_size_fftw, MPI_DOUBLE,
+   //      complex_fftw_operand_mag_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   //      rootnode, comm);
+ 
+   //MPI_Gather( complex_fftw_operand_re, local_alloc_size_fftw, MPI_DOUBLE,
+   //      complex_fftw_operand_re_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   //      rootnode, comm);
+ 
+   //MPI_Gather( complex_fftw_operand_im, local_alloc_size_fftw, MPI_DOUBLE,
+   //      complex_fftw_operand_im_joined, local_alloc_size_fftw, MPI_DOUBLE,
+   //      rootnode, comm);
  
    double max_complex_fftw_operand_mag_joined;
    double min_complex_fftw_operand_mag_joined;

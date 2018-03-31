@@ -3011,6 +3011,10 @@ int TEM_NS::read_parameter_file(
                cout << "Acceptable phrases in the parameter file:" << endl
                   << "  samples_x <integer> " << endl
                   << "  samples_y <integer> " << endl
+                  << "    WARNING: it's recommended that samples_x and "
+                  << "    samples_y be identical and even, otherwise "
+                  << "    bad data will creep in from the edges of "
+                  << "    reciprocal space" << endl
                   << "  model_file <path/to/model/file> " << endl
                   << "  microscope_voltage <voltage value> " << endl
                   << "  scherzer_defocus" << endl

@@ -62,6 +62,7 @@
 #include "scatterer.hpp"   // atom struct with fitting parameters
 #include "scatterer_pap_LUT.hpp"
 #include "slice.hpp"            
+#include "to_string.hpp"
 
 using std::cout;
 using std::endl;
@@ -72,7 +73,7 @@ using std::setprecision;
 using namespace TEM_NS;
 
 //int threads_ok; // global by request of fftw.org/doc/ ... section 6.11
-#define PRINT_USAGE cout << "Usage: " << argv[0] << " <options>" << endl << "OPTIONS : " << endl << "   --parameter_file <file name>" << endl << "      Contents of this file may specify any of the other arguments, but will" << endl << "      be superceded by those on the command line." << endl << "   -m <samples_x> <samples_y> <VV>" << endl << "      number of samples in the 2-D discretization and microscope voltage" << endl << "   [--scherzer_defocus]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_alphamax]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_cs3]" << endl << "      calculate and use scherzer Cs3 conditions" << endl << "   [--defocus <defocus>]" << endl << "      required if not using --scherzer_defocus" << endl << "   [--alphamax <alpha max>]" << endl << "      required if not using --scherzer_alphamax" << endl << "   [--spread <defocus spread> <condenser_illumination_angle>]" << endl << "      applicable only if using aberration correction" << endl << "   [--cs3 <third order spherical aberration>]" << endl << "      ignored if using --scherzer with aberration correction" << endl << "   [--cs5 <fifth order spherical aberration>]" << endl << "     applicable only if using aberration correction" << endl << "   [--rasterspacing <raster_spacing>]" << endl << "      units: angstroms; default is 1.5 for STEM or 10 for STEM-FEM" << endl << "   [--dupe <dupe_x> <dupe_y> <dupe_z>]" << endl << "      Periodically instantiate the given scatterers dupe_x, dupe_y, and " << endl << "      dupe_z times in respective directions; fem only" << endl << "   -a <lammps or xyz style position input file>" << endl << "   --output_prefix <output file prefix>" << endl << "   --paptif" << endl << "      output images of projected atomic potentials" << endl << "   [--adfstemcorrfem]" << endl << "      simulate fluctuation microscopy using aberration corrected" << endl << "      adfstem mode" << endl << "   [--adfstemuncorrfem]" << endl << "      simulate fluctuation microscopy using" << endl << "      adfstem mode without aberration correction" << endl << "   [--adfstemcorr]" << endl << "      simulate aberration corrected adfstem" << endl << "   [--adfstemuncorr]" << endl << "      simulate adfstem mode without aberration correction" << endl << "   [--dr <azimuthal_binning_size_factor>]" << endl << "      prefactor of sqrt(dx^2+dy^2) in azimuthal integration bin size" << endl << "   [--minslice <minSliceThickness>" << endl << "      minimum slice thickness in Angstroms, default is 1 " << endl << "   [--images]" << endl << "      generate and save images" << endl << "   [--netcdfimages]" << endl << "      save images as netcdf files" << endl << "   [--netcdfvariance]" << endl << "      save 1-D variance as netcdf files" << endl << "   [--D1]" << endl << "      FEM: normalized variance of the annular mean" << endl << "   [--D2]" << endl << "      FEM: mean of normalized variances of rings" << endl << "   [--D3]" << endl << "      FEM: normalized variance of ring ensemble" << endl << "   [--D4]" << endl << "      FEM: annular mean of variance image" << endl << "   [--GT17]" << endl << "      FEM: ratio of annular means of mean diffraction squared and the square of" << endl << "      mean diffraction" << endl << "   [--RVA]" << endl << "      FEM: angular normalized variance of the average diffraction" << endl << "   [--correlograph]" << endl << "      FEM: 2-D average of autocorrelation along azimuthal phi axis" << endl << "   [--correlograph_everyimage]" << endl << "      FEM: 2-D tif image output of autocorrelation along azimuthal phi axis for every STEM raster point" << endl << "   [--correlograph_everytxt]" << endl << "      FEM: 2-D txt output of autocorrelation along azimuthal phi axis for every STEM raster point" << endl << "   [--correlograph_variance]" << endl << "      FEM: 2-D variance of autocorrelation along azimuthal phi axis" << endl << "   [--debug]" << endl << "      enable verbose debug output to files and stdout" << endl ;
+#define PRINT_USAGE cout << "Usage: " << argv[0] << " <options>" << endl << "OPTIONS : " << endl << "   --parameter_file <file name>" << endl << "      Contents of this file may specify any of the other arguments, but will" << endl << "      be superceded by those on the command line." << endl << "   -m <samples_x> <samples_y> <VV>" << endl << "      number of samples in the 2-D discretization and microscope voltage" << endl << "      WARNING: if samples_x != samples_y, or if they are odd, bad data" << endl << "               may creep from the edges of reciprocal space boundaries" << endl << "   [--scherzer_defocus]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_alphamax]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_cs3]" << endl << "      calculate and use scherzer Cs3 conditions" << endl << "   [--defocus <defocus>]" << endl << "      required if not using --scherzer_defocus" << endl << "   [--alphamax <alpha max>]" << endl << "      required if not using --scherzer_alphamax" << endl << "   [--spread <defocus spread> <condenser_illumination_angle>]" << endl << "      applicable only if using aberration correction" << endl << "   [--cs3 <third order spherical aberration>]" << endl << "      ignored if using --scherzer with aberration correction" << endl << "   [--cs5 <fifth order spherical aberration>]" << endl << "     applicable only if using aberration correction" << endl << "   [--rasterspacing <raster_spacing>]" << endl << "      units: angstroms; default is 1.5 for STEM or 10 for STEM-FEM" << endl << "   [--dupe <dupe_x> <dupe_y> <dupe_z>]" << endl << "      Periodically instantiate the given scatterers dupe_x, dupe_y, and " << endl << "      dupe_z times in respective directions; fem only" << endl << "   -a <lammps or xyz style position input file>" << endl << "   --output_prefix <output file prefix>" << endl << "   --paptif" << endl << "      output images of projected atomic potentials" << endl << "   [--adfstemcorrfem]" << endl << "      simulate fluctuation microscopy using aberration corrected" << endl << "      adfstem mode" << endl << "   [--adfstemuncorrfem]" << endl << "      simulate fluctuation microscopy using" << endl << "      adfstem mode without aberration correction" << endl << "   [--adfstemcorr]" << endl << "      simulate aberration corrected adfstem" << endl << "   [--adfstemuncorr]" << endl << "      simulate adfstem mode without aberration correction" << endl << "   [--dr <azimuthal_binning_size_factor>]" << endl << "      prefactor of sqrt(dx^2+dy^2) in azimuthal integration bin size" << endl << "   [--minslice <minSliceThickness>" << endl << "      minimum slice thickness in Angstroms, default is 1 " << endl << "   [--images]" << endl << "      generate and save images" << endl << "   [--netcdfimages]" << endl << "      save images as netcdf files" << endl << "   [--netcdfvariance]" << endl << "      save 1-D variance as netcdf files" << endl << "   [--D1]" << endl << "      FEM: normalized variance of the annular mean" << endl << "   [--D2]" << endl << "      FEM: mean of normalized variances of rings" << endl << "   [--D3]" << endl << "      FEM: normalized variance of ring ensemble" << endl << "   [--D4]" << endl << "      FEM: annular mean of variance image" << endl << "   [--GT17]" << endl << "      FEM: ratio of annular means of mean diffraction squared and the square of" << endl << "      mean diffraction" << endl << "   [--RVA]" << endl << "      FEM: angular normalized variance of the average diffraction" << endl << "   [--correlograph]" << endl << "      FEM: 2-D average of autocorrelation along azimuthal phi axis" << endl << "   [--correlograph_everyimage]" << endl << "      FEM: 2-D tif image output of autocorrelation along azimuthal phi axis for every STEM raster point" << endl << "   [--correlograph_everytxt]" << endl << "      FEM: 2-D txt output of autocorrelation along azimuthal phi axis for every STEM raster point" << endl << "   [--correlograph_variance]" << endl << "      FEM: 2-D variance of autocorrelation along azimuthal phi axis" << endl << "   [--debug]" << endl << "      enable verbose debug output to files and stdout" << endl ;
 //<< endl << "   [--bfctemcorr]" << endl << "      simulate bright field TEM with aberration correction" << endl << "   [--bfctemuncorr] simulate bright field TEM without aberration correction" 
 
 
@@ -417,16 +418,90 @@ int main( int argc, char* argv[])
             &Nx_local,
             &local_0_start_fftw );
 
-   if ( flags.debug )
-      cout << "node " << mynode 
-         << ", (Nx_local, local_0_start_fftw) : (" 
-         << Nx_local << ", " << local_0_start_fftw << ")"<< endl; // debug
+   //if ( flags.debug )
+   //{
+   //   cout << "node " << mynode 
+   //      << ", (Nx_local, local_0_start_fftw, local_alloc_size_fftw) : (" 
+   //      << Nx_local << ", " << local_0_start_fftw << ", " 
+   //      << local_alloc_size_fftw << ")"<< endl; // debug
+   //}
 
    if ( local_alloc_size_fftw != Nx_local * Ny ) 
    {
-   // TODO: fix; this error is raised when totalnodes is not a power of 2
-      cerr << "local_alloc_size_fftw != Nx_local * Ny " << endl;
-      return( EXIT_FAILURE );
+      // TODO: fix
+      //if ( flags.debug )
+      cout << "WARNING: local_alloc_size_fftw != Nx_local * Ny " 
+         << ", this may yield bad data at the edges of images" << endl;
+      //return( EXIT_FAILURE );
+   }
+
+   //////////////////////////////////////////////////////////////////
+   // Gather the values of Nx_local and local_alloc_size_fftw into 
+   //    arrays on root node
+   //////////////////////////////////////////////////////////////////
+   int* Nx_strides;
+   int* Nx_displacements;
+   int* psi_mag_strides;
+   int* psi_mag_displacements;
+   Nx_strides = new int[ totalnodes ];
+   Nx_displacements = new int[ totalnodes ];
+   // psi_mag_strides and displacements are required for MPI_Allgatherv
+   psi_mag_strides = new int[ totalnodes ];
+   psi_mag_displacements = new int[ totalnodes ];
+
+   int Nx_local_int;
+   Nx_local_int = (int) Nx_local;   // problem here if domain is gigantic
+   MPI_Allgather(
+         &Nx_local_int,   // const void* sendbuf,
+         1,                // int sendcount,
+         MPI_INT,          // MPI_Datatype sendtype,
+         Nx_strides,       // void *recvbuf,
+         1,//totalnodes,       // int recvcount
+         MPI_INT,     // MPI_Datatype recvtype
+         //rootnode,         // int root
+         MPI_COMM_WORLD    // MPI_Comm comm
+         );
+   if ( flags.debug )
+   {
+      if ( mynode == rootnode )
+      {
+         cout << "rootnode Nx_strides[]: ";
+         for (size_t ii=0; ii < totalnodes; ++ii)
+            cout << Nx_strides[ii] << ", ";
+         cout << endl;
+      }
+   }
+
+   //int local_alloc_size_fftw_int;
+   //local_alloc_size_fftw_int = (int) local_alloc_size_fftw;
+   int Nx_local_Ny_int = (int) (Nx_local * Ny);
+   MPI_Allgather(
+         &Nx_local_Ny_int,//&local_alloc_size_fftw_int, // *sendbuf,
+         1,                // int sendcount,
+         MPI_INT,          // MPI_Datatype sendtype,
+         psi_mag_strides,  // void *recvbuf,
+         1,//totalnodes,       // int recvcount
+         MPI_INT,          // MPI_Datatype recvtype
+         //rootnode,         // int root
+         MPI_COMM_WORLD    // MPI_Comm comm
+         );
+
+   int Nx_offset = 0;
+   int psi_mag_offset = 0;
+   for ( size_t ii=0; ii < totalnodes; ++ii)
+   {
+      Nx_displacements[ii] = Nx_offset;
+      Nx_offset += Nx_strides[ii];
+
+      psi_mag_displacements[ii] = psi_mag_offset;
+      psi_mag_offset += psi_mag_strides[ii];
+
+      if ( (mynode == rootnode) && flags.debug )
+            cout << "node " << ii << ", Nx_strides[" << ii << "]: " 
+               << Nx_strides[ii] 
+               << endl
+               << "node " << ii << ", local_alloc_size_fftw: " 
+               << psi_mag_strides[ii] << endl;
    }
 
    //////////////////////////////////////////////////////////////////
@@ -436,9 +511,11 @@ int main( int argc, char* argv[])
    //        put machine type in the wisdom file name
 
    string wisdom_file_name
-      = "wisdom_file_c2c2c_cifb_" + TEM_NS::to_string(Nx_local)
-         + "x" + TEM_NS::to_string(Ny) + "_MPI" 
-         + TEM_NS::to_string(totalnodes);
+      = "wisdom_file_c2c2c_cifb_" + TEM_NS::to_string(Nx)
+         + "x" + TEM_NS::to_string(Ny)
+         + "_"
+         + TEM_NS::to_string(totalnodes)
+         + "nodes";
    
    int flag_wisdomFile = 1;
    if ( mynode == rootnode )
@@ -490,7 +567,7 @@ int main( int argc, char* argv[])
    }
 
    if ( flags.debug )
-      cout << "Check MPI_Bcast() quality:"
+      cout << "Checking MPI_Bcast() quality:"
          << "  node " << mynode 
          << ", (xperiod, yperiod, zperiod) : ("
          << xperiod << ", " << yperiod << ", " 
@@ -628,18 +705,49 @@ int main( int argc, char* argv[])
             << delta_ky << ": "
             << setw(width) << setprecision(precision)
             <<  ky[Ny/2] << "]" << endl;//debug
-
       }
    }
-   // TODO: note that the following is just a test and should be deleted
-   MPI_Scatter( xx_joined, Nx_local, MPI_DOUBLE, // 2-D
-               xx_local, Nx_local, MPI_DOUBLE,
-               rootnode, MPI_COMM_WORLD);
-   // TODO: note that the above is just a test and should be deleted
+   if ( flags.debug && (mynode == rootnode))
+   {
+      for ( size_t ii=0; ii< totalnodes; ++ii)
+      {
+         cout << "Nx_strides[" << ii << "], Nx_displacements[ " 
+            << ii << "]: " << Nx_strides[ii] << ", " 
+            << Nx_displacements[ii] << endl;
+         cout << "Scatterving xx and kx ..." << endl;
+      }
+   }
+   MPI_Scatterv( 
+               xx_joined,        // const void *sendbuf
+               Nx_strides,       // const int sendcounts[]
+               Nx_displacements, // const int displacements[]
+               MPI_DOUBLE,       // MPI_Datatype sendtype
+               xx_local,         // void *recvbuf
+               Nx_local,         // int recvcount
+               MPI_DOUBLE,       // MPI_Datatype recvtype
+               rootnode,         // int root
+               MPI_COMM_WORLD);  // MPI_Comm comm
+   //MPI_Scatter( xx_joined, Nx_local, MPI_DOUBLE,
+   //            xx_local, Nx_local, MPI_DOUBLE,
+   //            rootnode, MPI_COMM_WORLD);
 
-   MPI_Scatter( kx_joined, Nx_local, MPI_DOUBLE, // 2-D
-               kx_local, Nx_local, MPI_DOUBLE,
-               rootnode, MPI_COMM_WORLD);
+   MPI_Scatterv( 
+               kx_joined,        // const void *sendbuf
+               Nx_strides,       // const int sendcounts[]
+               Nx_displacements, // const int displacements[]
+               MPI_DOUBLE,       // MPI_Datatype sendtype
+               kx_local,         // void *recvbuf
+               Nx_local,         // int recvcount
+               MPI_DOUBLE,       // MPI_Datatype recvtype
+               rootnode,         // int root
+               MPI_COMM_WORLD);  // MPI_Comm comm
+   if ( flags.debug && (mynode == rootnode))
+      cout << "Scattered xx and kx domains ..." << endl;
+   //MPI_Scatter( kx_joined, Nx_local, MPI_DOUBLE,
+   //            kx_local, Nx_local, MPI_DOUBLE,
+   //            rootnode, MPI_COMM_WORLD);
+
+   // TODO: consider bundling the follow data into a single Bcast
    MPI_Bcast( ky, Ny, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
    MPI_Bcast( yy, Ny, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
    MPI_Bcast( kx_joined, Nx, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
@@ -751,6 +859,9 @@ int main( int argc, char* argv[])
          Nx,
          xmin,
          ky, Ny, ymin,
+         local_alloc_size_fftw,
+         psi_mag_strides,
+         psi_mag_displacements,
          mynode, rootnode, MPI_COMM_WORLD
          );
 
@@ -804,7 +915,6 @@ int main( int argc, char* argv[])
    //  position by slice.update_transmission_function() .
    //////////////////////////////////////////////////////////////////
    std::vector<scatterer> myScatterers;
-
    // Create duplicate scatterers to increase FTEM V(|k|) resolution
    if ( flags.dupe && flags.fem 
         &&
@@ -878,14 +988,15 @@ int main( int argc, char* argv[])
 
       for (size_t i = 0; i < initial_population; i++)
       {
-         //cout << "node " << mynode 
-         //   << ", pushing scatterers onto myScatterers : " // debug
-         //   << "Z_vector[" << i << "] : " << Z_vector[i] // debug
-         //   << ", q[0,1,2] : " // debug
-         //   << q[3*i]  // debug
-         //   << ", " << q[3*i + 1] // debug
-         //   << ", " << q[3*i + 2] // debug
-         //   << endl;  // debug
+         //if ( (mynode == rootnode) && flags.debug)
+         //   cout << "node " << mynode 
+         //      << ", pushing scatterers onto myScatterers : " // debug
+         //      << "Z_vector[" << i << "] : " << Z_vector[i] // debug
+         //      << ", q[0,1,2] : " // debug
+         //      << q[3*i]  // debug
+         //      << ", " << q[3*i + 1] // debug
+         //      << ", " << q[3*i + 2] // debug
+         //      << endl;  // debug
 
          myScatterers.push_back(
                scatterer( 
@@ -921,6 +1032,8 @@ int main( int argc, char* argv[])
 
    // TODO: parallelize assign_atoms_to_slices_z_auto() or compute on
    // a single node and broadcast the results.
+   if ( (mynode == rootnode) && flags.debug)
+      cout << "assigning atoms to slices ..." << endl;
    assign_atoms_to_slices_z_auto(
          myScatterers,
          xmin,ymin,zmin,
@@ -933,6 +1046,9 @@ int main( int argc, char* argv[])
          rootnode,
          MPI_COMM_WORLD
          );
+
+   if ( (mynode == rootnode) && flags.debug)
+      cout << "assigned atoms to slices" << endl;
 
    // Projected atomic potentials of each slice are not yet 
    // calculated. The next step should use the 
@@ -1009,6 +1125,8 @@ int main( int argc, char* argv[])
                sliceNumber,
                local_alloc_size_fftw,  
                local_0_start_fftw,
+               psi_mag_strides,
+               psi_mag_displacements,
                mynode,
                rootnode,
                MPI_COMM_WORLD
@@ -1292,6 +1410,10 @@ int main( int argc, char* argv[])
                output_prefix + "_adfstem_uncorr",
                local_alloc_size_fftw,
                local_0_start_fftw,
+               Nx_strides,
+               Nx_displacements,
+               psi_mag_strides,
+               psi_mag_displacements,
                mynode, rootnode, totalnodes,
                MPI_COMM_WORLD
              );
@@ -1366,6 +1488,10 @@ int main( int argc, char* argv[])
                output_prefix + "_adfstem_corr",
                local_alloc_size_fftw,
                local_0_start_fftw,
+               Nx_strides,
+               Nx_displacements,
+               psi_mag_strides,
+               psi_mag_displacements,
                mynode, rootnode, totalnodes,
                MPI_COMM_WORLD
              );
@@ -1465,6 +1591,11 @@ int main( int argc, char* argv[])
    //       members until all use of slicesOfScatterers is concluded.
       myScatterers.pop_back();
    }
+
+   delete[] Nx_strides;
+   delete[] Nx_displacements;
+   delete[] psi_mag_strides;
+   delete[] psi_mag_displacements;
 
    // Save wisdom to a file if it wasn't successfully opened above
    if ( mynode == rootnode )
