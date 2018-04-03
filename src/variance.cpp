@@ -236,7 +236,7 @@ int TEM_NS::integrate_out_phi_fftw(
             {
                //upper_bound = phi_binning_boundaries[jj+1];
                if ( (mag_itr->phi > phi_lower_bound)
-                     && (mag_itr->phi < phi_binning_boundaries[jj+1]) )
+                     && (mag_itr->phi <= phi_binning_boundaries[jj+1]) )
                {
                   intensity_in_radial_coords[
                         jj + ii*(number_of_phi_bins)
