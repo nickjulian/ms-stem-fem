@@ -56,7 +56,7 @@ namespace TEM_NS
    struct input_flags
    {
       unsigned int m;// = 0;// microscope parameters
-      unsigned int pf = 0;// simulation parameter file given
+      unsigned int pf;// = 0;// simulation parameter file given
       unsigned int o;// = 0;// output file name prefix
       unsigned int a;// = 0;// atom position and species input file
       unsigned int defocus;// = 0;   // defocus
@@ -99,6 +99,7 @@ namespace TEM_NS
       input_flags()  // constructor
       {
          m = 0;
+         pf = 0;
          o = 0;
          a = 0;
          defocus = 0;
