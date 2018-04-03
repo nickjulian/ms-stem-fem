@@ -3107,7 +3107,7 @@ int TEM_NS::adfstem(
             if ( k_correlograph_end_idx >= k_correlograph_start_idx )
                number_of_reducedk_bins
                   = (k_correlograph_end_idx 
-                     - k_correlograph_start_idx +1);
+                     - k_correlograph_start_idx );
             else 
                number_of_reducedk_bins = 0;
 
@@ -3115,7 +3115,7 @@ int TEM_NS::adfstem(
                = new double[number_of_reducedk_bins * number_of_phi_bins];
             //for ( size_t ii = 0; ii < number_of_k_bins; ++ii)
             for ( size_t ii = k_correlograph_start_idx; 
-                  ii < k_correlograph_end_idx + 1; 
+                  ii < k_correlograph_end_idx ; 
                   ++ii)
             {
                for ( size_t jj=0; jj < number_of_phi_bins; ++jj)
