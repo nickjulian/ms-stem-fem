@@ -79,6 +79,7 @@ namespace TEM_NS
       unsigned int cs5;// = 0;
       unsigned int alpha_max;// = 0;
       unsigned int aberration_correction;// = 0;
+      unsigned int adfstem_detector_angles;
       unsigned int raster_spacing;// = 0;
       unsigned int pap_tif;// = 0;
       unsigned int dupe;// = 0;
@@ -122,6 +123,7 @@ namespace TEM_NS
          cs5 = 0;
          alpha_max = 0;
          aberration_correction = 0;
+         adfstem_detector_angles = 0;
          raster_spacing = 0;
          pap_tif = 0;
          dupe = 0;
@@ -155,6 +157,8 @@ namespace TEM_NS
          double& condenser_illumination_angle,
          double& Cs3,
          double& Cs5,
+         double& detector_inner_angle,
+         double& detector_outer_angle,
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,
@@ -263,6 +267,8 @@ namespace TEM_NS
          double& condenser_illumination_angle,
          double& Cs3,
          double& Cs5,
+         double& detector_inner_angle,
+         double& detector_outer_angle,
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,

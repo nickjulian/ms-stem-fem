@@ -2781,6 +2781,8 @@ int TEM_NS::read_parameter_file(
          double& condenser_illumination_angle,
          double& Cs3,
          double& Cs5,
+         double& detector_inner_angle,
+         double& detector_outer_angle,
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,
@@ -2895,6 +2897,20 @@ int TEM_NS::read_parameter_file(
          {
             data_line_stream >> Cs5;
             flags.cs5 = 1;
+         }
+         else if ( ! data_descriptor.compare("detectorangles") )
+         {
+            data_line_stream >> detector_inner_angle;
+            data_line_stream >> detector_outer_angle;
+
+            if ( detector_inner_angle > detector_outer_angle )
+            {
+               double tmp_detector_angle;
+               tmp_detector_angle = detector_outer_angle;
+               detector_outer_angle = detector_inner_angle;
+               detector_inner_angle = tmp_detector_angle;
+            }
+            flags.adfstem_detector_angles = 1;
          }
          else if ( ! data_descriptor.compare("raster_spacing") )
          {
@@ -3027,6 +3043,8 @@ int TEM_NS::read_parameter_file(
                   << " <condenser illumination angle>" << endl
                   << "  cs3 <cs3 value>" << endl
                   << "  cs5 <cs5 value>" << endl
+                  << "  detectorangles <inner_angle>"
+                  <<    " <outer_angle [radians]>" << endl
                   << "  raster_spacing <distance [A] between probe"
                   << "  positions>" << endl
                   << "  adfstemcorrfem" << endl
@@ -3857,6 +3875,8 @@ unsigned int TEM_NS::read_cmdline_options(
    double& condenser_illumination_angle,
    double& Cs3,
    double& Cs5,
+   double& detector_inner_angle,
+   double& detector_outer_angle,
    double& raster_spacing,
    double& azimuthal_binning_size_factor,
    double& minSliceThickness,
@@ -3895,6 +3915,8 @@ unsigned int TEM_NS::read_cmdline_options(
                   condenser_illumination_angle,
                   Cs3,
                   Cs5,
+                  detector_inner_angle,
+                  detector_outer_angle,
                   raster_spacing,
                   azimuthal_binning_size_factor,
                   minSliceThickness,
@@ -4007,6 +4029,23 @@ unsigned int TEM_NS::read_cmdline_options(
          if (idx + 1 < args.size()) 
             istringstream( args[idx + 1] ) >> Cs5;
          flags.cs5 = 1;
+         idx += 1;
+      }
+      else if ( args[idx] == "--detectorangles" )
+      {
+         if (idx + 1 < args.size()) 
+            istringstream( args[idx + 1] ) >> detector_inner_angle;
+         if (idx + 2 < args.size()) 
+            istringstream( args[idx + 1] ) >> detector_outer_angle;
+
+         if ( detector_inner_angle > detector_outer_angle )
+         {
+            double tmp_detector_angle;
+            tmp_detector_angle = detector_outer_angle;
+            detector_outer_angle = detector_inner_angle;
+            detector_inner_angle = tmp_detector_angle;
+         }
+         flags.adfstem_detector_angles = 1;
          idx += 1;
       }
       else if ( args[idx] == "--rasterspacing" )
