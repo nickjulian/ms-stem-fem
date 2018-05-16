@@ -309,6 +309,15 @@ int TEM_NS::assign_atoms_to_slices_z(
    ///////////////////////////////////////////////////////////////////////
    // Sort all scatterers using scatterer_sorting_lt_z() as "<" operator.
    ///////////////////////////////////////////////////////////////////////
+   // TODO: parallelize this sort
+   //  - MPI_Scatterv the scatterer positions and species,
+   //  - sort the local collection of scatterers using 
+   //     scatterer_sorting_lt_z()
+   //  - combine node data pairwise, using known sorted relations and <
+   //     x1 < x2: (y = x1; iterate x1) ? (x2; iterate x2)
+   //  - how do you assign the node tree for recursive pairing?
+   //  - if parallelized, then MPI_Bcast from the final sort; there would
+   //     be no need to have a full copy of the scatterer list before sort
    std::sort( localScatterers.begin(),
                localScatterers.end(),
                scatterer_sorting_lt_z );
@@ -1565,7 +1574,7 @@ int TEM_NS::slice::update_transmission_function(
    double half_delta_x = 0.5 * (xx_joined[1] - xx_joined[0]);
    double half_delta_y = 0.5 * (yy[1] - yy[0]);
 
-   // iterate over the scatterers
+   // iterate over the scatterers (accessible through slice membership)
    for ( std::vector< const scatterer* >::const_iterator
           scatterer_ptr_itr = scatterers->begin();
           scatterer_ptr_itr != scatterers->end();
