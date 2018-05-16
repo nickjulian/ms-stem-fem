@@ -219,7 +219,7 @@ int TEM_NS::probe_wavefunction_correctedtoCs5_unnormalized(
                   lambda,
                   lambda_sqr
                   )
-                  - 2 * PI *( ((kx[i]) * x_p) + ((ky[j]) * y_p));
+                  + 2 * PI *( ((kx[i]) * x_p) + ((ky[j]) * y_p));
                   //- 2 * PI * (kx[j + i * Ny] * x_p
                   //            + ky[j + i * Ny] * y_p);
 
@@ -365,7 +365,7 @@ int TEM_NS::probe_wavefunction_norm(
 //               //   lambda,
 //               //   lambda_sqr
 //               //   )
-//                  - 2 * PI *( ((kx[i]) * x_p) + ((ky[j]) * y_p));
+//                  + 2 * PI *( ((kx[i]) * x_p) + ((ky[j]) * y_p));
 //                  //- 2 * PI * (kx[j + i * Ny] * x_p
 //                  //            + ky[j + i * Ny] * y_p);
 //

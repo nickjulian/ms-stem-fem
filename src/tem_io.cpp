@@ -2823,6 +2823,7 @@ int TEM_NS::read_parameter_file(
          //    Supposedly this won't work for UTF. ?!
          //    For Unicode support, I've heard that I should use 
          //    toLower from the ICU library.
+         //    Should they even be transformed to lower case?
          transform( data_descriptor.begin(), data_descriptor.end(), 
                     data_descriptor.begin(), (int(*)(int))tolower );
 
@@ -2910,27 +2911,27 @@ int TEM_NS::read_parameter_file(
             flags.adfstem_corrected = 1;
             flags.fem = 1;
          }
-         else if ( ! data_descriptor.compare("gt17") )
+         else if ( ! data_descriptor.compare("vgt17") )
          {
             flags.gt17 = 1;
          }
-         else if ( ! data_descriptor.compare("d1") )
+         else if ( ! data_descriptor.compare("vomega") )
          {
             flags.d1 = 1;
          }
-         else if ( ! data_descriptor.compare("d2") )
+         else if ( ! data_descriptor.compare("vr") )
          {
             flags.d2 = 1;
          }
-         else if ( ! data_descriptor.compare("d3") )
+         else if ( ! data_descriptor.compare("vre") )
          {
             flags.d3 = 1;
          }
-         else if ( ! data_descriptor.compare("d4") )
+         else if ( ! data_descriptor.compare("omegavimage") )
          {
             flags.d4 = 1;
          }
-         else if ( ! data_descriptor.compare("rva") )
+         else if ( ! data_descriptor.compare("vphi") )
          {
             flags.rva = 1;
          }
@@ -3030,12 +3031,12 @@ int TEM_NS::read_parameter_file(
                   << "  positions>" << endl
                   << "  adfstemcorrfem" << endl
                   << "  adfstemuncorrfem" << endl
-                  << "  gt17" << endl
-                  << "  d1" << endl
-                  << "  d2" << endl
-                  << "  d3" << endl
-                  << "  d4" << endl
-                  << "  rva" << endl
+                  << "  Vgt17" << endl
+                  << "  Vomega" << endl
+                  << "  Vr" << endl
+                  << "  Vre" << endl
+                  << "  Omegavimage" << endl
+                  << "  Vphi" << endl
                   << "  correlograph" << endl
                   << "  correlograph_variance" << endl
                   << "  correlograph_everyimage" << endl
@@ -4025,27 +4026,27 @@ unsigned int TEM_NS::read_cmdline_options(
          flags.adfstem_corrected = 1;
          flags.fem = 1;
       }
-      else if ( args[idx] == "--GT17" )
+      else if ( args[idx] == "--Vgt17" )
       {
          flags.gt17 = 1;
       }
-      else if ( args[idx] == "--D1" )
+      else if ( args[idx] == "--Vomega" )
       {
          flags.d1 = 1;
       }
-      else if ( args[idx] == "--D2" )
+      else if ( args[idx] == "--Vr" )
       {
          flags.d2 = 1;
       }
-      else if ( args[idx] == "--D3" )
+      else if ( args[idx] == "--Vre" )
       {
          flags.d3 = 1;
       }
-      else if ( args[idx] == "--D4" )
+      else if ( args[idx] == "--Omegavimage" )
       {
          flags.d4 = 1;
       }
-      else if ( args[idx] == "--RVA" )
+      else if ( args[idx] == "--Vphi" )
       {
          flags.rva = 1;
       }
