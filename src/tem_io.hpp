@@ -284,8 +284,7 @@ namespace TEM_NS
          const input_flags& flags,
          const string& args0,
          const int& mynode,
-         const int& rootnode,
-         MPI_Comm comm
+         const int& rootnode
          );
 
 

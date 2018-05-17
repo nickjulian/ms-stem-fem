@@ -314,8 +314,7 @@ int main( int argc, char* argv[])
          flags,
          args[0],
          mynode,
-         rootnode,
-         MPI_COMM_WORLD
+         rootnode
          );
 
    MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, MPI_COMM_WORLD );

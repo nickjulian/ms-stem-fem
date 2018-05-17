@@ -4198,8 +4198,7 @@ unsigned int TEM_NS::check_runtime_flags(
    const input_flags& flags,
    const string& args0,
    const int& mynode,
-   const int& rootnode,
-   MPI_Comm comm
+   const int& rootnode
 )
 {
    unsigned int failflag;
