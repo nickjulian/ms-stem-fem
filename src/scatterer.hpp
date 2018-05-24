@@ -39,8 +39,8 @@
 #include <fstream>
 #include <cassert>
 #include <complex>
-#include <fftw3-mpi.h>
-//#include "../include/fftw3-mpi.h"   // ptrdiff_t
+//#include <fftw3-mpi.h>
+#include "fftw3-mpi.h"   // ptrdiff_t
 //#include "scatterer_param_LUT.hpp"
 #include "scatterer_pap_LUT.hpp"
 
@@ -113,6 +113,41 @@ class scatterer
          //     << "pap_lut_im[0] : " 
          //     << (*pap_lut_itr)->projected_atomic_potential_local_joined_im[0]
          //     << endl; // debug
+      }
+
+      scatterer( double* const q_in,  const unsigned int& Z_in,
+            const scatterer_pap_LUT* pap_lut
+            )
+      { // use scatterer( q, Z ) : pap( <address of pap from LUT> )
+         q = q_in;
+         Z = Z_in;
+         
+         // Select a pap from the scatterer_pap_LUT using Z and assign 
+         //  pap_to_translate_{re,im} to point to it.
+         std::list< scatterer_pap* >::const_iterator pap_lut_itr;
+         for ( pap_lut_itr = pap_lut->pap_list.begin();
+               pap_lut_itr != pap_lut->pap_list.end();
+               ++pap_lut_itr)
+         {
+            if ( Z == (*pap_lut_itr)->Z )
+            {
+               pap_to_translate_re 
+                  = (*pap_lut_itr)
+                        ->projected_atomic_potential_local_joined_re;
+               pap_to_translate_im
+                  = (*pap_lut_itr)
+                        ->projected_atomic_potential_local_joined_im;
+
+               break;
+            }
+         }
+
+         if ( pap_lut_itr == pap_lut->pap_list.end() ) 
+         {
+            cout << "Error, scatterer constructor could not match its Z"
+               << " to any of those in the scatterer_pap_LUT." << endl;
+            cout << "Z : " << Z << ", Z_in : " << Z_in << endl;
+         }
       }
 };
 
