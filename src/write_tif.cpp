@@ -556,51 +556,51 @@ int TEM_NS::output_diffraction(
    }
 
    // debug printing real and imaginary parts separately
-   double* psi_re;
-   double* psi_im;
-   double max_psi_re;
-   double min_psi_re;
-   double max_psi_re_joined;
-   double min_psi_re_joined;
-   double max_psi_im;
-   double min_psi_im;
-   double max_psi_im_joined;
-   double min_psi_im_joined;
-   psi_re = new double[ local_alloc_size_fftw ];
-   psi_im = new double[ local_alloc_size_fftw ];
-   if ( local_alloc_size_fftw > 0 )
-   {
-      //if ( mynode == rootnode ) psi_re[0] = 0.0;
-      //else
-      psi_re[0] //  = 0.0;
-         = log(
-               1.0 + ( scale_factor * ( psi[0][0] ) )  
-            );
-      max_psi_re = psi_re[0];
-      min_psi_re = max_psi_re;
-      psi_im[0] //  = 0.0;
-         = log(
-               1.0 + ( scale_factor * ( psi[0][1] ) )
-            );
-      max_psi_im = psi_im[0];
-      min_psi_im = max_psi_im;
-   }
-
-   for ( ptrdiff_t i=1; i < local_alloc_size_fftw; ++i)
-   {
-      psi_re[i]
-         = log(
-               1.0 + ( scale_factor * ( psi[i][0] ) )
-            );
-         if ( psi_re[i] > max_psi_re) max_psi_re = psi_re[i];
-         if ( psi_re[i] < min_psi_re) min_psi_re = psi_re[i];
-      psi_im[i]
-         = log(
-               1.0 + ( scale_factor * ( psi[i][1] ) )
-            );
-         if ( psi_im[i] > max_psi_im) max_psi_im = psi_im[i];
-         if ( psi_im[i] < min_psi_im) min_psi_im = psi_im[i];
-   }
+   //double* psi_re;
+   //double* psi_im;
+   //double max_psi_re;
+   //double min_psi_re;
+   //double max_psi_re_joined;
+   //double min_psi_re_joined;
+   //double max_psi_im;
+   //double min_psi_im;
+   //double max_psi_im_joined;
+   //double min_psi_im_joined;
+   //psi_re = new double[ local_alloc_size_fftw ];
+   //psi_im = new double[ local_alloc_size_fftw ];
+   //if ( local_alloc_size_fftw > 0 )
+   //{
+   //   //if ( mynode == rootnode ) psi_re[0] = 0.0;
+   //   //else
+   //   psi_re[0] //  = 0.0;
+   //      = log(
+   //            1.0 + ( scale_factor * ( psi[0][0] ) )  
+   //         );
+   //   max_psi_re = psi_re[0];
+   //   min_psi_re = max_psi_re;
+   //   psi_im[0] //  = 0.0;
+   //      = log(
+   //            1.0 + ( scale_factor * ( psi[0][1] ) )
+   //         );
+   //   max_psi_im = psi_im[0];
+   //   min_psi_im = max_psi_im;
+   //}
+   //
+   //for ( ptrdiff_t i=1; i < local_alloc_size_fftw; ++i)
+   //{
+   //   psi_re[i]
+   //      = log(
+   //            1.0 + ( scale_factor * ( psi[i][0] ) )
+   //         );
+   //      if ( psi_re[i] > max_psi_re) max_psi_re = psi_re[i];
+   //      if ( psi_re[i] < min_psi_re) min_psi_re = psi_re[i];
+   //   psi_im[i]
+   //      = log(
+   //            1.0 + ( scale_factor * ( psi[i][1] ) )
+   //         );
+   //      if ( psi_im[i] > max_psi_im) max_psi_im = psi_im[i];
+   //      if ( psi_im[i] < min_psi_im) min_psi_im = psi_im[i];
+   //}
    // end debug
 
    double* psi_mag_joined;
@@ -768,8 +768,8 @@ int TEM_NS::output_diffraction(
    }
 
    delete[] psi_mag;
-   //delete[] psi_re; // debug
-   //delete[] psi_im; // debug
+   //delete[] psi_re;
+   //delete[] psi_im;
    return EXIT_SUCCESS;
 }
 
