@@ -891,6 +891,9 @@ int main( int argc, char* argv[])
       cout << "node " << mynode  // debug
          << ", Z_vector.size (resized) : " 
          << Z_vector.size() << endl;// debug
+   // TODO: The above is probably too reliant on communication, 
+   //       the list of Zs is probably small enough that communication is
+   //       slower than having duplicate calls to sort on each node.
 
    //////////////////////////////////////////////////////////////////
    // Initialize a look up table containing Zs paired with projected 

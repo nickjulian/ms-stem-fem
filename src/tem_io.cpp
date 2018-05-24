@@ -3073,6 +3073,7 @@ int TEM_NS::read_parameter_file(
                   << "  netcdfvariance" << endl
                   << "  debug" << endl;
             }
+            data_file.close();
             return EXIT_FAILURE;
          }
       }
