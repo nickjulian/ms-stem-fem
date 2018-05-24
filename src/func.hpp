@@ -40,7 +40,8 @@
 #include <vector>
 #include <list>
 
-#include <fftw3-mpi.h>
+//#include <fftw3-mpi.h>
+#include "fftw3-mpi.h"
 //#include "../include/fftw3-mpi.h"
 
 #include "to_string.hpp"
@@ -62,13 +63,27 @@ namespace TEM_NS
 
    void domain_2D(
          // Precondition: 
-         //    - qx[Nx] and qy[Ny] have been instantiated (memory allocated)
+         //    - qx[Nx] and qy[Ny] have been allocated
          // Postcondition: 
          //    - qx[Nx] and qy[Ny] have been initialized with values.
          const int& Nx, const int& Ny,
          const double& qmin_x, const double& qmax_x,
          const double& qmin_y, const double& qmax_y,
          double *qx, double *qy
+         );
+
+   void domain_1D_periodic(
+         // Precondition: 
+         //    - qx[Nx] has been allocated
+         // Postcondition: 
+         //    - qx[Nx] has been initialized with values.
+         //       qmin + qperiod_x == qmin 
+         //       Nx * dx == qperiod_x \implies dx == qperiod_x/Nx
+         const int& Nx,
+         const double& qperiod_x,
+         const double& qmin_x,
+         const double& dx,
+         double *qx
          );
 
    void domain_2D_periodic(
@@ -101,6 +116,19 @@ namespace TEM_NS
          std::list<double>& qx, std::list<double>& qy
          );
 
+   void domain_1D_periodic_recip(
+         // Precondition: 
+         //    - kx[Nx] has been instantiated (memory allocated)
+         // Postcondition: 
+         //    - kx[Nx] has been initialized with the values
+         //       {0, dkx, ..., kmax_x,-kmax_x,-dkx] and  
+         //       where dkx = kmax_x*2/Nx
+         const int& Nx,
+         const double& xperiod,
+         const double& kxperiod,
+         const double& dkx,
+         double *kx
+         );
 
    void domain_2D_periodic_recip(
          // Precondition: 

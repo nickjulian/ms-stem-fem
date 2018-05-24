@@ -76,6 +76,19 @@ void TEM_NS::domain_2D(
    return ;
 }
 
+void TEM_NS::domain_1D_periodic(
+         const int& Nx,
+         const double& qperiod_x,
+         const double& qmin_x,
+         const double& dx,
+         double *qx
+         )
+{
+   for(int i=0; i<Nx; i++) qx[i] = qmin_x + ( i * dx) ;
+
+   return ;
+}
+
 void TEM_NS::domain_2D_periodic(
          const int& Nx, const int& Ny,
          const double& qperiod_x, const double& qperiod_y, 
@@ -85,15 +98,9 @@ void TEM_NS::domain_2D_periodic(
          )
 {
    // periodicity: qperiod_x == (dx + qmax_x - qmin_x);
-   //dx = qperiod_x/Nx;
-   //dy = qperiod_y/Ny;
-   //cout << "dx, dy : " << dx << ", " << dy << endl; // debug
 
    for(int i=0; i<Nx; i++) qx[i] = qmin_x + ( i * dx) ;
    for(int i=0; i<Ny; i++) qy[i] = qmin_y + ( i * dy) ;
-
-   //cout << "xdomain: [" << qx[0] << ": " << dx << ": "<< qx[Nx-1] << "]" << endl;//debug
-   //cout << "ydomain: [" << qy[0] << ": " << dy << ": "<< qy[Ny-1] << "]" << endl;//debug
 
    return ;
 }
@@ -119,6 +126,23 @@ void TEM_NS::assign_stem_raster_points(
    return ;
 }
 
+void TEM_NS::domain_1D_periodic_recip(
+         const int& Nx,
+         const double& xperiod,
+         const double& kxperiod,
+         const double& dkx,
+         double *kx
+         )
+{
+   // periodicity: Nx/xperiod == 0, Nx/(2 xperiod) = -Nx/(2 xperiod)
+   //const double kxperiod = Nx / xperiod; 
+   //dkx = 1/xperiod; // == kxperiod / Nx == (Nx/xperiod)/Nx
+
+   for(int i=0; i<Nx/2; i++) kx[i] = i * dkx ;
+   for(int i=Nx/2; i<Nx; i++) kx[i] = i * dkx - kxperiod ;
+
+   return ;
+}
 
 void TEM_NS::domain_2D_periodic_recip(
          const int& Nx, const int& Ny,
@@ -133,34 +157,11 @@ void TEM_NS::domain_2D_periodic_recip(
    //const double kyperiod = Ny / yperiod;
    //dkx = 1/xperiod; // == kxperiod / Nx == (Nx/xperiod)/Nx
    //dky = 1/yperiod; 
-   //cout << "dx, dy : " << dx << ", " << dy << endl; // debug
 
    for(int i=0; i<Nx/2; i++) kx[i] = i * dkx ;
    for(int i=Nx/2; i<Nx; i++) kx[i] = i * dkx - kxperiod ;
    for(int i=0; i<Ny/2; i++) ky[i] = i * dky ;
    for(int i=Ny/2; i<Ny; i++) ky[i] = i * dky - kyperiod ;
-
-   //int precision = 7;//debug
-   //int width = precision + 2;//debug
-   //cout << "(kxperiod, xperiod): (" 
-   //   << setwidth(width) << setprecision(precision)//debug
-   //   << kxperiod << ", " //debug
-   //   << setwidth(width) << setprecision(precision)//debug
-   //   << xperiod << ")" << endl;//debug
-   //cout << "kxdomain: [" //debug
-   //   << setwidth(width) << setprecision(precision)//debug
-   //   << kx[0] << ": " //debug
-   //   << setwidth(width) << setprecision(precision)//debug
-   //   << dkx << ": "//debug
-   //   << setwidth(width) << setprecision(precision)//debug
-   //   << kx[Nx-1] << "]" << endl;//debug
-   //cout << "kydomain: [" //debug
-   //   << setwidth(width) << setprecision(precision)//debug
-   //   << ky[0] << ": " //debug
-   //   << setwidth(width) << setprecision(precision)//debug
-   //   << dky << ": "//debug
-   //   << setwidth(width) << setprecision(precision)//debug
-   //   << ky[Ny-1] << "]" << endl;//debug
 
    return ;
 }
