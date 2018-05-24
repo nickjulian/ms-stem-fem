@@ -2336,20 +2336,20 @@ int TEM_NS::adfstem(
 
                if ( ftem_d1[idx] < 0.0 )
                {
-                  cout << " WARNING, fem --d1, ftem_d1[" 
+                  cout << " WARNING, fem --Vomega, ftem_d1[" 
                      << idx << "] < 0.0 : "
                      << ftem_d1[idx] << endl;
                }
             }
 
-            // write the d1 variance to a file
+            // write the Vomega variance to a file
             if( flags.netcdf_variance )
             {
                if ( 
                      output_variance_to_netcdf(
                         ftem_d1,
                         k_binning_boundaries,
-                        outFileName_prefix + "_fem_d1"
+                        outFileName_prefix + "_fem_Vomega"
                      ) != EXIT_SUCCESS)
                {
                   cout << " failed to write variance data to a"
@@ -2360,7 +2360,7 @@ int TEM_NS::adfstem(
                   output_variance_to_txt(
                         ftem_d1,
                         k_binning_boundaries,
-                        outFileName_prefix + "_fem_d1"
+                        outFileName_prefix + "_fem_Vomega"
                      ) != EXIT_SUCCESS)
                {
                   cout << " failed to write variance data to a"
@@ -2382,7 +2382,7 @@ int TEM_NS::adfstem(
 
                if ( diffracted_wave_variance_sum[ii] < 0.0 )
                {
-                  cout << " WARNING, fem --d2,"
+                  cout << " WARNING, fem --Vr,"
                      << " diffracted_wave_variance_sum[" 
                      << ii << "] < 0.0 : "
                      << diffracted_wave_variance_sum[ii] << endl;
@@ -2395,7 +2395,7 @@ int TEM_NS::adfstem(
                      output_variance_to_netcdf(
                         diffracted_wave_variance_sum,
                         k_binning_boundaries,
-                        outFileName_prefix + "_fem_d2"
+                        outFileName_prefix + "_fem_Vr"
                      ) != EXIT_SUCCESS)
                {
                   cout << " failed to write variance data to a"
@@ -2406,10 +2406,10 @@ int TEM_NS::adfstem(
                   output_variance_to_txt(
                         diffracted_wave_variance_sum,
                         k_binning_boundaries,
-                        outFileName_prefix + "_fem_d2"
+                        outFileName_prefix + "_fem_Vr"
                      ) != EXIT_SUCCESS)
                {
-                  cout << " failed to write --d2 data to a"
+                  cout << " failed to write --Vr data to a"
                      << " txt file : " << outFileName_prefix << endl;
                }
             }
@@ -2738,13 +2738,13 @@ int TEM_NS::adfstem(
                            ftem_gt17,
                            k_binning_boundaries,
                            outFileName_prefix 
-                              + "_fem_gt17"
+                              + "_fem_Vgt17"
                         ) != EXIT_SUCCESS)
                   {
-                     cout << " failed to write gt17 variance data to"
+                     cout << " failed to write Vgt17 variance data to"
                        << " netCDF file : " 
                        << outFileName_prefix 
-                           + "_fem_gt17.nc" 
+                           + "_fem_Vgt17.nc" 
                        << endl;
                   }
                } else {
@@ -2767,13 +2767,13 @@ int TEM_NS::adfstem(
                            ftem_gt17,
                            k_binning_boundaries,
                            outFileName_prefix 
-                              + "_fem_gt17"
+                              + "_fem_Vgt17"
                         ) != EXIT_SUCCESS)
                   {
-                     cout << " failed to write gt17 variance data"
+                     cout << " failed to write Vgt17 variance data"
                         << " to a txt file : " 
                         << outFileName_prefix 
-                           + "_fem_gt17.txt"
+                           + "_fem_Vgt17.txt"
                         << endl;
                   }
                } // gt17 text output block
@@ -2850,13 +2850,13 @@ int TEM_NS::adfstem(
                               ftem_d3,
                               k_binning_boundaries,
                               outFileName_prefix 
-                                 + "_fem_d3"
+                                 + "_fem_Vre"
                            ) != EXIT_SUCCESS)
                      {
-                        cout << " failed to write --d3 variance data to"
+                        cout << " failed to write --Vre variance data to"
                           << " netCDF file : " 
                           << outFileName_prefix 
-                              + "_fem_d3.nc" 
+                              + "_fem_Vre.nc" 
                           << endl;
                      }
                   } else {
@@ -2865,13 +2865,13 @@ int TEM_NS::adfstem(
                               ftem_d3,
                               k_binning_boundaries,
                               outFileName_prefix 
-                                 + "_fem_d3"
+                                 + "_fem_Vre"
                            ) != EXIT_SUCCESS)
                      {
-                        cout << " failed to write --d3 variance data"
+                        cout << " failed to write --Vre variance data"
                            << " to a txt file : " 
                            << outFileName_prefix 
-                              + "_fem_d3.txt"
+                              + "_fem_Vre.txt"
                            << endl;
                      }
                   } // d3 text output block
@@ -2886,13 +2886,13 @@ int TEM_NS::adfstem(
                               ftem_rva,
                               k_binning_boundaries,
                               outFileName_prefix 
-                                 + "_fem_rva"
+                                 + "_fem_Vphi"
                            ) != EXIT_SUCCESS)
                      {
-                        cout << " failed to write --rva variance data to"
+                        cout << " failed to write --Vphi variance data to"
                           << " netCDF file : " 
                           << outFileName_prefix 
-                              + "_fem_rva.nc" 
+                              + "_fem_Vphi.nc" 
                           << endl;
                      }
                   } else {
@@ -2901,13 +2901,13 @@ int TEM_NS::adfstem(
                               ftem_rva,
                               k_binning_boundaries,
                               outFileName_prefix 
-                                 + "_fem_rva"
+                                 + "_fem_Vphi"
                            ) != EXIT_SUCCESS)
                      {
-                        cout << " failed to write --rva variance data"
+                        cout << " failed to write --Vphi variance data"
                            << " to a txt file : " 
                            << outFileName_prefix 
-                              + "_fem_rva.txt"
+                              + "_fem_Vphi.txt"
                            << endl;
                      }
                   } // rva text output block
@@ -3011,13 +3011,13 @@ int TEM_NS::adfstem(
                            ftem_d4,
                            k_binning_boundaries,
                            outFileName_prefix 
-                              + "_fem_d4"
+                              + "_fem_Omegavimage"
                         ) != EXIT_SUCCESS)
                   {
-                     cout << " failed to write --d4 variance data to"
+                     cout << " failed to write --Omegavimage variance data to"
                        << " netCDF file : " 
                        << outFileName_prefix 
-                           + "_fem_d4.nc" 
+                           + "_fem_Omegavimage.nc" 
                        << endl;
                   }
                } else {
@@ -3026,13 +3026,13 @@ int TEM_NS::adfstem(
                            ftem_d4,
                            k_binning_boundaries,
                            outFileName_prefix 
-                              + "_fem_d4"
+                              + "_fem_Omegavimage"
                         ) != EXIT_SUCCESS)
                   {
-                     cout << " failed to write --d4 variance data"
+                     cout << " failed to write --Omegavimage variance data"
                         << " to a txt file : " 
                         << outFileName_prefix 
-                           + "_fem_d4.txt"
+                           + "_fem_Omegavimage.txt"
                         << endl;
                   }
                } // d4 text output block
