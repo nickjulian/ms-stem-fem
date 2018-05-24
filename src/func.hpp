@@ -40,8 +40,8 @@
 #include <vector>
 #include <list>
 
-//#include <fftw3-mpi.h>
-#include "fftw3-mpi.h"
+#include <fftw3-mpi.h>
+//#include "fftw3-mpi.h"
 //#include "../include/fftw3-mpi.h"
 
 #include "to_string.hpp"

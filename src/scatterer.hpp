@@ -39,8 +39,8 @@
 #include <fstream>
 #include <cassert>
 #include <complex>
-//#include <fftw3-mpi.h>
-#include "fftw3-mpi.h"   // ptrdiff_t
+#include <fftw3-mpi.h>
+//#include "fftw3-mpi.h"   // ptrdiff_t
 //#include "scatterer_param_LUT.hpp"
 #include "scatterer_pap_LUT.hpp"
 
