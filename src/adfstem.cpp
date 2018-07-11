@@ -1954,6 +1954,159 @@ int TEM_NS::adfstem(
          //-----------------------------------------------------------
          // End of beam transmission through individual slices
          //-----------------------------------------------------------
+         
+         if ( flags.diffraction_output )
+         {
+            if ( flags.debug && mynode == rootnode )
+               cout << "appending diffraction to tiff" << endl;//debug
+
+            diffraction_scale_factor = 1.0e+28;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+
+            diffraction_scale_factor = 1.0e+26;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+
+            diffraction_scale_factor = 1.0e+24;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+
+            diffraction_scale_factor = 1.0e+20;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+
+            diffraction_scale_factor = 1.0e+10;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+
+            diffraction_scale_factor = 1.0e+5;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+
+            diffraction_scale_factor = 1.0e-10;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+
+            diffraction_scale_factor = 1.0e-1;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+
+            diffraction_scale_factor = 1.0e-5;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  local_alloc_size_fftw,
+                  Nx_local, Nx, Ny,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+            if ( flags.netcdf_images )
+            {
+               if ( mynode == rootnode && flags.debug)
+                  cout << "saving initial probe to netCDF" << endl;
+
+               if( output_psi_realspace_to_netcdf(
+                     psi,
+                     local_alloc_size_fftw,
+                     Nx_local, kx_joined, Nx, ky, Ny,
+                     outFileName_prefix 
+                        + "_diffraction_raster_position_"
+                        + to_string(pixel_number_x) 
+                        + "_"
+                        + to_string(pixel_number_y) ,
+                     psi_mag_strides,
+                     psi_mag_displacements,
+                     mynode, rootnode, comm
+                     ) == EXIT_FAILURE)
+                  cout << "output_psi_realspace_to_netcdf() failed" 
+                     << endl;
+            }
+         }
 
          /////////////////////////////////////////////////////////////
          // FTEM: accumulate the first and second moments of 

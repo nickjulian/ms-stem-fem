@@ -2987,6 +2987,10 @@ int TEM_NS::read_parameter_file(
          {
             flags.image_output = 1;
          }
+         else if ( ! data_descriptor.compare("diffractionimages") )
+         {
+            flags.diffraction_output = 1;
+         }
          else if ( ! data_descriptor.compare("netcdfimages") )
          {
             flags.netcdf_images = 1;
@@ -3069,6 +3073,7 @@ int TEM_NS::read_parameter_file(
                   << "  dr <azimuthal binning size factor>" << endl
                   << "  minslice <minimum slice thickness>" << endl
                   << "  images" << endl
+                  << "  diffractionimages" << endl
                   << "  netcdfimages" << endl
                   << "  netcdfvariance" << endl
                   << "  debug" << endl;
@@ -4222,6 +4227,10 @@ unsigned int TEM_NS::check_runtime_flags(
       flags.spread << endl <<
       "flags.dupe " << 
       flags.dupe << endl <<
+      "flags.image_output " << 
+      flags.image_output << endl <<
+      "flags.diffraction_output " << 
+      flags.diffraction_output << endl <<
       "flags.adfstem_corrected " << 
       flags.adfstem_corrected << endl <<
       "flags.adfstem_uncorrected  " << 

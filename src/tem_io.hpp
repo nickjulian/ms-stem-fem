@@ -84,6 +84,7 @@ namespace TEM_NS
       unsigned int pap_tif;// = 0;
       unsigned int dupe;// = 0;
       unsigned int image_output;// = 0;
+      unsigned int diffraction_output;// =0;
       unsigned int netcdf_images;// = 0;
       unsigned int netcdf_variance;// = 0;
       unsigned int nx;// = 0;
@@ -128,6 +129,7 @@ namespace TEM_NS
          pap_tif = 0;
          dupe = 0;
          image_output = 0;
+         diffraction_output = 0;
          netcdf_images = 0;
          netcdf_variance = 0;
          nx = 0;
