@@ -1960,7 +1960,7 @@ int TEM_NS::adfstem(
             if ( flags.debug && mynode == rootnode )
                cout << "appending diffraction to tiff" << endl;//debug
 
-            diffraction_scale_factor = 1.0e+28;
+            diffraction_scale_factor = 1.0e+18;
             output_diffraction_append(
                   psi,
                   diffraction_scale_factor,
@@ -1973,118 +1973,7 @@ int TEM_NS::adfstem(
                   psi_mag_displacements,
                   mynode, rootnode, comm
                   );
-
-            diffraction_scale_factor = 1.0e+26;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix,
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
-
-            diffraction_scale_factor = 1.0e+24;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix,
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
-
-            diffraction_scale_factor = 1.0e+20;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix,
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
-
-            diffraction_scale_factor = 1.0e+10;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix,
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
-
-            diffraction_scale_factor = 1.0e+5;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix,
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
-
-            diffraction_scale_factor = 1.0e-10;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix,
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
-
-            diffraction_scale_factor = 1.0e-1;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix,
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
-
-            diffraction_scale_factor = 1.0e-5;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix,
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
+                  
             if ( flags.netcdf_images )
             {
                if ( mynode == rootnode && flags.debug)
