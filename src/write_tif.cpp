@@ -1100,10 +1100,15 @@ int TEM_NS::output_diffraction(
 int TEM_NS::output_diffraction_append(
       const fftw_complex* const psi,
       const double& scale_factor,
+      const double& lambda_sqr,
+      const double& alpha_max_sqr,
       const ptrdiff_t& local_alloc_size_fftw,
       const ptrdiff_t& Nx_local,
+      const double* const kx_local,   // kx domain elements
       const ptrdiff_t& Nx,
+      //const double* const kx_joined,   // kx domain elements
       const ptrdiff_t& Ny,
+      const double* const ky, // ky domain elements
       const size_t& resolutionUnit,
       const double& xResolution, const double& yResolution,
       const string& outFileName_prefix,
@@ -1120,12 +1125,15 @@ int TEM_NS::output_diffraction_append(
    writeImage imageWriter;
 
    double* psi_mag;
-   psi_mag = new double[ local_alloc_size_fftw ];
+   //psi_mag = new double[ local_alloc_size_fftw ];
+   psi_mag = new double[ Nx_local * Ny];
 
    double max_psi_mag;
    double min_psi_mag;
    double max_psi_mag_joined;
    double min_psi_mag_joined;
+
+   double ksqr;
 
    // Calculate intensities, scaling them onto a log scale, and determine 
    //  the max and min of the resulting log scale intensities.
@@ -1137,29 +1145,51 @@ int TEM_NS::output_diffraction_append(
    {
       //if ( mynode == rootnode ) psi_mag[0] = 0.0;   // TODO: this removes
       //else                                          //  the direct beam
+      ksqr = kx_local[0] * kx_local[0] + ky[0] * ky[0];
+      if ( lambda_sqr * ksqr > alpha_max_sqr )
+      {
          psi_mag[0] //  = 0.0;
             = log(
                   1.0 + (
-                        scale_factor 
-                        * ( psi[0][0] * psi[0][0] + psi[0][1] * psi[0][1]  )
-                      )
+                      scale_factor 
+                      * ( psi[0][0] * psi[0][0] + psi[0][1] * psi[0][1]  )
+                  )
                );
+      }
+      else
+      {
+         psi_mag[0] = 0.0;
+      }
+
       max_psi_mag = psi_mag[0];
       min_psi_mag = max_psi_mag;
    }
 
-   for ( ptrdiff_t i=1; i < local_alloc_size_fftw; ++i)
-   {
-      psi_mag[i]
-         = log(
-               1.0 + (
-                     scale_factor 
-                     * ( psi[i][0] * psi[i][0] +  psi[i][1] * psi[i][1] )
-                   )
-            );
-         if ( psi_mag[i] > max_psi_mag) max_psi_mag = psi_mag[i];
-         if ( psi_mag[i] < min_psi_mag) min_psi_mag = psi_mag[i];
-   }
+   //for ( ptrdiff_t i=1; i < local_alloc_size_fftw; ++i)
+   for( ptrdiff_t i=0; i < Nx_local; ++i)
+      for( ptrdiff_t j=0; j < Ny; ++j)
+      {
+         ksqr = kx_local[i] * kx_local[i] + ky[j] * ky[j];
+         if ( lambda_sqr * ksqr > alpha_max_sqr )
+         {
+            psi_mag[j + i * Ny]
+               = log(
+                     1.0 + (
+                        scale_factor 
+                        * ( psi[j + i * Ny][0] * psi[j + i * Ny][0] 
+                           + psi[j + i * Ny][1] * psi[j + i * Ny][1])
+                      )
+                  );
+         }
+         else
+         {
+            psi_mag[j + i * Ny] = 0.0;
+         }
+         if ( psi_mag[j + i * Ny] > max_psi_mag) 
+            max_psi_mag = psi_mag[j + i * Ny];
+         if ( psi_mag[j + i * Ny] < min_psi_mag) 
+            min_psi_mag = psi_mag[j + i * Ny];
+      }
 
    // debug printing real and imaginary parts separately
    //double* psi_re;

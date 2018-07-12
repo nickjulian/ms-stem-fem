@@ -1960,12 +1960,61 @@ int TEM_NS::adfstem(
             if ( flags.debug && mynode == rootnode )
                cout << "appending diffraction to tiff" << endl;//debug
 
-            diffraction_scale_factor = 1.0e+18;
+            diffraction_scale_factor = 1.0e+13;
             output_diffraction_append(
                   psi,
                   diffraction_scale_factor,
+                  lambda_sqr,
+                  alpha_max_sqr,
                   local_alloc_size_fftw,
-                  Nx_local, Nx, Ny,
+                  Nx_local, 
+                  kx_local,
+                  Nx, 
+                  //kx_joined, 
+                  Ny,
+                  ky,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+                  
+            diffraction_scale_factor = 1.0;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  lambda_sqr,
+                  alpha_max_sqr,
+                  local_alloc_size_fftw,
+                  Nx_local, 
+                  kx_local,
+                  Nx, 
+                  //kx_joined, 
+                  Ny,
+                  ky,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix,
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+                  
+            diffraction_scale_factor = 1.0e-1;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  lambda_sqr,
+                  alpha_max_sqr,
+                  local_alloc_size_fftw,
+                  Nx_local, 
+                  kx_local,
+                  Nx, 
+                  //kx_joined, 
+                  Ny,
+                  ky,
                   resolutionUnit_recip,
                   xResolution_recip, yResolution_recip,
                   outFileName_prefix,

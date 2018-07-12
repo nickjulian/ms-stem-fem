@@ -618,10 +618,15 @@ int output_diffraction(
 int output_diffraction_append(
       const fftw_complex* const psi,
       const double& scale_factor,
+      const double& lambda_sqr,
+      const double& alpha_max_sqr,
       const ptrdiff_t& local_alloc_size_fftw,
       const ptrdiff_t& Nx_local,
+      const double* const kx_local,   // kx domain elements
       const ptrdiff_t& Nx,
+      //const double* const kx_joined,   // kx domain elements
       const ptrdiff_t& Ny,
+      const double* const ky, // ky domain elements
       const size_t& resolutionUnit,
       const double& xResolution, const double& yResolution,
       const string& outFileName_prefix,
