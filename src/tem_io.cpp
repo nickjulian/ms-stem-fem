@@ -2783,6 +2783,10 @@ int TEM_NS::read_parameter_file(
          double& Cs5,
          double& detector_inner_angle,
          double& detector_outer_angle,
+         double* mtf, // to be allocated by read_mtf_file
+         double* mtf_domain, // to be allocated by read_mtf_file but deleted by tem.cpp
+         // TODO: does the mtf need to be split among nodes into local sub-intervals?
+         double& mtf_resolution,
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,
@@ -2911,6 +2915,64 @@ int TEM_NS::read_parameter_file(
                detector_inner_angle = tmp_detector_angle;
             }
             flags.adfstem_detector_angles = 1;
+         }
+         else if ( ! data_descriptor.compare("mtf_file") )
+         {
+            string mtf_file_name
+            data_line_stream >> mtf_file_name;
+            if (
+               read_mtf_file(
+                  flags, // for checking to see if mtf is already allocated
+                  mtf_file_name
+                  mtf,
+                  mtf_domain,
+                  mynode,
+                  rootnode,
+                  comm
+                  ) == EXIT_FAILURE
+               )
+            {
+               if ( mynode == rootnode )
+               {
+                  cout << "Error, could not read MTF file : " 
+                     << mtf_file_name << endl;
+               }
+               flags.failflag = 1 ;
+            }
+            else flags.mtf_file = 1;
+         }
+         else if ( ! data_descriptor.compare("mtf_sampling_rate") )
+         {
+            double resolution;
+            //while ( data_line_stream )
+            //while ( ! data_line_stream.empty() )
+            while ( ! data_line_stream.eof() )
+            {
+               dataline_stream >> resolution;
+               mtf_resolutions.push_back( resolution );
+            }
+            //data_line_stream >> mtf_resolution;
+            if ( mtf_resolutions.empty() )
+               flags.mtf_resolution = 0;
+            else
+               flags.mtf_resolution = 1;
+            if ( mtf_resolutions.size() 
+                  == mtf_resolutions.max_size())
+            {
+               cout << "maximum number of MTF sample rates"
+                 << " reached" << endl;
+            }
+            // debug
+            cout << "(debug) resolutions added to mtr_resolutions: "
+            for ( std:vector<double>::iterator 
+                  itr = mtr_resolutions.begin();
+                  itr != mtr_resolutions.end();
+                  ++itr)
+            {
+                  cout << *itr << " "
+            }
+            cout << endl;
+            // end debug
          }
          else if ( ! data_descriptor.compare("raster_spacing") )
          {
@@ -3049,6 +3111,16 @@ int TEM_NS::read_parameter_file(
                   << "  cs5 <cs5 value>" << endl
                   << "  detectorangles <inner_angle>"
                   <<    " <outer_angle [radians]>" << endl
+                  << "  mtf_file <mtf filepath>" << endl
+                  << "    simulate detector modulation transfer function" << endl
+                  << "     using the values contained in the specified" << endl
+                  << "     file containing a domain on the first line" << endl
+                  << "      and MTF values in units of the image" << endl
+                  << "       Nyquist frequency (0.5*sample_rate) on" << endl
+                  << "       the second" << endl
+                  << "  mtf_sampling_rate <value [A^-1]>" << endl
+                  << "    sampling rate or resolution of the modulation"
+                  << "     transfer function in inverse Angstroms" << endl
                   << "  raster_spacing <distance [A] between probe"
                   << "  positions>" << endl
                   << "  adfstemcorrfem" << endl
@@ -3883,6 +3955,10 @@ unsigned int TEM_NS::read_cmdline_options(
    double& Cs5,
    double& detector_inner_angle,
    double& detector_outer_angle,
+   double* mtf,
+   double* mtf_domain,
+   double* mtf_resolution,
+   std::vector< double >& mtf_resolution,
    double& raster_spacing,
    double& azimuthal_binning_size_factor,
    double& minSliceThickness,
@@ -3923,6 +3999,9 @@ unsigned int TEM_NS::read_cmdline_options(
                   Cs5,
                   detector_inner_angle,
                   detector_outer_angle,
+                  mtf,
+                  mtf_domain,
+                  mtf_resolution,
                   raster_spacing,
                   azimuthal_binning_size_factor,
                   minSliceThickness,
@@ -3948,6 +4027,65 @@ unsigned int TEM_NS::read_cmdline_options(
          flags.pf = 1;
          idx += 1;
 
+      }
+      else if (args[idx] == "--mtf_file")
+      {
+         string mtf_file_name;
+         if (idx + 1 < args.size()) 
+            mtf_file_name = string(args[idx + 1]);
+         if (
+               read_mtf_file(
+                  flags, 
+                  mtf_file_name
+                  mtf,
+                  mtf_domain,
+                  mynode,
+                  rootnode,
+                  comm
+               ) == EXIT_FAILURE
+         )
+         {
+            if ( mynode == rootnode )
+            {
+               cout << "Error, could not read MTF file : " 
+                  << mtf_file_name << endl;
+            }
+            failflag = 1 ;
+         }
+         else flags.mtf_file = 1
+      }
+      else if ( args[idx] == "--mtf_sampling_rate")
+      {
+         //if (idx + 1 < args.size()) 
+            //istringstream( args[idx + 1] ) >> mtf_resolution;
+         while (idx + 1 < args.size() 
+                  && 
+                  (
+                     mtf_resolutions.size 
+                     < mtf_resolutions.max_size()
+                  )
+               ) 
+         {
+            double resolution;
+            if ( (args[idx + 1]).front() == '-')
+            //if ( (args[idx + 1])[0]  == '-')
+               break;
+            else
+            {
+               istringstream( args[idx + 1]) >> resolution;
+               mtf_resolutions.push_back( resolution );
+            }
+            idx += 1;
+         }
+         if ( mtf_resolutions.empty() )
+            flags.mtf_resolution = 0;
+         else
+            flags.mtf_resolution = 1;
+         if ( mtf_resolutions.size() == mtf_resolutions.max_size())
+         {
+            cout << "maximum number of MTF sample rates reached"
+               << endl;
+         }
       }
       else if ( args[idx] == "--debug" )
       {
@@ -4200,6 +4338,124 @@ unsigned int TEM_NS::read_cmdline_options(
    return EXIT_SUCCESS;
 }
 
+unsigned int read_mtf_file( 
+      //  if the mtf has already been read, then 
+      //   deallocate, reallocate, and 
+      //   read the new values
+      const input_flags& flags,
+      const string& mtf_file_name,
+      std::vector<double> mtf,
+      std::vector<double> mtf_domain,
+      const int& mynode,
+      const int& rootnode,
+      MPI_Comm comm
+      )
+{
+   unsigned int failflag = 0;
+   unsigned int mtf_size;
+   unsigned int mtf_domain_size;
+   // read the mtf file only at root node and broadcast the results
+   if ( mynode == rootnode )
+   {
+      ifstream data_file( mtf_file_name.c_str() );
+      if ( data_file.is_open() )
+      {
+         size_t mtf_size = 0;
+         size_t domain_size = 0;
+         string data_line;
+         if ( getline( data_file, data_line) && data_file.good() )
+         {
+            // replace all commas with a space
+            size_t found_loc = data_line.find(",");
+            while ( found_loc != string::npos )
+            {
+               data_line.replace( found_loc, 1, " ");
+               found_loc = data_line.find(",");
+            }
+            istringstream data_line_stream( data_line );
+            double value;
+            while ( ! data_line_stream.eof() )
+            {
+               data_line_stream >> value;
+               mtf.push_back( value );
+            }
+         }
+
+         if ( getline( data_file, data_line) && data_file.good() )
+         {
+            // replace all commas with a space
+            size_t found_loc = data_line.find(",");
+            while ( found_loc != string::npos )
+            {
+               data_line.replace( found_loc, 1, " ");
+               found_loc = data_line.find(",");
+            }
+            istringstream data_line_stream( data_line );
+            double value;
+            while ( ! data_line_stream.eof() )
+            {
+               data_line_stream >> value;
+               mtf_domain.push_back( value );
+            }
+         }
+
+         if ( mtf_domain.size() != mtf.size() )
+         {
+            cout << "Error reading MTF file: " << mtf_file_name 
+               << endl;
+            cout << " MTF (1st line) and MTF domain (2nd line)"
+               << " do not have the same number of elements."
+               << endl;
+            flags.failflag = 1;
+         }
+      }
+      else
+      {
+         cout << "Error opening MTF file: " << mtf_file_name 
+            << endl;
+         flags.failflag = 1;
+      }
+
+      //failflag = flags.failflag;
+      //MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, 
+      MPI_Bcast( &(flags.failflag), 1, MPI_UNSIGNED, 
+                   rootnode, MPI_COMM_WORLD);
+      if ( flags.failflag ) return EXIT_FAILURE;
+
+      mtf_size = mtf.size();
+      mtf_domain_size = mtf_domain.size();
+      MPI_Bcast( &mtf_size, 1, MPI_UNSIGNED, 
+                  rootnode, MPI_COMM_WORLD);
+      MPI_Bcast( &mtf_domain_size, 1, MPI_UNSIGNED, 
+                  rootnode, MPI_COMM_WORLD);
+
+      MPI_Bcast( &mtf[0], mtf.size(), 
+                  MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+      MPI_Bcast( &mtf_domain[0], mtf_domain.size(), 
+                  MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   }
+   else
+   {
+      MPI_Bcast( &(flags.failflag), 1, MPI_UNSIGNED, 
+                  rootnode, MPI_COMM_WORLD);
+      if ( flags.failflag ) return EXIT_FAILURE;
+
+      MPI_Bcast( &mtf_size, 1, MPI_UNSIGNED, 
+            rootnode, MPI_COMM_WORLD);
+      MPI_Bcast( &mtf_domain_size, 1, MPI_UNSIGNED, 
+            rootnode, MPI_COMM_WORLD);
+
+      mtf.resize(mtf_size);
+      mtf_domain.resize(mtf_size);
+
+      MPI_Bcast( &mtf[0], mtf.size(), 
+                  MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+      MPI_Bcast( &mtf_domain[0], mtf_domain.size(), 
+                  MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
+   }
+   return EXIT_SUCCESS;
+}
+
 unsigned int TEM_NS::check_runtime_flags(
    const input_flags& flags,
    const string& args0,
@@ -4269,6 +4525,10 @@ unsigned int TEM_NS::check_runtime_flags(
       flags.aberration_correction << endl <<
       "flags.raster_spacing " << 
       flags.raster_spacing << endl <<
+      "flags.mtf_file" << 
+      flags.mtf_file << endl <<
+      "flags.mtf_resolution" << 
+      flags.mtf_resolution << endl <<
       "flags.correlograph " << 
       flags.correlograph << endl <<
       "flags.correlograph_variance" << 
@@ -4334,6 +4594,10 @@ unsigned int TEM_NS::check_runtime_flags(
                (! flags.cs3)
             )
             &&
+            !( // require simultaneous mtf sampling rate and file
+                  flags.mtf_file != flags.mtf_resolution 
+            )
+            &&
             (
                flags.scherzer_defocus 
                || 
@@ -4373,6 +4637,15 @@ unsigned int TEM_NS::check_runtime_flags(
             cout << "Use of aberraction correction requires"
                << " specifying --defocus_spread and --cs5. If not using"
                << " --scherzer_cs3, then --cs3 is also required." << endl;
+         }
+         if ( // require simultaneous mtf sampling rate and file
+                  flags.mtf_file != flags.mtf_resolution 
+            )
+         {
+            cout << "Use of detector modulation transfer function"
+               << " requires specifying both a file containing it"
+               << " and a sampling rate by which it will be "
+               << " scaled" << endl;
          }
          if (
                (// require specifying Cs3 if using uncorrected TEM

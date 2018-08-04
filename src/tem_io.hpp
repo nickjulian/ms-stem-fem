@@ -81,6 +81,8 @@ namespace TEM_NS
       unsigned int aberration_correction;// = 0;
       unsigned int adfstem_detector_angles;
       unsigned int raster_spacing;// = 0;
+      unsigned int mtf_file;
+      unsigned int mtf_resolution;
       unsigned int pap_tif;// = 0;
       unsigned int dupe;// = 0;
       unsigned int image_output;// = 0;
@@ -126,6 +128,8 @@ namespace TEM_NS
          aberration_correction = 0;
          adfstem_detector_angles = 0;
          raster_spacing = 0;
+         mtf_file = 0;
+         mtf_resolution = 0;
          pap_tif = 0;
          dupe = 0;
          image_output = 0;
@@ -161,6 +165,9 @@ namespace TEM_NS
          double& Cs5,
          double& detector_inner_angle,
          double& detector_outer_angle,
+         double* mtf, // to be allocated by read_mtf_file
+         double* mtf_domain, // to be allocated by read_mtf_file
+         std::vector<double>& mtf_resolutions,
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,
@@ -271,12 +278,28 @@ namespace TEM_NS
          double& Cs5,
          double& detector_inner_angle,
          double& detector_outer_angle,
+         double* mtf,
+         double* mtf_domain,
+         std::vector< double >& mtf_resolutions,
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,
          unsigned int& dupe_x,
          unsigned int& dupe_y,
          unsigned int& dupe_z,
+         const int& mynode,
+         const int& rootnode,
+         MPI_Comm comm
+         );
+
+   unsigned int read_mtf_file( 
+         //  if the mtf has already been read, then 
+         //   deallocate, reallocate, and 
+         //   read the new values
+         const input_flags& flags,
+         const string& mtf_file_name,
+         std::vector<double> mtf,
+         std::vector<double> mtf_domain,
          const int& mynode,
          const int& rootnode,
          MPI_Comm comm
