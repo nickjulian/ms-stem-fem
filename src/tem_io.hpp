@@ -99,6 +99,7 @@ namespace TEM_NS
       unsigned int correlograph_variance;// = 0;
       unsigned int correlograph_everyimage;
       unsigned int correlograph_everytxt;
+      unsigned int fail;
       //unsigned int correlograph_everynetcdf;
       input_flags()  // constructor
       {
@@ -145,6 +146,7 @@ namespace TEM_NS
          correlograph_variance = 0;
          correlograph_everyimage = 0;
          correlograph_everytxt = 0;
+         fail = 0;
       }
    };
 
@@ -165,9 +167,9 @@ namespace TEM_NS
          double& Cs5,
          double& detector_inner_angle,
          double& detector_outer_angle,
-         double* mtf, // to be allocated by read_mtf_file
-         double* mtf_domain, // to be allocated by read_mtf_file
-         std::vector<double>& mtf_resolutions,
+         std::vector<double>& mtf,
+         std::vector<double>& mtf_domain,
+         double& mtf_resolution,
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,
@@ -278,9 +280,9 @@ namespace TEM_NS
          double& Cs5,
          double& detector_inner_angle,
          double& detector_outer_angle,
-         double* mtf,
-         double* mtf_domain,
-         std::vector< double >& mtf_resolutions,
+         std::vector<double>& mtf,
+         std::vector<double>& mtf_domain,
+         double& mtf_resolution,
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,
@@ -293,13 +295,10 @@ namespace TEM_NS
          );
 
    unsigned int read_mtf_file( 
-         //  if the mtf has already been read, then 
-         //   deallocate, reallocate, and 
-         //   read the new values
-         const input_flags& flags,
+         input_flags& flags,
          const string& mtf_file_name,
-         std::vector<double> mtf,
-         std::vector<double> mtf_domain,
+         std::vector<double>& mtf,
+         std::vector<double>& mtf_domain,
          const int& mynode,
          const int& rootnode,
          MPI_Comm comm

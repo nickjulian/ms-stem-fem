@@ -72,6 +72,9 @@ int TEM_NS::adfstem(
       const double& alpha_max, // objective aperture limiting angle
       const double& detector_inner_angle, // detector dimension [\AA^{-1}]
       const double& detector_outer_angle, // detector dimension [\AA^{-1}]
+      const std::vector<double>& mtf_1D, // modulation transfer function
+      const std::vector<double>& mtf_domain_sqr,
+      const double& mtf_resolution,
       const double& lambda,
       const string& outFileName_prefix,
       const ptrdiff_t& local_alloc_size_fftw,
@@ -227,6 +230,71 @@ int TEM_NS::adfstem(
    fftw_complex* psi;
    psi = fftw_alloc_complex( local_alloc_size_fftw );
 
+   //////////////////////////////////////////////////////////////////
+   // If using a detector modulation transfer function, allocate 
+   //  its two dimensional representation
+   //////////////////////////////////////////////////////////////////
+   //fftw_complex* mtf_joined; 
+   double* mtf_2D_split; 
+   if ( flags.mtf_file && flags.mtf_resolution )
+   {
+      ///////////////////////////////////////////////////////////////////
+      // Evaluate the two dimensional representations of the modulation 
+      //  transfer function
+      ///////////////////////////////////////////////////////////////////
+
+      mtf_2D_split = new double[ Nx_local * Ny ];
+      // use mtf_1D, mtf_domain_sqr, and mtf_resolution to evaluate 
+      //  mtf_split 
+      // evaluate the 2-D modulation transfer function
+      // mtf_resolution [pixels per \AA^{-1}]
+      // mtf_domain_sqr: in units of Nyquist frequency 
+      //    = 0.5 * mtf_resolution
+      //for ( std::vector<double>::iterator 
+      //      itr = mtf_1D.begin();
+      //      itr != mtf_1D.end();
+      //      ++itr)
+      size_t mtf_1D_size = mtf_1D.size();
+      //size_t mtf_domain_size = mtf_domain_sqr.size(); // unnecessary
+      // mtf_1D.size() == mtf_domain_sqr.size() checked by read_mtf_file()
+      //
+      // The following was moved to tem.cpp since the domain is const here
+      //for ( size_t idx=0; idx < mtf_1D_size; ++idx)
+      //{  
+      //   mtf_domain_sqr[idx] = mtf_domain_sqr[idx] * 0.5 * mtf_resolution;
+      //   mtf_domain_sqr[idx] = mtf_domain_sqr[idx] * mtf_domain_sqr[idx]; 
+      //}
+
+      double ksqr;
+      for ( size_t i=0; i < Nx_local; ++i)
+      {
+         for ( size_t j=0; j < Ny; ++j)
+         {
+            ksqr = kx_local[j + i * Ny] * kx_local[j + i * Ny]
+                     + ky[j + i * Ny] * ky[j + i * Ny];
+
+            mtf_2D_split[j + i * Ny] = 0; // default value
+            for ( size_t mtf_idx = 0; mtf_idx < mtf_1D_size -1; ++mtf_idx)
+            {
+               if ( mtf_1D_size == 1 )
+               {
+                  mtf_2D_split[j + i * Ny] = mtf_1D[mtf_idx];
+               }
+               if ( (ksqr >= mtf_domain_sqr[mtf_idx]) 
+                     && (ksqr < mtf_domain_sqr[mtf_idx+1]) )
+               {
+                  double domain1 = sqrt(mtf_domain_sqr[mtf_idx]);
+                  double domain2 = sqrt(mtf_domain_sqr[mtf_idx+1]);
+                  mtf_2D_split[j + i * Ny] = 
+                     mtf_1D[mtf_idx] +
+                      (mtf_1D[mtf_idx+1] - mtf_1D[mtf_idx])
+                       *(sqrt(ksqr) - domain1)/(domain2 - domain1);
+               }
+            }
+         }
+      }
+   }
+   
    ///////////////////////////////////////////////////////////////////
    // Instantiate the large STEM probe
    ///////////////////////////////////////////////////////////////////
@@ -2059,6 +2127,35 @@ int TEM_NS::adfstem(
 
          if ( flags.fem )
          {
+            if ( flags.mtf_file && flags.mtf_resolution )
+            {
+               fftw_execute( pb_c2c_psi );
+
+               for (size_t i=0; i < Nx_local; ++i)
+               {
+                  for ( size_t j=0; j < Ny; ++j)
+                  {
+                     psi[j + i * Ny][0] = 
+                        psi[j + i * Ny][0] 
+                           * mtf_2D_split[j + i * Ny]/sqrtNxNy;
+                     
+                     psi[j + i * Ny][1] = 
+                        psi[j + i * Ny][1] 
+                           * mtf_2D_split[j + i * Ny]/sqrtNxNy;
+                  }
+               }
+               //  transform psi back into reciprocal space
+               fftw_execute( pf_c2c_psi );
+               // renormalize
+               for (size_t i=0; i < local_alloc_size_fftw; ++i)
+               {
+                     psi[i][0] = psi[i][0] / sqrtNxNy;
+                     psi[i][1] = psi[i][1] / sqrtNxNy;
+               }
+               
+               // proceed with the rest of the FEM calculations on psi
+            }
+               
             if ( (mynode == rootnode) && flags.debug )
                cout << "calculating and accumulating FTEM quanitites ..." 
                   << endl;
@@ -3455,6 +3552,13 @@ int TEM_NS::adfstem(
       delete[] stem_image;
       //delete[] x_p;
       //delete[] y_p;
+      //if ( flags.mtf_file && flags.mtf_resolution )
+      //   fftw_free( mtf_joined );
+   }
+
+   if ( flags.mtf_file && flags.mtf_resolution )
+   {
+      delete[] mtf_2D_split;
    }
 
    delete stem_probe_joined_re, stem_probe_joined_im;

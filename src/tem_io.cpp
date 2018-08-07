@@ -2783,9 +2783,8 @@ int TEM_NS::read_parameter_file(
          double& Cs5,
          double& detector_inner_angle,
          double& detector_outer_angle,
-         double* mtf, // to be allocated by read_mtf_file
-         double* mtf_domain, // to be allocated by read_mtf_file but deleted by tem.cpp
-         // TODO: does the mtf need to be split among nodes into local sub-intervals?
+         std::vector<double>& mtf,
+         std::vector<double>& mtf_domain,
          double& mtf_resolution,
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
@@ -2918,12 +2917,12 @@ int TEM_NS::read_parameter_file(
          }
          else if ( ! data_descriptor.compare("mtf_file") )
          {
-            string mtf_file_name
+            string mtf_file_name;
             data_line_stream >> mtf_file_name;
             if (
                read_mtf_file(
                   flags, // for checking to see if mtf is already allocated
-                  mtf_file_name
+                  mtf_file_name,
                   mtf,
                   mtf_domain,
                   mynode,
@@ -2937,7 +2936,7 @@ int TEM_NS::read_parameter_file(
                   cout << "Error, could not read MTF file : " 
                      << mtf_file_name << endl;
                }
-               flags.failflag = 1 ;
+               flags.fail = 1 ;
             }
             else flags.mtf_file = 1;
          }
@@ -2946,32 +2945,37 @@ int TEM_NS::read_parameter_file(
             double resolution;
             //while ( data_line_stream )
             //while ( ! data_line_stream.empty() )
-            while ( ! data_line_stream.eof() )
-            {
-               dataline_stream >> resolution;
-               mtf_resolutions.push_back( resolution );
-            }
-            //data_line_stream >> mtf_resolution;
-            if ( mtf_resolutions.empty() )
+            //while ( ! data_line_stream.eof() )
+            //{
+            //   data_line_stream >> resolution;
+            //   mtf_resolutions.push_back( resolution );
+            //}
+            mtf_resolution = 0;
+            if ( ! data_line_stream.eof() )
+               data_line_stream >> mtf_resolution;
+            //if ( mtf_resolutions.empty() )
+            //   flags.mtf_resolution = 0;
+            //else
+            if ( mtf_resolution == 0 )
                flags.mtf_resolution = 0;
             else
                flags.mtf_resolution = 1;
-            if ( mtf_resolutions.size() 
-                  == mtf_resolutions.max_size())
-            {
-               cout << "maximum number of MTF sample rates"
-                 << " reached" << endl;
-            }
+            //if ( mtf_resolutions.size() 
+            //      == mtf_resolutions.max_size())
+            //{
+            //   cout << "maximum number of MTF sample rates"
+            //     << " reached" << endl;
+            //}
             // debug
-            cout << "(debug) resolutions added to mtr_resolutions: "
-            for ( std:vector<double>::iterator 
-                  itr = mtr_resolutions.begin();
-                  itr != mtr_resolutions.end();
-                  ++itr)
-            {
-                  cout << *itr << " "
-            }
-            cout << endl;
+            //cout << "(debug) resolutions added to mtf_resolutions: ";
+            //for ( std::vector<double>::iterator 
+            //      itr = mtf_resolutions.begin();
+            //      itr != mtf_resolutions.end();
+            //      ++itr)
+            //{
+            //      cout << *itr << " ";
+            //}
+            //cout << endl;
             // end debug
          }
          else if ( ! data_descriptor.compare("raster_spacing") )
@@ -3955,10 +3959,9 @@ unsigned int TEM_NS::read_cmdline_options(
    double& Cs5,
    double& detector_inner_angle,
    double& detector_outer_angle,
-   double* mtf,
-   double* mtf_domain,
-   double* mtf_resolution,
-   std::vector< double >& mtf_resolution,
+   std::vector<double>& mtf,
+   std::vector<double>& mtf_domain,
+   double& mtf_resolution,
    double& raster_spacing,
    double& azimuthal_binning_size_factor,
    double& minSliceThickness,
@@ -4036,7 +4039,7 @@ unsigned int TEM_NS::read_cmdline_options(
          if (
                read_mtf_file(
                   flags, 
-                  mtf_file_name
+                  mtf_file_name,
                   mtf,
                   mtf_domain,
                   mynode,
@@ -4052,40 +4055,46 @@ unsigned int TEM_NS::read_cmdline_options(
             }
             failflag = 1 ;
          }
-         else flags.mtf_file = 1
+         else flags.mtf_file = 1;
       }
       else if ( args[idx] == "--mtf_sampling_rate")
       {
-         //if (idx + 1 < args.size()) 
-            //istringstream( args[idx + 1] ) >> mtf_resolution;
-         while (idx + 1 < args.size() 
-                  && 
-                  (
-                     mtf_resolutions.size 
-                     < mtf_resolutions.max_size()
-                  )
-               ) 
+         mtf_resolution = 0;
+         if (idx + 1 < args.size()) 
+            istringstream( args[idx + 1] ) >> mtf_resolution;
+         //while (idx + 1 < args.size() 
+         //         && 
+         //         (
+         //            mtf_resolutions.size()
+         //            < mtf_resolutions.max_size()
+         //         )
+         //      ) 
+         //{
+         //   double resolution;
+         //   if ( (args[idx + 1]).front() == '-')
+         //   //if ( (args[idx + 1])[0]  == '-')
+         //      break;
+         //   else
+         //   {
+         //      istringstream( args[idx + 1]) >> resolution;
+         //      mtf_resolutions.push_back( resolution );
+         //   }
+         //   idx += 1;
+         //}
+         //if ( mtf_resolutions.empty() )
+         if ( mtf_resolution <= 0)
          {
-            double resolution;
-            if ( (args[idx + 1]).front() == '-')
-            //if ( (args[idx + 1])[0]  == '-')
-               break;
-            else
-            {
-               istringstream( args[idx + 1]) >> resolution;
-               mtf_resolutions.push_back( resolution );
-            }
-            idx += 1;
-         }
-         if ( mtf_resolutions.empty() )
             flags.mtf_resolution = 0;
-         else
-            flags.mtf_resolution = 1;
-         if ( mtf_resolutions.size() == mtf_resolutions.max_size())
-         {
-            cout << "maximum number of MTF sample rates reached"
+            cout << " Warning: attempted to use MTF sampling rate <= 0" 
                << endl;
          }
+         else
+            flags.mtf_resolution = 1;
+         //if ( mtf_resolutions.size() == mtf_resolutions.max_size())
+         //{
+         //   cout << "maximum number of MTF sample rates reached"
+         //      << endl;
+         //}
       }
       else if ( args[idx] == "--debug" )
       {
@@ -4338,14 +4347,11 @@ unsigned int TEM_NS::read_cmdline_options(
    return EXIT_SUCCESS;
 }
 
-unsigned int read_mtf_file( 
-      //  if the mtf has already been read, then 
-      //   deallocate, reallocate, and 
-      //   read the new values
-      const input_flags& flags,
+unsigned int TEM_NS::read_mtf_file( 
+      input_flags& flags,
       const string& mtf_file_name,
-      std::vector<double> mtf,
-      std::vector<double> mtf_domain,
+      std::vector<double>& mtf,
+      std::vector<double>& mtf_domain,
       const int& mynode,
       const int& rootnode,
       MPI_Comm comm
@@ -4377,7 +4383,7 @@ unsigned int read_mtf_file(
             while ( ! data_line_stream.eof() )
             {
                data_line_stream >> value;
-               mtf.push_back( value );
+               mtf_domain.push_back( value );
             }
          }
 
@@ -4395,7 +4401,7 @@ unsigned int read_mtf_file(
             while ( ! data_line_stream.eof() )
             {
                data_line_stream >> value;
-               mtf_domain.push_back( value );
+               mtf.push_back( value );
             }
          }
 
@@ -4406,21 +4412,21 @@ unsigned int read_mtf_file(
             cout << " MTF (1st line) and MTF domain (2nd line)"
                << " do not have the same number of elements."
                << endl;
-            flags.failflag = 1;
+            flags.fail = 1;
          }
       }
       else
       {
          cout << "Error opening MTF file: " << mtf_file_name 
             << endl;
-         flags.failflag = 1;
+         flags.fail = 1;
       }
 
-      //failflag = flags.failflag;
-      //MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, 
-      MPI_Bcast( &(flags.failflag), 1, MPI_UNSIGNED, 
+      //failflag = flags.fail;
+      //MPI_Bcast( &fail, 1, MPI_UNSIGNED, rootnode, 
+      MPI_Bcast( &(flags.fail), 1, MPI_UNSIGNED, 
                    rootnode, MPI_COMM_WORLD);
-      if ( flags.failflag ) return EXIT_FAILURE;
+      if ( flags.fail ) return EXIT_FAILURE;
 
       mtf_size = mtf.size();
       mtf_domain_size = mtf_domain.size();
@@ -4436,9 +4442,9 @@ unsigned int read_mtf_file(
    }
    else
    {
-      MPI_Bcast( &(flags.failflag), 1, MPI_UNSIGNED, 
+      MPI_Bcast( &(flags.fail), 1, MPI_UNSIGNED, 
                   rootnode, MPI_COMM_WORLD);
-      if ( flags.failflag ) return EXIT_FAILURE;
+      if ( flags.fail ) return EXIT_FAILURE;
 
       MPI_Bcast( &mtf_size, 1, MPI_UNSIGNED, 
             rootnode, MPI_COMM_WORLD);
@@ -4453,6 +4459,27 @@ unsigned int read_mtf_file(
       MPI_Bcast( &mtf_domain[0], mtf_domain.size(), 
                   MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
    }
+   // debug
+   //cout << "node " << mynode << "MTF size : " << mtf.size() << endl;
+   //if (mynode == rootnode)
+   //{
+   //   cout << "MTF file contents:" << endl;
+   //}
+   //for ( std::vector<double>::iterator 
+   //         itr = mtf.begin();
+   //         itr != mtf.end();
+   //         ++itr)
+   //{
+   //   cout << "node " << mynode << ", mtf : " << *itr << endl;
+   //}
+   //for ( std::vector<double>::iterator 
+   //         itr = mtf_domain.begin();
+   //         itr != mtf_domain.end();
+   //         ++itr)
+   //{
+   //   cout << "node " << mynode << ", mtf_domain : " << *itr << endl;
+   //}
+   // end debug
    return EXIT_SUCCESS;
 }
 

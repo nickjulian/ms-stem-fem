@@ -101,6 +101,9 @@ int adfstem(
       const double& alpha_max, // objective aperture limiting angle
       const double& detector_inner_angle, // detector dimension [\AA^{-1}]
       const double& detector_outer_angle, // detector dimension [\AA^{-1}]
+      const std::vector<double>& mtf, // modulation transfer function
+      const std::vector<double>& mtf_domain_sqr,
+      const double& mtf_resolution,
       const double& lambda,
       const string& outFileName_prefix,
       const ptrdiff_t& local_alloc_size_fftw,

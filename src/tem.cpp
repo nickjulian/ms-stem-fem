@@ -73,7 +73,7 @@ using std::setprecision;
 using namespace TEM_NS;
 
 //int threads_ok; // global by request of fftw.org/doc/ ... section 6.11
-#define PRINT_USAGE cout << "Usage: " << argv[0] << " <options>" << endl << "OPTIONS : " << endl << "   --parameter_file <file name>" << endl << "      Contents of this file may specify any of the other arguments, but will" << endl << "      be superceded by those on the command line." << endl << "   -m <samples_x> <samples_y> <VV>" << endl << "      number of samples in the 2-D discretization and microscope voltage" << endl << "      WARNING: if samples_x != samples_y, or if they are odd, bad data" << endl << "               may creep from the edges of reciprocal space boundaries" << endl << "   [--scherzer_defocus]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_alphamax]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_cs3]" << endl << "      calculate and use scherzer Cs3 conditions" << endl << "   [--defocus <defocus>]" << endl << "      required if not using --scherzer_defocus" << endl << "   [--alphamax <alpha max>]" << endl << "      required if not using --scherzer_alphamax" << endl << "   [--spread <defocus spread> <condenser_illumination_angle>]" << endl << "      applicable only if using aberration correction" << endl << "   [--cs3 <third order spherical aberration>]" << endl << "      ignored if using --scherzer with aberration correction" << endl << "   [--cs5 <fifth order spherical aberration>]" << endl << "     applicable only if using aberration correction" << endl << "   [--detectorangles <inner_angle> <outer_angle>]" << endl << "     specify in radians; applicable only if using adfstem;" << endl << "     default is 0.04 0.2 for V >= 200kV, else 0.045 and 0.2" << endl << "        Note: bandwidth limit will reduce detected signal if" << endl << "              the outer angle is greater than it, being" << endl << "              (1/3)*(number of x or y samples)/(x or y realspace period)" << endl << "   [--rasterspacing <raster_spacing>]" << endl << "      units: angstroms; default is 1.5 for STEM or 10 for STEM-FEM" << endl << "   [--dupe <dupe_x> <dupe_y> <dupe_z>]" << endl << "      Periodically instantiate the given scatterers dupe_x, dupe_y, and " << endl << "      dupe_z times in respective directions; fem only" << endl << "   -a <lammps or xyz style position input file>" << endl << "   --output_prefix <output file prefix>" << endl << "   --paptif" << endl << "      output images of projected atomic potentials" << endl << "   [--adfstemcorrfem]" << endl << "      simulate fluctuation microscopy using aberration corrected" << endl << "      adfstem mode" << endl << "   [--adfstemuncorrfem]" << endl << "      simulate fluctuation microscopy using" << endl << "      adfstem mode without aberration correction" << endl << "   [--adfstemcorr]" << endl << "      simulate aberration corrected adfstem" << endl << "   [--adfstemuncorr]" << endl << "      simulate adfstem mode without aberration correction" << endl << "   [--dr <azimuthal_binning_size_factor>]" << endl << "      prefactor of sqrt(dx^2+dy^2) in azimuthal integration bin size" << endl << "   [--minslice <minSliceThickness>" << endl << "      minimum slice thickness in Angstroms, default is 1 " << endl << "   [--mtf_file <mtf_filepath>]" << endl << "      simulate detector modulation transfer" << endl << "       function (MTF) using the values contained" << endl << "       in the specified file containing a domain" << endl << "       on the first line and MTF values in units of the image Nyquist frequecy (0.5*sample_rate) on the second" << endl << "   [--mtf_sampling_rates <values>]" << endl << "      list of sampling rates or resolution of the modulation" << endl << "       transfer function in inverse angstroms" << endl << "   [--images]" << endl << "      generate and save images" << endl << "   [--netcdfimages]" << endl << "      save images as netcdf files" << endl << "   [--netcdfvariance]" << endl << "      save 1-D variance as netcdf files" << endl << "   [--Vomega]" << endl << "      FEM: normalized variance of the annular mean" << endl << "   [--Vr]" << endl << "      FEM: mean of normalized variances of rings" << endl << "   [--Vre]" << endl << "      FEM: normalized variance of ring ensemble" << endl << "   [--Omegavimage]" << endl << "      FEM: annular mean of variance image" << endl << "   [--Vgt17]" << endl << "      FEM: ratio of annular means of mean diffraction squared and the square of" << endl << "      mean diffraction" << endl << "   [--Vphi]" << endl << "      FEM: angular normalized variance of the average diffraction" << endl << "   [--correlograph]" << endl << "      FEM: 2-D average of autocorrelation along azimuthal phi axis" << endl << "   [--correlograph_everyimage]" << endl << "      FEM: 2-D tif image output of autocorrelation along azimuthal phi axis for" << endl << "      every STEM raster point" << endl << "   [--correlograph_everytxt]" << endl << "      FEM: 2-D txt output of autocorrelation along azimuthal phi axis for every" << endl << "      STEM raster point" << endl << "   [--correlograph_variance]" << endl << "      FEM: 2-D variance of autocorrelation along azimuthal phi axis" << endl << "   [--debug]" << endl << "      enable verbose debug output to files and stdout" << endl ;
+#define PRINT_USAGE cout << "Usage: " << argv[0] << " <options>" << endl << "OPTIONS : " << endl << "   --parameter_file <file name>" << endl << "      Contents of this file may specify any of the other arguments, but will" << endl << "      be superceded by those on the command line." << endl << "   -m <samples_x> <samples_y> <VV>" << endl << "      number of samples in the 2-D discretization and microscope voltage" << endl << "      WARNING: if samples_x != samples_y, or if they are odd, bad data" << endl << "               may creep from the edges of reciprocal space boundaries" << endl << "   [--scherzer_defocus]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_alphamax]" << endl << "      calculate and use scherzer focus conditions" << endl << "   [--scherzer_cs3]" << endl << "      calculate and use scherzer Cs3 conditions" << endl << "   [--defocus <defocus>]" << endl << "      required if not using --scherzer_defocus" << endl << "   [--alphamax <alpha max>]" << endl << "      required if not using --scherzer_alphamax" << endl << "   [--spread <defocus spread> <condenser_illumination_angle>]" << endl << "      applicable only if using aberration correction" << endl << "   [--cs3 <third order spherical aberration>]" << endl << "      ignored if using --scherzer with aberration correction" << endl << "   [--cs5 <fifth order spherical aberration>]" << endl << "     applicable only if using aberration correction" << endl << "   [--detectorangles <inner_angle> <outer_angle>]" << endl << "     specify in radians; applicable only if using adfstem;" << endl << "     default is 0.04 0.2 for V >= 200kV, else 0.045 and 0.2" << endl << "        Note: bandwidth limit will reduce detected signal if" << endl << "              the outer angle is greater than it, being" << endl << "              (1/3)*(number of x or y samples)/(x or y realspace period)" << endl << "   [--rasterspacing <raster_spacing>]" << endl << "      units: angstroms; default is 1.5 for STEM or 10 for STEM-FEM" << endl << "   [--dupe <dupe_x> <dupe_y> <dupe_z>]" << endl << "      Periodically instantiate the given scatterers dupe_x, dupe_y, and " << endl << "      dupe_z times in respective directions; fem only" << endl << "   -a <lammps or xyz style position input file>" << endl << "   --output_prefix <output file prefix>" << endl << "   --paptif" << endl << "      output images of projected atomic potentials" << endl << "   [--adfstemcorrfem]" << endl << "      simulate fluctuation microscopy using aberration corrected" << endl << "      adfstem mode" << endl << "   [--adfstemuncorrfem]" << endl << "      simulate fluctuation microscopy using" << endl << "      adfstem mode without aberration correction" << endl << "   [--adfstemcorr]" << endl << "      simulate aberration corrected adfstem" << endl << "   [--adfstemuncorr]" << endl << "      simulate adfstem mode without aberration correction" << endl << "   [--dr <azimuthal_binning_size_factor>]" << endl << "      prefactor of sqrt(dx^2+dy^2) in azimuthal integration bin size" << endl << "   [--minslice <minSliceThickness>" << endl << "      minimum slice thickness in Angstroms, default is 1 " << endl << "   [--mtf_file <mtf_filepath>]" << endl << "      simulate detector modulation transfer" << endl << "       function (MTF) using the values contained" << endl << "       in the specified file containing a domain" << endl << "       on the first line and MTF values in units of the image Nyquist frequecy (0.5*sample_rate) on the second" << endl << "   [--mtf_sampling_rate <values>]" << endl << "      list of sampling rates or resolution of the modulation" << endl << "       transfer function in inverse angstroms" << endl << "   [--images]" << endl << "      generate and save images" << endl << "   [--netcdfimages]" << endl << "      save images as netcdf files" << endl << "   [--netcdfvariance]" << endl << "      save 1-D variance as netcdf files" << endl << "   [--Vomega]" << endl << "      FEM: normalized variance of the annular mean" << endl << "   [--Vr]" << endl << "      FEM: mean of normalized variances of rings" << endl << "   [--Vre]" << endl << "      FEM: normalized variance of ring ensemble" << endl << "   [--Omegavimage]" << endl << "      FEM: annular mean of variance image" << endl << "   [--Vgt17]" << endl << "      FEM: ratio of annular means of mean diffraction squared and the square of" << endl << "      mean diffraction" << endl << "   [--Vphi]" << endl << "      FEM: angular normalized variance of the average diffraction" << endl << "   [--correlograph]" << endl << "      FEM: 2-D average of autocorrelation along azimuthal phi axis" << endl << "   [--correlograph_everyimage]" << endl << "      FEM: 2-D tif image output of autocorrelation along azimuthal phi axis for" << endl << "      every STEM raster point" << endl << "   [--correlograph_everytxt]" << endl << "      FEM: 2-D txt output of autocorrelation along azimuthal phi axis for every" << endl << "      STEM raster point" << endl << "   [--correlograph_variance]" << endl << "      FEM: 2-D variance of autocorrelation along azimuthal phi axis" << endl << "   [--debug]" << endl << "      enable verbose debug output to files and stdout" << endl ;
 //<< endl << "   [--bfctemcorr]" << endl << "      simulate bright field TEM with aberration correction" << endl << "   [--bfctemuncorr] simulate bright field TEM without aberration correction" 
 
 
@@ -174,7 +174,7 @@ int main( int argc, char* argv[])
 
    std::vector< double > mtf;
    std::vector< double > mtf_domain;
-   std::vector< double > mtf_resolutions;
+   double mtf_resolution;
 
    //double azimuthal_binning_size_factor = 1.0;
 
@@ -205,7 +205,7 @@ int main( int argc, char* argv[])
          detector_outer_angle,
          mtf,
          mtf_domain,
-         mtf_resolutions,
+         mtf_resolution,
          raster_spacing,
          azimuthal_binning_size_factor,
          minSliceThickness,
@@ -224,6 +224,45 @@ int main( int argc, char* argv[])
       //failflag = 1 ;
    }
 
+   // debug
+   //if ( flags.debug )
+   //{
+   //   cout << "node " << mynode << "MTF size : " << mtf.size() << endl;
+   //   if (mynode == rootnode)
+   //   {
+   //      cout << "MTF file contents:" << endl;
+   //   }
+   //   for ( std::vector<double>::iterator 
+   //            itr = mtf.begin();
+   //            itr != mtf.end();
+   //            ++itr)
+   //   {
+   //      cout << "node " << mynode << ", mtf : " << *itr << endl;
+   //   }
+   //   for ( std::vector<double>::iterator 
+   //            itr = mtf_domain.begin();
+   //            itr != mtf_domain.end();
+   //            ++itr)
+   //   {
+   //      cout << "node " << mynode << ", mtf_domain : " << *itr << endl;
+   //   }
+   //}
+   // debug
+
+   if ( flags.mtf_file && flags.mtf_resolution )
+   {
+      size_t mtf_domain_size = mtf_domain.size();
+      for ( size_t mtf_domain_idx = 0; 
+            mtf_domain_idx < mtf_domain_size;
+            ++mtf_domain_idx)
+      {
+         mtf_domain[mtf_domain_idx]
+            =
+            (0.5 * mtf_resolution * mtf_domain[mtf_domain_idx])
+            *
+            (0.5 * mtf_resolution * mtf_domain[mtf_domain_idx]);
+      }
+   }
 
    // Read model file
    unsigned int read_xyz_flag = 0;
@@ -806,7 +845,7 @@ int main( int argc, char* argv[])
    MPI_Bcast( yy, Ny, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
    MPI_Bcast( kx_joined, Nx, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
    MPI_Bcast( xx_joined, Nx, MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-   
+
    //////////////////////////////////////////////////////////////////
    // Strategy for efficiently assigning the projected atomic potential:
    //  - At rootnode: reduce Z_array[] to a list of unique atomic 
@@ -1464,6 +1503,9 @@ int main( int argc, char* argv[])
                defocus_spread,   // TODO : implement adfstem with defocus_spread
                alpha_max,
                detector_inner_angle, detector_outer_angle,
+               mtf, // modulation transfer function
+               mtf_domain, // mtf_domain_sqr
+               mtf_resolution,
                lambda, 
                output_prefix + "_adfstem_uncorr",
                local_alloc_size_fftw,
@@ -1542,6 +1584,9 @@ int main( int argc, char* argv[])
                defocus_spread,   // TODO : implement adfstem with defocus_spread
                alpha_max,
                detector_inner_angle, detector_outer_angle,
+               mtf, // modulation transfer function
+               mtf_domain, // mtf_domain_sqr
+               mtf_resolution,
                lambda, 
                output_prefix + "_adfstem_corr",
                local_alloc_size_fftw,
