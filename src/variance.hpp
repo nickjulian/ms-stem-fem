@@ -45,7 +45,7 @@
 #include "indexed_vector_magnitude_sqr.hpp"
 #include "func.hpp"
 #include "radial_discretization.hpp"
-#include "io_netcdf.hpp"
+//#include "io_netcdf.hpp"
 #include "io_txt.hpp"
 #include "tem_io.hpp"
 
@@ -88,17 +88,17 @@ namespace TEM_NS
          MPI_Comm comm
          );
 
-   int variance_2D_BFCTEM(
-         // average of intensity over beam position raster
-         double* data2D_avgs_local, 
-         // average of intensity^{2} over beam position raster
-         double* data2D_sqr_avgs_local,
-         const radial_discretization& sample_rotations,
-         const string& outFilePrefix,
-         const int& mynode,
-         const int& rootnode,
-         MPI_Comm comm
-         );
+   //int variance_2D_BFCTEM(
+   //      // average of intensity over beam position raster
+   //      double* data2D_avgs_local, 
+   //      // average of intensity^{2} over beam position raster
+   //      double* data2D_sqr_avgs_local,
+   //      const radial_discretization& sample_rotations,
+   //      const string& outFilePrefix,
+   //      const int& mynode,
+   //      const int& rootnode,
+   //      MPI_Comm comm
+   //      );
 
    int integrate_out_phi_fftw(
          const fftw_complex* const psi,   // 2-D data input

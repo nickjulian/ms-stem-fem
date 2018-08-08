@@ -2927,27 +2927,27 @@ int TEM_NS::read_parameter_file(
             flags.adfstem_corrected = 1;
             flags.fem = 1;
          }
-         else if ( ! data_descriptor.compare("vgt17") )
+         else if ( ! data_descriptor.compare("v_gt17") )
          {
             flags.gt17 = 1;
          }
-         else if ( ! data_descriptor.compare("vomega") )
+         else if ( ! data_descriptor.compare("v_omega") )
          {
             flags.d1 = 1;
          }
-         else if ( ! data_descriptor.compare("vr") )
+         else if ( ! data_descriptor.compare("vbar_r") )
          {
             flags.d2 = 1;
          }
-         else if ( ! data_descriptor.compare("vre") )
+         else if ( ! data_descriptor.compare("v_re") )
          {
             flags.d3 = 1;
          }
-         else if ( ! data_descriptor.compare("omegavimage") )
+         else if ( ! data_descriptor.compare("omega_vimage") )
          {
             flags.d4 = 1;
          }
-         else if ( ! data_descriptor.compare("vphi") )
+         else if ( ! data_descriptor.compare("v_rbar") )
          {
             flags.rva = 1;
          }
@@ -3053,12 +3053,12 @@ int TEM_NS::read_parameter_file(
                   << "  positions>" << endl
                   << "  adfstemcorrfem" << endl
                   << "  adfstemuncorrfem" << endl
-                  << "  Vgt17" << endl
-                  << "  Vomega" << endl
-                  << "  Vr" << endl
-                  << "  Vre" << endl
-                  << "  Omegavimage" << endl
-                  << "  Vphi" << endl
+                  << "  V_gt17" << endl
+                  << "  V_omega" << endl
+                  << "  Vbar_r" << endl
+                  << "  V_re" << endl
+                  << "  Omega_vimage" << endl
+                  << "  V_rbar" << endl
                   << "  correlograph" << endl
                   << "  correlograph_variance" << endl
                   << "  correlograph_everyimage" << endl
@@ -4071,27 +4071,27 @@ unsigned int TEM_NS::read_cmdline_options(
          flags.adfstem_corrected = 1;
          flags.fem = 1;
       }
-      else if ( args[idx] == "--Vgt17" )
+      else if ( args[idx] == "--V_gt17" )
       {
          flags.gt17 = 1;
       }
-      else if ( args[idx] == "--Vomega" )
+      else if ( args[idx] == "--V_omega" )
       {
          flags.d1 = 1;
       }
-      else if ( args[idx] == "--Vr" )
+      else if ( args[idx] == "--Vbar_r" )
       {
          flags.d2 = 1;
       }
-      else if ( args[idx] == "--Vre" )
+      else if ( args[idx] == "--V_re" )
       {
          flags.d3 = 1;
       }
-      else if ( args[idx] == "--Omegavimage" )
+      else if ( args[idx] == "--Omega_vimage" )
       {
          flags.d4 = 1;
       }
-      else if ( args[idx] == "--Vphi" )
+      else if ( args[idx] == "--V_rbar" )
       {
          flags.rva = 1;
       }
