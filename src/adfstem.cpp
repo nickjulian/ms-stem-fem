@@ -1542,7 +1542,7 @@ int TEM_NS::adfstem(
              //  && 
                flags.debug 
                &&
-               (flags.image_output || flags.netcdf_images))
+               (flags.image_output))// || flags.netcdf_images))
          {
             //if ( mynode == rootnode && flags.debug 
             //      && flags.image_output )
@@ -1594,27 +1594,27 @@ int TEM_NS::adfstem(
                   mynode, rootnode, comm);
             }
 
-            if ( flags.netcdf_images )
-            {
-               if ( mynode == rootnode && flags.debug)
-                  cout << "saving initial probe to netCDF" << endl;
+            //if ( flags.netcdf_images )
+            //{
+            //   if ( mynode == rootnode && flags.debug)
+            //      cout << "saving initial probe to netCDF" << endl;
 
-               if( output_psi_realspace_to_netcdf(
-                     psi,
-                     local_alloc_size_fftw,
-                     Nx_local, kx_joined, Nx, ky, Ny,
-                     outFileName_prefix 
-                        + "_initial_probe_realspace",
-                     psi_mag_strides,
-                     psi_mag_displacements,
-                     mynode, rootnode, comm
-                     ) == EXIT_FAILURE)
-                  cout << "output_psi_realspace_to_netcdf() failed" 
-                     << endl;
-            }
-            // TODO: uncomment if evaluating the probe rather than copying
-            //        it
-            //fftw_execute( pf_c2c_psi ); // debug
+            //   if( output_psi_realspace_to_netcdf(
+            //         psi,
+            //         local_alloc_size_fftw,
+            //         Nx_local, kx_joined, Nx, ky, Ny,
+            //         outFileName_prefix 
+            //            + "_initial_probe_realspace",
+            //         psi_mag_strides,
+            //         psi_mag_displacements,
+            //         mynode, rootnode, comm
+            //         ) == EXIT_FAILURE)
+            //      cout << "output_psi_realspace_to_netcdf() failed" 
+            //         << endl;
+            //}
+            //// TODO: uncomment if evaluating the probe rather than copying
+            ////        it
+            ////fftw_execute( pf_c2c_psi ); // debug
          }
 
          // transform translated beam into reciprocal space for slice loop
@@ -1927,29 +1927,29 @@ int TEM_NS::adfstem(
               << *x_itr << ", " << *y_itr << ")" << endl;
 
          if ( first_probe_flag 
-               && (flags.image_output || flags.netcdf_images) )
+               && (flags.image_output))// || flags.netcdf_images) )
          {
-            if ( mynode == rootnode && flags.debug 
-                  && flags.netcdf_images )
-            {
-               cout << "writing first diffraction to netcdf" << endl;
-               if( output_psi_reciprocalspace_to_netcdf(
-                     psi,
-                     local_alloc_size_fftw,
-                     Nx_local, kx_joined, Nx, ky, Ny,
-                     outFileName_prefix 
-                        + "_first" 
-                        + TEM_NS::to_string(*x_itr) 
-                        + "_" + TEM_NS::to_string(*y_itr),
-                     psi_mag_strides,
-                     psi_mag_displacements,
-                     mynode, rootnode, comm
-                     ) == EXIT_FAILURE )
-               {
-                  cout << "output_psi_realspace_to_netcdf() failed" 
-                     << endl;
-               }
-            }
+            //if ( mynode == rootnode && flags.debug 
+            //      && flags.netcdf_images )
+            //{
+            //   cout << "writing first diffraction to netcdf" << endl;
+            //   if( output_psi_reciprocalspace_to_netcdf(
+            //         psi,
+            //         local_alloc_size_fftw,
+            //         Nx_local, kx_joined, Nx, ky, Ny,
+            //         outFileName_prefix 
+            //            + "_first" 
+            //            + TEM_NS::to_string(*x_itr) 
+            //            + "_" + TEM_NS::to_string(*y_itr),
+            //         psi_mag_strides,
+            //         psi_mag_displacements,
+            //         mynode, rootnode, comm
+            //         ) == EXIT_FAILURE )
+            //   {
+            //      cout << "output_psi_realspace_to_netcdf() failed" 
+            //         << endl;
+            //   }
+            //}
 
             // scale factor for logarithmic scaling of diffraction images
             
@@ -2122,27 +2122,27 @@ int TEM_NS::adfstem(
                   mynode, rootnode, comm
                   );
                   
-            if ( flags.netcdf_images )
-            {
-               if ( mynode == rootnode && flags.debug)
-                  cout << "saving initial probe to netCDF" << endl;
+            //if ( flags.netcdf_images )
+            //{
+            //   if ( mynode == rootnode && flags.debug)
+            //      cout << "saving initial probe to netCDF" << endl;
 
-               if( output_psi_realspace_to_netcdf(
-                     psi,
-                     local_alloc_size_fftw,
-                     Nx_local, kx_joined, Nx, ky, Ny,
-                     outFileName_prefix 
-                        + "_diffraction_raster_position_"
-                        + to_string(pixel_number_x) 
-                        + "_"
-                        + to_string(pixel_number_y) ,
-                     psi_mag_strides,
-                     psi_mag_displacements,
-                     mynode, rootnode, comm
-                     ) == EXIT_FAILURE)
-                  cout << "output_psi_realspace_to_netcdf() failed" 
-                     << endl;
-            }
+            //   if( output_psi_realspace_to_netcdf(
+            //         psi,
+            //         local_alloc_size_fftw,
+            //         Nx_local, kx_joined, Nx, ky, Ny,
+            //         outFileName_prefix 
+            //            + "_diffraction_raster_position_"
+            //            + to_string(pixel_number_x) 
+            //            + "_"
+            //            + to_string(pixel_number_y) ,
+            //         psi_mag_strides,
+            //         psi_mag_displacements,
+            //         mynode, rootnode, comm
+            //         ) == EXIT_FAILURE)
+            //      cout << "output_psi_realspace_to_netcdf() failed" 
+            //         << endl;
+            //}
          }
 
          /////////////////////////////////////////////////////////////
@@ -2527,37 +2527,37 @@ int TEM_NS::adfstem(
 
                if ( ftem_d1[idx] < 0.0 )
                {
-                  cout << " WARNING, fem --Vomega, ftem_d1[" 
+                  cout << " WARNING, fem --V_omega, ftem_d1[" 
                      << idx << "] < 0.0 : "
                      << ftem_d1[idx] << endl;
                }
             }
 
-            // write the Vomega variance to a file
-            if( flags.netcdf_variance )
+            // write the V_omega variance to a file
+            //if( flags.netcdf_variance )
+            //{
+            //   if ( 
+            //         output_variance_to_netcdf(
+            //            ftem_d1,
+            //            k_binning_boundaries,
+            //            outFileName_prefix + "_fem_V_omega"
+            //         ) != EXIT_SUCCESS)
+            //   {
+            //      cout << " failed to write variance data to a"
+            //        << " netCDF file : " << outFileName_prefix << endl;
+            //   }
+            //} else {
+            if ( 
+               output_variance_to_txt(
+                     ftem_d1,
+                     k_binning_boundaries,
+                     outFileName_prefix + "_fem_V_omega"
+                  ) != EXIT_SUCCESS)
             {
-               if ( 
-                     output_variance_to_netcdf(
-                        ftem_d1,
-                        k_binning_boundaries,
-                        outFileName_prefix + "_fem_Vomega"
-                     ) != EXIT_SUCCESS)
-               {
-                  cout << " failed to write variance data to a"
-                    << " netCDF file : " << outFileName_prefix << endl;
-               }
-            } else {
-               if ( 
-                  output_variance_to_txt(
-                        ftem_d1,
-                        k_binning_boundaries,
-                        outFileName_prefix + "_fem_Vomega"
-                     ) != EXIT_SUCCESS)
-               {
-                  cout << " failed to write variance data to a"
-                     << " txt file : " << outFileName_prefix << endl;
-               }
+               cout << " failed to write variance data to a"
+                  << " txt file : " << outFileName_prefix << endl;
             }
+            //}
          } // rootnode
       } // flags.d1
 
@@ -2573,37 +2573,37 @@ int TEM_NS::adfstem(
 
                if ( diffracted_wave_variance_sum[ii] < 0.0 )
                {
-                  cout << " WARNING, fem --Vr,"
+                  cout << " WARNING, fem --Vbar_r,"
                      << " diffracted_wave_variance_sum[" 
                      << ii << "] < 0.0 : "
                      << diffracted_wave_variance_sum[ii] << endl;
                }
             }
             // write the d2 variance to a file
-            if( flags.netcdf_variance )
+            //if( flags.netcdf_variance )
+            //{
+            //   if (
+            //         output_variance_to_netcdf(
+            //            diffracted_wave_variance_sum,
+            //            k_binning_boundaries,
+            //            outFileName_prefix + "_fem_Vbar_r"
+            //         ) != EXIT_SUCCESS)
+            //   {
+            //      cout << " failed to write variance data to a"
+            //        << " netCDF file : " << outFileName_prefix << endl;
+            //   }
+            //} else {
+            if (
+               output_variance_to_txt(
+                     diffracted_wave_variance_sum,
+                     k_binning_boundaries,
+                     outFileName_prefix + "_fem_Vbar_r"
+                  ) != EXIT_SUCCESS)
             {
-               if (
-                     output_variance_to_netcdf(
-                        diffracted_wave_variance_sum,
-                        k_binning_boundaries,
-                        outFileName_prefix + "_fem_Vr"
-                     ) != EXIT_SUCCESS)
-               {
-                  cout << " failed to write variance data to a"
-                    << " netCDF file : " << outFileName_prefix << endl;
-               }
-            } else {
-               if (
-                  output_variance_to_txt(
-                        diffracted_wave_variance_sum,
-                        k_binning_boundaries,
-                        outFileName_prefix + "_fem_Vr"
-                     ) != EXIT_SUCCESS)
-               {
-                  cout << " failed to write --Vr data to a"
-                     << " txt file : " << outFileName_prefix << endl;
-               }
+               cout << " failed to write --Vbar_r data to a"
+                  << " txt file : " << outFileName_prefix << endl;
             }
+            //}
          } // rootnode
       } // flags.d2 
 
@@ -2810,29 +2810,29 @@ int TEM_NS::adfstem(
 
          } // flags.image_output && flags.complex_realspace_sum
 
-         if (flags.complex_realspace_sum && flags.netcdf_images)
-         {
-           if(
-              output_psi_reciprocalspace_to_netcdf(
-                     diffracted_wave_fftw_complex_sum,
-                     local_alloc_size_fftw,
-                     Nx_local,
-                     kx_joined, Nx,
-                     ky, Ny,
-                     outFileName_prefix 
-                        + "_diffracted_wave_fftw_complex_sum",
-                     psi_mag_strides,
-                     psi_mag_displacements,
-                     mynode, rootnode, comm
-                     ) == EXIT_FAILURE
-           )
-           {
-              cout << "output_psi_reciprocalspace_to_netcdf() failed" 
-                 << endl;
-               fftw_free( diffracted_wave_fftw_complex_sum ); // debug
+         //if (flags.complex_realspace_sum && flags.netcdf_images)
+         //{
+         //  if(
+         //     output_psi_reciprocalspace_to_netcdf(
+         //            diffracted_wave_fftw_complex_sum,
+         //            local_alloc_size_fftw,
+         //            Nx_local,
+         //            kx_joined, Nx,
+         //            ky, Ny,
+         //            outFileName_prefix 
+         //               + "_diffracted_wave_fftw_complex_sum",
+         //            psi_mag_strides,
+         //            psi_mag_displacements,
+         //            mynode, rootnode, comm
+         //            ) == EXIT_FAILURE
+         //  )
+         //  {
+         //     cout << "output_psi_reciprocalspace_to_netcdf() failed" 
+         //        << endl;
+         //      fftw_free( diffracted_wave_fftw_complex_sum ); // debug
 
-            }
-         }
+         //   }
+         //}
 
          if ( flags.gt17 || flags.d3 )
          {
@@ -2922,23 +2922,23 @@ int TEM_NS::adfstem(
                }
 
                // save output of gt17
-               if( flags.netcdf_variance )
-               {
-                  if ( 
-                        output_variance_to_netcdf(
-                           ftem_gt17,
-                           k_binning_boundaries,
-                           outFileName_prefix 
-                              + "_fem_Vgt17"
-                        ) != EXIT_SUCCESS)
-                  {
-                     cout << " failed to write Vgt17 variance data to"
-                       << " netCDF file : " 
-                       << outFileName_prefix 
-                           + "_fem_Vgt17.nc" 
-                       << endl;
-                  }
-               } else {
+               //if( flags.netcdf_variance )
+               //{
+               //   if ( 
+               //         output_variance_to_netcdf(
+               //            ftem_gt17,
+               //            k_binning_boundaries,
+               //            outFileName_prefix 
+               //               + "_fem_V_gt17"
+               //         ) != EXIT_SUCCESS)
+               //   {
+               //      cout << " failed to write V_gt17 variance data to"
+               //        << " netCDF file : " 
+               //        << outFileName_prefix 
+               //            + "_fem_V_gt17.nc" 
+               //        << endl;
+               //   }
+               //} else {
                   // debug
                   //output_variance_to_txt(
                   //   diffracted_wave_radial_intensity_sqr_avg_gt17,
@@ -2958,16 +2958,16 @@ int TEM_NS::adfstem(
                            ftem_gt17,
                            k_binning_boundaries,
                            outFileName_prefix 
-                              + "_fem_Vgt17"
+                              + "_fem_V_gt17"
                         ) != EXIT_SUCCESS)
                   {
-                     cout << " failed to write Vgt17 variance data"
+                     cout << " failed to write V_gt17 variance data"
                         << " to a txt file : " 
                         << outFileName_prefix 
-                           + "_fem_Vgt17.txt"
+                           + "_fem_V_gt17.txt"
                         << endl;
-                  }
-               } // gt17 text output block
+                  } // gt17 text output block
+               //} 
             } // mynode == rootnode && flags.gt17 
          } // flags.gt17 || flags.rva
 
@@ -3034,74 +3034,74 @@ int TEM_NS::adfstem(
                // save output of d3
                if ( flags.d3 ) 
                {
-                  if( flags.netcdf_variance )
-                  {
-                     if ( 
-                           output_variance_to_netcdf(
-                              ftem_d3,
-                              k_binning_boundaries,
-                              outFileName_prefix 
-                                 + "_fem_Vre"
-                           ) != EXIT_SUCCESS)
-                     {
-                        cout << " failed to write --Vre variance data to"
-                          << " netCDF file : " 
-                          << outFileName_prefix 
-                              + "_fem_Vre.nc" 
-                          << endl;
-                     }
-                  } else {
+                  //if( flags.netcdf_variance )
+                  //{
+                  //   if ( 
+                  //         output_variance_to_netcdf(
+                  //            ftem_d3,
+                  //            k_binning_boundaries,
+                  //            outFileName_prefix 
+                  //               + "_fem_V_re"
+                  //         ) != EXIT_SUCCESS)
+                  //   {
+                  //      cout << " failed to write --V_re variance data to"
+                  //        << " netCDF file : " 
+                  //        << outFileName_prefix 
+                  //            + "_fem_V_re.nc" 
+                  //        << endl;
+                  //   }
+                  //} else {
                      if ( 
                         output_variance_to_txt(
                               ftem_d3,
                               k_binning_boundaries,
                               outFileName_prefix 
-                                 + "_fem_Vre"
+                                 + "_fem_V_re"
                            ) != EXIT_SUCCESS)
                      {
-                        cout << " failed to write --Vre variance data"
+                        cout << " failed to write --V_re variance data"
                            << " to a txt file : " 
                            << outFileName_prefix 
-                              + "_fem_Vre.txt"
+                              + "_fem_V_re.txt"
                            << endl;
                      }
-                  } // d3 text output block
+                  //} // d3 text output block
                } // flags.d3
 
                if ( flags.rva ) 
                {
-                  if( flags.netcdf_variance )
-                  {
-                     if ( 
-                           output_variance_to_netcdf(
-                              ftem_rva,
-                              k_binning_boundaries,
-                              outFileName_prefix 
-                                 + "_fem_Vphi"
-                           ) != EXIT_SUCCESS)
-                     {
-                        cout << " failed to write --Vphi variance data to"
-                          << " netCDF file : " 
-                          << outFileName_prefix 
-                              + "_fem_Vphi.nc" 
-                          << endl;
-                     }
-                  } else {
+                  //if( flags.netcdf_variance )
+                  //{
+                  //   if ( 
+                  //         output_variance_to_netcdf(
+                  //            ftem_rva,
+                  //            k_binning_boundaries,
+                  //            outFileName_prefix 
+                  //               + "_fem_V_rbar"
+                  //         ) != EXIT_SUCCESS)
+                  //   {
+                  //      cout << " failed to write --V_rbar variance data"
+                  //        << " to netCDF file : " 
+                  //        << outFileName_prefix 
+                  //            + "_fem_V_rbar.nc" 
+                  //        << endl;
+                  //   }
+                  //} else {
                      if ( 
                         output_variance_to_txt(
                               ftem_rva,
                               k_binning_boundaries,
                               outFileName_prefix 
-                                 + "_fem_Vphi"
+                                 + "_fem_V_rbar"
                            ) != EXIT_SUCCESS)
                      {
-                        cout << " failed to write --Vphi variance data"
+                        cout << " failed to write --V_rbar variance data"
                            << " to a txt file : " 
                            << outFileName_prefix 
-                              + "_fem_Vphi.txt"
+                              + "_fem_V_rbar.txt"
                            << endl;
                      }
-                  } // rva text output block
+                  //} // rva text output block
                } // flags.rva
             } // root node 
          } // flags.d3 || flags.rva
@@ -3195,38 +3195,38 @@ int TEM_NS::adfstem(
                   ftem_d4[ii] = ftem_d4[ii] / k_bin_counts_aggregated[ii];
                }
                // save output of d4
-               if( flags.netcdf_variance )
-               {
-                  if ( 
-                        output_variance_to_netcdf(
-                           ftem_d4,
-                           k_binning_boundaries,
-                           outFileName_prefix 
-                              + "_fem_Omegavimage"
-                        ) != EXIT_SUCCESS)
-                  {
-                     cout << " failed to write --Omegavimage variance data to"
-                       << " netCDF file : " 
-                       << outFileName_prefix 
-                           + "_fem_Omegavimage.nc" 
-                       << endl;
-                  }
-               } else {
+               //if( flags.netcdf_variance )
+               //{
+               //   if ( 
+               //         output_variance_to_netcdf(
+               //            ftem_d4,
+               //            k_binning_boundaries,
+               //            outFileName_prefix 
+               //               + "_fem_Omega_vimage"
+               //         ) != EXIT_SUCCESS)
+               //   {
+               //      cout << " failed to write --Omega_vimage variance data to"
+               //        << " netCDF file : " 
+               //        << outFileName_prefix 
+               //            + "_fem_Omega_vimage.nc" 
+               //        << endl;
+               //   }
+               //} else {
                   if ( 
                      output_variance_to_txt(
                            ftem_d4,
                            k_binning_boundaries,
                            outFileName_prefix 
-                              + "_fem_Omegavimage"
+                              + "_fem_Omega_vimage"
                         ) != EXIT_SUCCESS)
                   {
-                     cout << " failed to write --Omegavimage variance data"
+                     cout << " failed to write --Omega_vimage variance data"
                         << " to a txt file : " 
                         << outFileName_prefix 
-                           + "_fem_Omegavimage.txt"
+                           + "_fem_Omega_vimage.txt"
                         << endl;
-                  }
-               } // d4 text output block
+                  } // d4 text output block
+               //}
             }
          }
 

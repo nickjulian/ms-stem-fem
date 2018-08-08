@@ -47,7 +47,7 @@
 #include "slice.hpp"            
 #include "probe_wavefunction.hpp"         // convergent probe wavefunction
 #include "variance.hpp"
-#include "io_netcdf.hpp"
+//#include "io_netcdf.hpp"
 #include "tem_io.hpp"
 #include "indexed_vector_magnitude_sqr.hpp"
 

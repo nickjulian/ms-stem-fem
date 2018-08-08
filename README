@@ -26,9 +26,11 @@ include              location of locally compiled files to include
 MS-STEM-FEM makes use of the following libraries, which must be
 present on the system for which it is compiled:
 
-  FFTW version 3.3.6 or later compiled with MPI capabilities
-
-  NetCDF 
+  FFTW version 3.3.6 or later compiled with MPI capabilities 
+     <fftw3-mpi.h>
+  
+  libtiff 
+     <tiffio.h>
 
 Modification of build/Makefile may be required to ensure proper library
 inclusion and compiler selection.

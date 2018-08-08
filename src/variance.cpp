@@ -562,19 +562,19 @@ int TEM_NS::variance_1D_STEM(
    }
 
    // debug
-   if( input_flag_netcdf_variance )
-   {
-      output_variance_to_netcdf(
-         diffracted_wave_radial_intensity_sqr_sum,
-         binning_boundaries,
-         outFilePrefix + "_radial_intensity_sqr_sum"
-         );
-      output_variance_to_netcdf(
-         diffracted_wave_radial_intensity_sum,
-         binning_boundaries,
-         outFilePrefix + "_radial_intensity_sum"
-         );
-   } else {
+   //if( input_flag_netcdf_variance )
+   //{
+   //   output_variance_to_netcdf(
+   //      diffracted_wave_radial_intensity_sqr_sum,
+   //      binning_boundaries,
+   //      outFilePrefix + "_radial_intensity_sqr_sum"
+   //      );
+   //   output_variance_to_netcdf(
+   //      diffracted_wave_radial_intensity_sum,
+   //      binning_boundaries,
+   //      outFilePrefix + "_radial_intensity_sum"
+   //      );
+   //} else {
       output_variance_to_txt(
          diffracted_wave_radial_intensity_sqr_sum,
          binning_boundaries,
@@ -585,23 +585,23 @@ int TEM_NS::variance_1D_STEM(
          binning_boundaries,
          outFilePrefix + "_radial_intensity_sum"
          );
-   }
+   //}
    //end debug
 
    // write the variance to a file
-   if( input_flag_netcdf_variance )
-   {
-      if ( 
-            output_variance_to_netcdf(
-               variance,
-               binning_boundaries,
-               outFilePrefix + "_radial_intensity_variance"
-            ) != EXIT_SUCCESS)
-      {
-         cout << " failed to write variance data to netCDF file : " 
-            << outFilePrefix << endl;
-      }
-   } else {
+   //if( input_flag_netcdf_variance )
+   //{
+   //   if ( 
+   //         output_variance_to_netcdf(
+   //            variance,
+   //            binning_boundaries,
+   //            outFilePrefix + "_radial_intensity_variance"
+   //         ) != EXIT_SUCCESS)
+   //   {
+   //      cout << " failed to write variance data to netCDF file : " 
+   //         << outFilePrefix << endl;
+   //   }
+   //} else {
       if ( 
          output_variance_to_txt(
                variance,
@@ -612,7 +612,7 @@ int TEM_NS::variance_1D_STEM(
          cout << " failed to write variance data to a txt file : " 
             << outFilePrefix << endl;
       }
-   }
+   //}
 }
 
 // TODO: rewrite variance_2D_STEM() to work within revised adfstem()
@@ -1046,85 +1046,85 @@ int TEM_NS::variance_2D_STEM(
 
 
 
-int TEM_NS::variance_2D_BFCTEM( 
-      double* data2D_avgs_local,
-      double* data2D_sqr_avgs_local,
-      const radial_discretization& sample_rotations,
-      const string& outFilePrefix,
-      const int& mynode,
-      const int& rootnode,
-      MPI_Comm comm
-      )
-{
-   double* variance;
-   double* data1D_avgs_reduced;
-   double* data1D_sqr_avgs_reduced ;
-   size_t number_of_q = sample_rotations.size();
-
-   if ( mynode == rootnode )
-   {
-      data1D_avgs_reduced = new double[ number_of_q ];
-      data1D_sqr_avgs_reduced = new double[ number_of_q ];
-      variance = new double[ number_of_q ];
-   }
-   
-   MPI_Reduce( data2D_avgs_local, data1D_avgs_reduced, 
-               number_of_q, MPI_DOUBLE, MPI_SUM, 
-               rootnode, comm);
-   MPI_Reduce( data2D_sqr_avgs_local, data1D_sqr_avgs_reduced, 
-               number_of_q, MPI_DOUBLE, MPI_SUM, 
-               rootnode, comm);
-
-
-   if ( mynode == rootnode )
-   {
-
-      for( size_t i=0; i<number_of_q; ++i)
-      {
-         if ( data1D_avgs_reduced[i] != 0.0 )
-         {
-            variance[i] 
-               = 
-               (
-                data1D_sqr_avgs_reduced[i] 
-                / ( data1D_avgs_reduced[i] * data1D_avgs_reduced[i] )
-               ) - 1.0;
-         }
-         else
-         {
-            variance[i] = 0.0;
-         }
-      }
-
-      // output_variance_to_netcdf() requires a list<double> of binning
-      //  boundaries
-      //std::list<double> binning_boundaries;
-      //for( radial_discretization::const_iterator 
-      //      rad_itr = sample_rotations.begin();
-      //      rad_itr != sample_rotations.end();
-      //      ++rad_itr)
-      //{
-      //   binning_boundaries.push_back( rad_itr->radius );
-      //}
-
-      if ( output_variance_to_netcdf(
-               variance,
-               sample_rotations,
-               outFilePrefix + "_avgs"
-               ) != EXIT_SUCCESS)
-      {
-         cout << "failed to write variance data to netCDF file : "
-            << outFilePrefix << endl;
-      }
-   }
-
-   if ( mynode == rootnode )
-   {
-      delete[] data1D_avgs_reduced;
-      delete[] data1D_sqr_avgs_reduced;
-      //delete[] variance;
-   }
-
-   return EXIT_SUCCESS;
-}
+//int TEM_NS::variance_2D_BFCTEM( 
+//      double* data2D_avgs_local,
+//      double* data2D_sqr_avgs_local,
+//      const radial_discretization& sample_rotations,
+//      const string& outFilePrefix,
+//      const int& mynode,
+//      const int& rootnode,
+//      MPI_Comm comm
+//      )
+//{
+//   double* variance;
+//   double* data1D_avgs_reduced;
+//   double* data1D_sqr_avgs_reduced ;
+//   size_t number_of_q = sample_rotations.size();
+//
+//   if ( mynode == rootnode )
+//   {
+//      data1D_avgs_reduced = new double[ number_of_q ];
+//      data1D_sqr_avgs_reduced = new double[ number_of_q ];
+//      variance = new double[ number_of_q ];
+//   }
+//   
+//   MPI_Reduce( data2D_avgs_local, data1D_avgs_reduced, 
+//               number_of_q, MPI_DOUBLE, MPI_SUM, 
+//               rootnode, comm);
+//   MPI_Reduce( data2D_sqr_avgs_local, data1D_sqr_avgs_reduced, 
+//               number_of_q, MPI_DOUBLE, MPI_SUM, 
+//               rootnode, comm);
+//
+//
+//   if ( mynode == rootnode )
+//   {
+//
+//      for( size_t i=0; i<number_of_q; ++i)
+//      {
+//         if ( data1D_avgs_reduced[i] != 0.0 )
+//         {
+//            variance[i] 
+//               = 
+//               (
+//                data1D_sqr_avgs_reduced[i] 
+//                / ( data1D_avgs_reduced[i] * data1D_avgs_reduced[i] )
+//               ) - 1.0;
+//         }
+//         else
+//         {
+//            variance[i] = 0.0;
+//         }
+//      }
+//
+//      // output_variance_to_netcdf() requires a list<double> of binning
+//      //  boundaries
+//      //std::list<double> binning_boundaries;
+//      //for( radial_discretization::const_iterator 
+//      //      rad_itr = sample_rotations.begin();
+//      //      rad_itr != sample_rotations.end();
+//      //      ++rad_itr)
+//      //{
+//      //   binning_boundaries.push_back( rad_itr->radius );
+//      //}
+//
+//      if ( output_variance_to_netcdf(
+//               variance,
+//               sample_rotations,
+//               outFilePrefix + "_avgs"
+//               ) != EXIT_SUCCESS)
+//      {
+//         cout << "failed to write variance data to netCDF file : "
+//            << outFilePrefix << endl;
+//      }
+//   }
+//
+//   if ( mynode == rootnode )
+//   {
+//      delete[] data1D_avgs_reduced;
+//      delete[] data1D_sqr_avgs_reduced;
+//      //delete[] variance;
+//   }
+//
+//   return EXIT_SUCCESS;
+//}
 #endif
