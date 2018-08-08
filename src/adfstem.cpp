@@ -270,8 +270,7 @@ int TEM_NS::adfstem(
       {
          for ( size_t j=0; j < Ny; ++j)
          {
-            ksqr = kx_local[j + i * Ny] * kx_local[j + i * Ny]
-                     + ky[j + i * Ny] * ky[j + i * Ny];
+            ksqr = kx_local[i] * kx_local[i] + ky[j] * ky[j];
 
             mtf_2D_split[j + i * Ny] = 0; // default value
             for ( size_t mtf_idx = 0; mtf_idx < mtf_1D_size -1; ++mtf_idx)
@@ -280,14 +279,19 @@ int TEM_NS::adfstem(
                {
                   mtf_2D_split[j + i * Ny] = mtf_1D[mtf_idx];
                }
-               if ( (ksqr >= mtf_domain_sqr[mtf_idx]) 
-                     && (ksqr < mtf_domain_sqr[mtf_idx+1]) )
+               if ( 
+                     (ksqr >= mtf_domain_sqr[mtf_idx]) 
+                     && (ksqr < mtf_domain_sqr[mtf_idx+1]) 
+                     //&& (ksqr < (bwcutoff_t * bwcutoff_t))
+                     //&& (mtf_domain_sqr[mtf_idx+1] 
+                     //      < (bwcutoff_t * bwcutoff_t))
+                  )
                {
                   double domain1 = sqrt(mtf_domain_sqr[mtf_idx]);
                   double domain2 = sqrt(mtf_domain_sqr[mtf_idx+1]);
                   mtf_2D_split[j + i * Ny] = 
-                     mtf_1D[mtf_idx] +
-                      (mtf_1D[mtf_idx+1] - mtf_1D[mtf_idx])
+                     mtf_1D[mtf_idx] 
+                     + (mtf_1D[mtf_idx+1] - mtf_1D[mtf_idx])
                        *(sqrt(ksqr) - domain1)/(domain2 - domain1);
                }
             }
@@ -2022,7 +2026,34 @@ int TEM_NS::adfstem(
          //-----------------------------------------------------------
          // End of beam transmission through individual slices
          //-----------------------------------------------------------
-         
+         // TODO: bandwidth limit for mtf operation
+         if ( flags.mtf_file && flags.mtf_resolution )
+         {
+            fftw_execute( pb_c2c_psi );
+
+            for (size_t i=0; i < Nx_local; ++i)
+            {
+               for ( size_t j=0; j < Ny; ++j)
+               {
+                  psi[j + i * Ny][0] = 
+                     psi[j + i * Ny][0] 
+                        * mtf_2D_split[j + i * Ny]/sqrtNxNy;
+                  
+                  psi[j + i * Ny][1] = 
+                     psi[j + i * Ny][1] 
+                        * mtf_2D_split[j + i * Ny]/sqrtNxNy;
+               }
+            }
+            //  transform psi back into reciprocal space
+            fftw_execute( pf_c2c_psi );
+            // renormalize
+            for (size_t i=0; i < local_alloc_size_fftw; ++i)
+            {
+                  psi[i][0] = psi[i][0] / sqrtNxNy;
+                  psi[i][1] = psi[i][1] / sqrtNxNy;
+            }
+         }
+
          if ( flags.diffraction_output )
          {
             if ( flags.debug && mynode == rootnode )
@@ -2127,34 +2158,6 @@ int TEM_NS::adfstem(
 
          if ( flags.fem )
          {
-            if ( flags.mtf_file && flags.mtf_resolution )
-            {
-               fftw_execute( pb_c2c_psi );
-
-               for (size_t i=0; i < Nx_local; ++i)
-               {
-                  for ( size_t j=0; j < Ny; ++j)
-                  {
-                     psi[j + i * Ny][0] = 
-                        psi[j + i * Ny][0] 
-                           * mtf_2D_split[j + i * Ny]/sqrtNxNy;
-                     
-                     psi[j + i * Ny][1] = 
-                        psi[j + i * Ny][1] 
-                           * mtf_2D_split[j + i * Ny]/sqrtNxNy;
-                  }
-               }
-               //  transform psi back into reciprocal space
-               fftw_execute( pf_c2c_psi );
-               // renormalize
-               for (size_t i=0; i < local_alloc_size_fftw; ++i)
-               {
-                     psi[i][0] = psi[i][0] / sqrtNxNy;
-                     psi[i][1] = psi[i][1] / sqrtNxNy;
-               }
-               
-               // proceed with the rest of the FEM calculations on psi
-            }
                
             if ( (mynode == rootnode) && flags.debug )
                cout << "calculating and accumulating FTEM quanitites ..." 

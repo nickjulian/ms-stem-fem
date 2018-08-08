@@ -1678,12 +1678,12 @@ int main( int argc, char* argv[])
       delete[] q_duped;
       //delete[] Z_array_duped;
    }
-   if ( flags.mtf_file )
-   {
-   //   mtf;
-   //   mtf_domain;
-   //   // TODO: does the mtf need to be split among nodes into local sub-intervals? Not the 1-D MTF, but the 2-D MTF does.
-   }
+   //if ( flags.mtf_file )
+   //{
+   ////   mtf;
+   ////   mtf_domain;
+   ////   // TODO: does the mtf need to be split among nodes into local sub-intervals? Not the 1-D MTF, but the 2-D MTF does.
+   //}
 
    delete[] kx_local;
    delete[] kx_joined;
