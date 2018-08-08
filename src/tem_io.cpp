@@ -3074,8 +3074,8 @@ int TEM_NS::read_parameter_file(
                   << "  minslice <minimum slice thickness>" << endl
                   << "  images" << endl
                   << "  diffractionimages" << endl
-                  << "  netcdfimages" << endl
-                  << "  netcdfvariance" << endl
+                  //<< "  netcdfimages" << endl
+                  //<< "  netcdfvariance" << endl
                   << "  debug" << endl;
             }
             data_file.close();
