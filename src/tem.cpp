@@ -256,12 +256,9 @@ int main( int argc, char* argv[])
       for ( size_t mtf_domain_idx = 0; 
             mtf_domain_idx < mtf_domain_size;
             ++mtf_domain_idx)
-      {
+      { // mtf_file was in units of Nyquist freq. = 0.5 * sampling freq.
          mtf_domain[mtf_domain_idx]
-            =
-            (0.5 * mtf_resolution * mtf_domain[mtf_domain_idx])
-            *
-            (0.5 * mtf_resolution * mtf_domain[mtf_domain_idx]);
+            = pow((0.5 * mtf_resolution * mtf_domain[mtf_domain_idx]), 2);
       }
    }
 

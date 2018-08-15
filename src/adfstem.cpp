@@ -234,8 +234,8 @@ int TEM_NS::adfstem(
    // If using a detector modulation transfer function, allocate 
    //  its two dimensional representation
    //////////////////////////////////////////////////////////////////
-   //fftw_complex* mtf_joined; 
-   double* mtf_2D_split; 
+   fftw_complex* mtf_2D_split; 
+   fftw_plan pf_c2c_mtf, pb_c2c_mtf;
    if ( flags.mtf_file && flags.mtf_resolution )
    {
       ///////////////////////////////////////////////////////////////////
@@ -243,21 +243,30 @@ int TEM_NS::adfstem(
       //  transfer function
       ///////////////////////////////////////////////////////////////////
 
-      mtf_2D_split = new double[ Nx_local * Ny ];
+      mtf_2D_split =  fftw_alloc_complex( local_alloc_size_fftw );
+      pf_c2c_mtf = fftw_mpi_plan_dft_2d( // c2c in-place fft,
+                                 Nx, Ny, 
+                                 mtf_2D_split, mtf_2D_split,
+                                 //comm, FFTW_FORWARD, FFTW_ESTIMATE );
+                                 //comm, FFTW_FORWARD, FFTW_PATIENT );
+                                 //comm, FFTW_FORWARD, FFTW_EXHAUSTIVE );
+                                 comm, FFTW_FORWARD, FFTW_MEASURE );
+
+      pb_c2c_mtf = fftw_mpi_plan_dft_2d( // c2c in-place fft,
+                                 Nx, Ny, 
+                                 mtf_2D_split, mtf_2D_split,
+                                 //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
+                                 //comm, FFTW_BACKWARD, FFTW_PATIENT );
+                                 //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
+                                 comm, FFTW_BACKWARD, FFTW_MEASURE );
+
       // use mtf_1D, mtf_domain_sqr, and mtf_resolution to evaluate 
       //  mtf_split 
       // evaluate the 2-D modulation transfer function
       // mtf_resolution [pixels per \AA^{-1}]
       // mtf_domain_sqr: in units of Nyquist frequency 
-      //    = 0.5 * mtf_resolution
-      //for ( std::vector<double>::iterator 
-      //      itr = mtf_1D.begin();
-      //      itr != mtf_1D.end();
-      //      ++itr)
       size_t mtf_1D_size = mtf_1D.size();
-      //size_t mtf_domain_size = mtf_domain_sqr.size(); // unnecessary
-      // mtf_1D.size() == mtf_domain_sqr.size() checked by read_mtf_file()
-      //
+      
       // The following was moved to tem.cpp since the domain is const here
       //for ( size_t idx=0; idx < mtf_1D_size; ++idx)
       //{  
@@ -265,37 +274,141 @@ int TEM_NS::adfstem(
       //   mtf_domain_sqr[idx] = mtf_domain_sqr[idx] * mtf_domain_sqr[idx]; 
       //}
 
-      double ksqr;
+      // Evaluate the 2-D MTF from the 1-D input
+      double rsqr, domain1, domain2, sincx, sincy, sincarg;
       for ( size_t i=0; i < Nx_local; ++i)
       {
          for ( size_t j=0; j < Ny; ++j)
          {
-            ksqr = kx_local[i] * kx_local[i] + ky[j] * ky[j];
+            rsqr = pow( pow(xperiod_duped, 2) *kx_local[i]/Nx, 2) 
+                     + pow( pow(yperiod_duped, 2)* ky[j]/Ny, 2);
 
-            mtf_2D_split[j + i * Ny] = 0; // default value
+            mtf_2D_split[j + i * Ny][0] = 0; // default value
+            mtf_2D_split[j + i * Ny][1] = 0; // default value
             for ( size_t mtf_idx = 0; mtf_idx < mtf_1D_size -1; ++mtf_idx)
             {
                if ( mtf_1D_size == 1 )
                {
-                  mtf_2D_split[j + i * Ny] = mtf_1D[mtf_idx];
+                  mtf_2D_split[j + i * Ny][0] = mtf_1D[mtf_idx];
                }
-               if ( 
-                     (ksqr >= mtf_domain_sqr[mtf_idx]) 
-                     && (ksqr < mtf_domain_sqr[mtf_idx+1]) 
-                     //&& (ksqr < (bwcutoff_t * bwcutoff_t))
-                     //&& (mtf_domain_sqr[mtf_idx+1] 
-                     //      < (bwcutoff_t * bwcutoff_t))
+               if (
+                     (rsqr >= mtf_domain_sqr[mtf_idx]) 
+                    && (rsqr < mtf_domain_sqr[mtf_idx+1]) 
                   )
                {
-                  double domain1 = sqrt(mtf_domain_sqr[mtf_idx]);
-                  double domain2 = sqrt(mtf_domain_sqr[mtf_idx+1]);
-                  mtf_2D_split[j + i * Ny] = 
+                  domain1 = sqrt(mtf_domain_sqr[mtf_idx]);
+                  domain2 = sqrt(mtf_domain_sqr[mtf_idx+1]);
+                  mtf_2D_split[j + i * Ny][0] = 
                      mtf_1D[mtf_idx] 
                      + (mtf_1D[mtf_idx+1] - mtf_1D[mtf_idx])
-                       *(sqrt(ksqr) - domain1)/(domain2 - domain1);
+                       *(sqrt(rsqr) - domain1)/(domain2 - domain1);
+
+                  // Krause  2013
+                  sincarg = kx_local[i] / mtf_resolution;
+                  // Thust 2009
+                  //sincarg = 0.5 * PI * kx_local[i] ;
+
+                  if ( sincarg != 0 )
+                     sincx = sin( sincarg ) / sincarg;
+                  else 
+                     sincx = 1;
+
+                  // Krause 2013
+                  sincarg = ky[j] / mtf_resolution;
+                  // Thust 2009
+                  //sincarg = 0.5 * PI * ky[j] ;
+
+                  if ( sincarg != 0 )
+                     sincy = sin( sincarg ) / sincarg;
+                  else
+                     sincy = 1;
+
+                  mtf_2D_split[j + i * Ny][0] = 
+                    mtf_2D_split[j + i * Ny][0] * sincx * sincy;
                }
             }
          }
+      }
+      //bw_limit(
+      //      mtf_2D_split,
+      //      Nx_local, kx_local, Ny, ky,
+      //      //xperiod_duped/3
+      //      1.5*bwcutoff_t
+      //      //bwcutoff_t
+      //      );
+      fftw_execute( pb_c2c_mtf );
+      //if ( flags.debug && flags.image_output )
+      //{
+      //   cout << "saving 2-D modulation transfer function to tiff" << endl;
+
+      //   debug_output_complex_fftw_operand(
+      //         mtf_2D_split,
+      //         0,
+      //         local_alloc_size_fftw,
+      //         Nx_local, Nx, Ny,
+      //         resolutionUnit,
+      //         xResolution, yResolution,
+      //         outFileName_prefix
+      //         + "_mtf_2D_reciprocalspace",
+      //         psi_mag_strides,
+      //         psi_mag_displacements,
+      //         mynode, rootnode, comm);
+      //}
+      bw_limit(
+            mtf_2D_split,
+            Nx_local, kx_local, Ny, ky,
+            bwcutoff_t
+            );
+      if ( flags.debug && flags.image_output )
+      {
+         cout << "saving 2-D modulation transfer function to tiff" << endl;
+
+         debug_output_complex_fftw_operand(
+               mtf_2D_split,
+               0,
+               local_alloc_size_fftw,
+               Nx_local, Nx, Ny,
+               resolutionUnit,
+               xResolution, yResolution,
+               outFileName_prefix
+               + "_mtf_2D_realspace_bwlimited",
+               psi_mag_strides,
+               psi_mag_displacements,
+               mynode, rootnode, comm);
+      }
+      fftw_execute( pf_c2c_mtf );
+      //bw_limit(
+      //      mtf_2D_split,
+      //      Nx_local, kx_local, Ny, ky,
+      //      //xperiod_duped/3
+      //      //1.5*bwcutoff_t
+      //      bwcutoff_t
+      //      );
+      // renormalize
+      for (ptrdiff_t i=0; i < local_alloc_size_fftw; ++i)
+      {
+         mtf_2D_split[i][0] = mtf_2D_split[i][0] / NxNy;
+         mtf_2D_split[i][1] = mtf_2D_split[i][1] / NxNy;
+      }
+      fftw_destroy_plan( pf_c2c_mtf );
+      fftw_destroy_plan( pb_c2c_mtf );
+
+      if ( flags.debug && flags.image_output )
+      {
+         cout << "saving 2-D modulation transfer function to tiff" << endl;
+
+         debug_output_complex_fftw_operand(
+               mtf_2D_split,
+               0,
+               local_alloc_size_fftw,
+               Nx_local, Nx, Ny,
+               resolutionUnit,
+               xResolution, yResolution,
+               outFileName_prefix
+               + "_mtf_2D",
+               psi_mag_strides,
+               psi_mag_displacements,
+               mynode, rootnode, comm);
       }
    }
    
@@ -2026,23 +2139,133 @@ int TEM_NS::adfstem(
          //-----------------------------------------------------------
          // End of beam transmission through individual slices
          //-----------------------------------------------------------
-         // TODO: bandwidth limit for mtf operation
+
+         /////////////////////////////////////////////////////////////
+         // STEM: integrate the diffracted intensity impingent upon 
+         //       the annular detector
+         /////////////////////////////////////////////////////////////
+
+         if ( flags.image_output )
+         {
+            detected_intensity = 
+               sum_detected_intensity( 
+                     psi, 
+                     kx_local, ky,
+                     detector_inner_angle / lambda,
+                     detector_outer_angle / lambda,
+                     Nx_local, Ny
+                     );
+
+            MPI_Reduce( 
+                  &detected_intensity, 
+                  &detected_intensity_reduced,
+                  1, MPI_DOUBLE,
+                  MPI_SUM, rootnode, comm );
+
+            if( mynode == rootnode )
+            {
+               stem_image[ pixel_number_y + pixel_number_x * y_p.size() ]
+                  = detected_intensity_reduced;
+            }
+         }
+
+         /////////////////////////////////////////////////////////////
+         // Apply modulation transfer function of the image detector
+         /////////////////////////////////////////////////////////////
          if ( flags.mtf_file && flags.mtf_resolution )
          {
+            // transform psi into its magnitude
+            //  and apply beam blocker to direct beam
+            double ksqr;
+            for ( size_t i=0; i < Nx_local; ++i)
+            {
+               for ( size_t j=0; j < Ny; ++j)
+               {
+                  ksqr = pow(kx_local[i], 2) + pow(ky[j], 2);
+                  if ( lambda_sqr * ksqr > alpha_max_sqr )
+                  {
+                     psi[j + i*Ny][0] = 
+                        sqrt( (psi[j + i*Ny][0] *psi[j + i*Ny][0])
+                              + (psi[j + i*Ny][1] * psi[j + i*Ny][1]) );
+                  }
+                  else
+                  {
+                     psi[j + i*Ny][0] =  0.0;
+                  }
+                  psi[j + i*Ny][1] = 0.0;
+               }
+            }
+
+            //bw_limit(
+            //      psi,
+            //      Nx_local, kx_local, Ny, ky,
+            //      //0.5*bwcutoff_t
+            //      bwcutoff_t
+            //      );
+            
+            // transform psi into real-space
             fftw_execute( pb_c2c_psi );
 
+            diffraction_scale_factor = 1.0e+10;
+            output_diffraction_append(
+                  psi,
+                  diffraction_scale_factor,
+                  lambda_sqr,
+                  alpha_max_sqr,
+                  local_alloc_size_fftw,
+                  Nx_local, 
+                  kx_local,
+                  Nx, 
+                  //kx_joined, 
+                  Ny,
+                  ky,
+                  resolutionUnit_recip,
+                  xResolution_recip, yResolution_recip,
+                  outFileName_prefix + "_psi_mtf2D_recipspace",
+                  psi_mag_strides,
+                  psi_mag_displacements,
+                  mynode, rootnode, comm
+                  );
+
+            
             for (size_t i=0; i < Nx_local; ++i)
             {
                for ( size_t j=0; j < Ny; ++j)
                {
-                  psi[j + i * Ny][0] = 
-                     psi[j + i * Ny][0] 
-                        * mtf_2D_split[j + i * Ny]/sqrtNxNy;
-                  
-                  psi[j + i * Ny][1] = 
-                     psi[j + i * Ny][1] 
-                        * mtf_2D_split[j + i * Ny]/sqrtNxNy;
+                  // multiply psi by the mtf
+                  psi[j + i * Ny][0]
+                     = (
+                        (psi[j + i * Ny][0])*(mtf_2D_split[j + i * Ny][0])
+                       - (psi[j + i * Ny][1])*(mtf_2D_split[j + i * Ny][1])
+                       )/sqrtNxNy;
+
+                  psi[j + i * Ny][1]
+                     = (
+                        (psi[j + i * Ny][0])*(mtf_2D_split[j + i * Ny][1])
+                       + (psi[j + i * Ny][1])*(mtf_2D_split[j + i * Ny][0])
+                       )/sqrtNxNy;
                }
+            }
+            if ( flags.debug && flags.image_output )
+            {
+               diffraction_scale_factor = 1.0e+10;
+               output_diffraction(
+                     psi,
+                     diffraction_scale_factor,
+                     //lambda_sqr,
+                     //alpha_max_sqr,
+                     local_alloc_size_fftw,
+                     Nx_local, //kx_local, 
+                     Nx, 
+                     //kx_joined, 
+                     Ny, //ky,
+                     resolutionUnit_recip,
+                     xResolution_recip, yResolution_recip,
+                     outFileName_prefix + "_psi_mtf2D_realspace",
+                     psi_mag_strides,
+                     psi_mag_displacements,
+                     mynode, rootnode, comm
+                     );
             }
             //  transform psi back into reciprocal space
             fftw_execute( pf_c2c_psi );
@@ -2052,6 +2275,11 @@ int TEM_NS::adfstem(
                   psi[i][0] = psi[i][0] / sqrtNxNy;
                   psi[i][1] = psi[i][1] / sqrtNxNy;
             }
+            bw_limit(
+                  psi,
+                  Nx_local, kx_local, Ny, ky,
+                  bwcutoff_t
+                  );
          }
 
          if ( flags.diffraction_output )
@@ -2101,26 +2329,26 @@ int TEM_NS::adfstem(
                   mynode, rootnode, comm
                   );
                   
-            diffraction_scale_factor = 1.0e-1;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  lambda_sqr,
-                  alpha_max_sqr,
-                  local_alloc_size_fftw,
-                  Nx_local, 
-                  kx_local,
-                  Nx, 
-                  //kx_joined, 
-                  Ny,
-                  ky,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix,
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
+            //diffraction_scale_factor = 1.0e-1;
+            //output_diffraction_append(
+            //      psi,
+            //      diffraction_scale_factor,
+            //      lambda_sqr,
+            //      alpha_max_sqr,
+            //      local_alloc_size_fftw,
+            //      Nx_local, 
+            //      kx_local,
+            //      Nx, 
+            //      //kx_joined, 
+            //      Ny,
+            //      ky,
+            //      resolutionUnit_recip,
+            //      xResolution_recip, yResolution_recip,
+            //      outFileName_prefix,
+            //      psi_mag_strides,
+            //      psi_mag_displacements,
+            //      mynode, rootnode, comm
+            //      );
                   
             //if ( flags.netcdf_images )
             //{
@@ -2423,37 +2651,14 @@ int TEM_NS::adfstem(
             } // flags.gt17 || flags.d3 || flags.d4
          } // end of flags.fem dependent block
 
-         /////////////////////////////////////////////////////////////
-         // STEM: integrate the diffracted intensity impingent upon 
-         //       the annular detector
-         /////////////////////////////////////////////////////////////
-
-         if ( flags.image_output )
-         {
-            detected_intensity = 
-               sum_detected_intensity( 
-                     psi, 
-                     kx_local, ky,
-                     detector_inner_angle / lambda,
-                     detector_outer_angle / lambda,
-                     Nx_local, Ny
-                     );
-
-            MPI_Reduce( 
-                  &detected_intensity, 
-                  &detected_intensity_reduced,
-                  1, MPI_DOUBLE,
-                  MPI_SUM, rootnode, comm );
-
-            if( mynode == rootnode )
-            {
-               stem_image[ pixel_number_y + pixel_number_x * y_p.size() ]
-                  = detected_intensity_reduced;
-            }
-         }
-
          fftw_destroy_plan( pb_c2c_psi );
          fftw_destroy_plan( pf_c2c_psi );
+
+         //if ( flags.mtf_file && flags.mtf_resolution )
+         //{
+         //   fftw_destroy_plan( pf_c2c_mtf );
+         //   fftw_destroy_plan( pb_c2c_mtf );
+         //}
 
          ++pixel_number_y; 
       }
@@ -3402,7 +3607,8 @@ int TEM_NS::adfstem(
    {
       //output_diffraction_with_renormalization(
       //diffraction_scale_factor = 1.0e13;//1e-20;
-      diffraction_scale_factor = 1.0e+20;//1e-20;
+      //diffraction_scale_factor = 1.0e+20;//1e-20;
+      diffraction_scale_factor = 1.0e+0;
       output_diffraction(
             psi,
             diffraction_scale_factor,
@@ -3561,7 +3767,7 @@ int TEM_NS::adfstem(
 
    if ( flags.mtf_file && flags.mtf_resolution )
    {
-      delete[] mtf_2D_split;
+      fftw_free( mtf_2D_split );
    }
 
    delete stem_probe_joined_re, stem_probe_joined_im;

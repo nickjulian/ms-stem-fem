@@ -2973,8 +2973,7 @@ int TEM_NS::read_parameter_file(
             //      itr != mtf_resolutions.end();
             //      ++itr)
             //{
-            //      cout << *itr << " ";
-            //}
+            //      cout << *itr << " "; //}
             //cout << endl;
             // end debug
          }
@@ -4061,7 +4060,10 @@ unsigned int TEM_NS::read_cmdline_options(
       {
          mtf_resolution = 0;
          if (idx + 1 < args.size()) 
+         {
             istringstream( args[idx + 1] ) >> mtf_resolution;
+            idx += 1;
+         }
          //while (idx + 1 < args.size() 
          //         && 
          //         (
