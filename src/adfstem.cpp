@@ -275,13 +275,16 @@ int TEM_NS::adfstem(
       //}
 
       // Evaluate the 2-D MTF from the 1-D input
-      double rsqr, domain1, domain2, sincx, sincy, sincarg;
+      double rsqr, domain1, domain2, sincx, sincy, sincarg, xxx, yyy;
       for ( size_t i=0; i < Nx_local; ++i)
       {
          for ( size_t j=0; j < Ny; ++j)
          {
-            rsqr = pow( pow(xperiod_duped, 2) *kx_local[i]/Nx, 2) 
-                     + pow( pow(yperiod_duped, 2)* ky[j]/Ny, 2);
+            xxx = pow( xperiod_duped, 2) * kx_local[i] / Nx;
+            yyy = pow( yperiod_duped, 2) * ky[j] / Ny;
+            rsqr = pow( xxx, 2) + pow( yyy, 2);
+            //rsqr = pow( pow(xperiod_duped, 2) *kx_local[i]/Nx, 2) 
+            //         + pow( pow(yperiod_duped, 2)* ky[j]/Ny, 2);
 
             mtf_2D_split[j + i * Ny][0] = 0; // default value
             mtf_2D_split[j + i * Ny][1] = 0; // default value
@@ -304,9 +307,9 @@ int TEM_NS::adfstem(
                        *(sqrt(rsqr) - domain1)/(domain2 - domain1);
 
                   // Krause  2013
-                  sincarg = kx_local[i] / mtf_resolution;
+                  sincarg = xxx / mtf_resolution;
                   // Thust 2009
-                  //sincarg = 0.5 * PI * kx_local[i] ;
+                  //sincarg = 0.5 * PI * xxx ;
 
                   if ( sincarg != 0 )
                      sincx = sin( sincarg ) / sincarg;
@@ -314,9 +317,9 @@ int TEM_NS::adfstem(
                      sincx = 1;
 
                   // Krause 2013
-                  sincarg = ky[j] / mtf_resolution;
+                  sincarg = yyy / mtf_resolution;
                   // Thust 2009
-                  //sincarg = 0.5 * PI * ky[j] ;
+                  //sincarg = 0.5 * PI * yyy ;
 
                   if ( sincarg != 0 )
                      sincy = sin( sincarg ) / sincarg;
