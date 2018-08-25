@@ -19,8 +19,10 @@ CXX = mpicxx
 CXXFLAGS = -I$(ROOT)/include
 #LIBS_NETCDF	= -lnetcdf_c++ -lnetcdf -lnetcdf_c++
 LIBS_FFTW = -lfftw3_mpi -lfftw3
+#LIBS_LMP = -L$(ROOT)/<put path to lammps library here> -llammps
+LIBS_LMP = -llammps # to use this, copy all lammps header files to include/
 #LIBS = -L$(ROOT)/lib -L/usr/lib64 $(LIBS_NETCDF) $(LIBS_FFTW) -ltiff -lm 
-LIBS = -L$(ROOT)/lib -L/usr/lib64 $(LIBS_FFTW) -ltiff -lm 
+LIBS = -L$(ROOT)/lib -L/usr/lib64 $(LIBS_FFTW) $(LIBS_LMP) -ltiff -lm 
 #############################
 
 OBJS = func.o projected_atomic_potential.o write_tif.o scherzer.o bw_limit.o lenses.o tem_io.o probe_wavefunction.o adfstem.o slice.o variance.o io_txt.o 
@@ -30,13 +32,23 @@ SRCS = $(ROOT)/src/func.cpp $(ROOT)/src/projected_atomic_potential.cpp $(ROOT)/s
 
 MSSTEMFEM = $(ROOT)/bin/ms-stem-fem.x
 
+MSSTEMFEMMD = $(ROOT)/bin/ms-stem-fem-md.x
+
 $(MSSTEMFEM):	$(OBJS)
 	$(CXX) -g $(ROOT)/src/tem.cpp $(OBJS) $(CXXFLAGS) $(LIBS) -o $(MSSTEMFEM)
+
+
+$(MSSTEMFEMMD):	$(OBJS)
+	$(CXX) -g $(ROOT)/src/ftem_lammps.cpp $(OBJS) $(CXXFLAGS) $(LIBS) -o $(MSSTEMFEM)
+
+#$(CXX) -g $(ROOT)/src/tem.cpp $(OBJS) $(CXXFLAGS) $(LIBS) -o $(MSSTEMFEM)
 
 $(OBJS):			
 	$(CXX) -g -c $(CXXFLAGS) $(SRCS)
 
 ms-stem-fem: $(MSSTEMFEM)
 
+ms-stem-fem-md: $(MSSTEMFEMMD)
+
 clean: 
-	rm -f $(OBJS) $(MSSTEMFEM) 
+	rm -f $(OBJS) $(MSSTEMFEM) $(MSSTEMFEMMD)

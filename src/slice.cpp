@@ -69,6 +69,8 @@ int TEM_NS::delete_slices_from_list( list< slice* > sliceList )
       delete[] (*sliceList_itr)->propagator_y_im;
 
       fftw_free( (*sliceList_itr)->exp_i_sigma_v );
+
+      delete ((*sliceList_itr)->scatterers);
    }
 
    return EXIT_SUCCESS;
@@ -1531,48 +1533,12 @@ int TEM_NS::slice::update_transmission_function(
    
    size_t idx_x, idx_y;
    size_t idx_shift_x, idx_shift_y;
-   size_t idx = 0;
+   size_t idx; idx = 0;
 
-   // debug
-   //  Determine the value of idx_local_start_x such that
-   //   kx_joined[i + idx_local_start_x] == kx_local[i]
-   //   and thus
-   //   pap_joined_x[i + idx_local_start_x] == pap_split_x[i]
-   size_t idx_local_start_x; 
-   while ( idx < Nx_joined )
-   {
-      // NOTE: comparing reciprocal space domains to determine real space
-      //  splitting location ...
-      if ( kx_joined[idx] == kx_local[0] )
-      {
-         idx_local_start_x = idx;
-         break;
-      }
-      else 
-         ++idx;
-   }
-   if ( idx == Nx_joined )
-   {
-      cout << "Error : update_transmission_function() failed;" 
-         << " could not identify appropriate idx_local_start" << endl;
-      return EXIT_FAILURE;
-   }
-   if ( idx_local_start_x != local_0_start_fftw )
-   {
-      cout << "Error : idx_local_start_x != local_0_start_fftw"
-         << endl << " idx_local_start_x: " << idx_local_start_x << endl
-         << endl << " local_0_start_fftw: " << local_0_start_fftw << endl
-         << " Shifting of cached projected atomic potentials and probes"
-         << " will be erroneous." << endl;
-      return( EXIT_FAILURE );
-   }
-   // end debug
-
-   //cout << "node " << mynode << ", idx_local_start_x : "  // debug
-   //   << idx_local_start_x << endl; // debug
-
-   double half_delta_x = 0.5 * (xx_joined[1] - xx_joined[0]);
-   double half_delta_y = 0.5 * (yy[1] - yy[0]);
+   double half_delta_x; 
+   half_delta_x = 0.5 * (xx_joined[1] - xx_joined[0]);
+   double half_delta_y; 
+   half_delta_y = 0.5 * (yy[1] - yy[0]);
 
    // iterate over the scatterers (accessible through slice membership)
    for ( std::vector< const scatterer* >::const_iterator
@@ -1583,10 +1549,6 @@ int TEM_NS::slice::update_transmission_function(
       // Identify apropriate idx_shift_x idx_shift_y using kx_joined and 
       //  ky.
 
-      // pap_shifted_y[i] = pap_template_y[i - idx_shift_y] with pbc
-      // pap_shifted_split_x[i] 
-      //    = pap_template_x[i + idx_local_start_x - idx_shift_x] with pbc
-      
       // NOTE: the following assumes scatterer position is within 
       //       xx_joined & y domains
       idx_shift_x = 0;
@@ -1609,6 +1571,7 @@ int TEM_NS::slice::update_transmission_function(
          }
       }
 
+
       //cout << "node " << mynode  // debug
       //   << ", scatterer Z : " << (*scatterer_ptr_itr)->Z // debug
       //   << ", scatterer pap_re : "  // debug
@@ -1630,19 +1593,11 @@ int TEM_NS::slice::update_transmission_function(
       // iterate over the domains
       for ( size_t i=0; i < Nx_local; ++i)
       {
-         //   pap_joined_x[i + idx_local_start_x] == pap_split_x[i]
-         
-         //if ( i + idx_local_start_x >= Nx_joined ) 
-         //   idx_local_start_x = -i;
-
          // enforce periodic boundary condition, x direction
-         if ( i + idx_local_start_x < idx_shift_x )
-         //if ( i + local_0_start_fftw < idx_shift_x )
-            //idx_x = i + Nx_joined + local_0_start_fftw - idx_shift_x;
-            idx_x = i + Nx_joined + idx_local_start_x - idx_shift_x;
+         if ( i + local_0_start_fftw < idx_shift_x )
+            idx_x = i + Nx_joined + local_0_start_fftw - idx_shift_x;
          else
             idx_x = i + local_0_start_fftw - idx_shift_x;
-            //idx_x = i + idx_local_start_x - idx_shift_x;
 
          for ( size_t j=0; j < Ny; ++j)
          {
@@ -1658,12 +1613,16 @@ int TEM_NS::slice::update_transmission_function(
                   || idx_y < 0 || idx_y > Ny
                   || idx_y + idx_x * Ny > Nx_joined * Ny
                )
-               cout << "Error, (idx_x, idx_y, idx_y + idx_x*Ny, local_alloc_size_fftw): ("
+               cout << "Error, (idx_x, idx_y, idx_y + idx_x*Ny, idx_shift_x, idx_shift_y, local_alloc_size_fftw): ("
                  << idx_x << ", " << idx_y 
-                 << ", " << idx_y + idx_x * Ny << ", " 
+                 << ", " << idx_y + idx_x * Ny 
+                 << ", " << idx_shift_x << ", " << idx_shift_y  << ", "
                  << local_alloc_size_fftw
                  << ") exceeds bounds (Nx_joined,Ny)"
-                 << Nx_joined << ", " << Ny << ")" << endl;
+                 << Nx_joined << ", " << Ny << ")" 
+                 << "(*scatterer_ptr_itr)->q[0,1] : (" 
+                 << (*scatterer_ptr_itr)->q[1]
+                 << ", " << (*scatterer_ptr_itr)->q[1] << ")" << endl;
             // end debug
 
             // debug

@@ -185,6 +185,9 @@ int main( int argc, char* argv[])
 
    input_flags flags;
 
+   string lammps_preTEM_file_name;
+   unsigned int lammps_TEM_steps;
+
    //double tmp_double;// for accepting input from operator>>() and 
    //                      pushing onto a vector<double> 
 
@@ -213,6 +216,8 @@ int main( int argc, char* argv[])
          dupe_x,
          dupe_y,
          dupe_z,
+         lammps_preTEM_filename,
+         lammps_TEM_steps,
          mynode,
          rootnode,
          MPI_COMM_WORLD

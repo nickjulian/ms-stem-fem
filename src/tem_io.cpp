@@ -80,12 +80,6 @@ int TEM_NS::read_position_lammps_file(
          // First line must begin with a space separated list of atomic
          //    numbers.
          size_t Z; 
-         std::vector<size_t> Zcategories;
-         if ( data_file.good() ) 
-         {
-            istringstream data_line_stream( data_line );
-            while( data_line_stream >> Z ) Zcategories.push_back( Z );
-         }
 
          if( getline( data_file, data_line) && data_file.good() )
          {
@@ -200,16 +194,6 @@ int TEM_NS::read_position_lammps_file(
                cout << "node " << mynode << ", "
                   << "numberofspecies : "
                   << numberofspecies << endl;
-
-            if ( numberofspecies != Zcategories.size() )
-            {
-               cerr << "node " << mynode << ", "   
-                  << "The first line of the input file must begin with "
-                  << "a space separated list of atomic numbers having order "
-                 << " corresponding with the lammps species enumeration"
-                 << endl;
-               return EXIT_FAILURE;
-            }
          }
          else
          {
@@ -634,6 +618,7 @@ int TEM_NS::read_position_lammps_file(
                // grab data from the current line
                istringstream data_line_stream( data_line );
                data_line_stream >> atom_number >> atom_type;
+               cout << "atom " << atom_number << "atom_type : " << atom_type << endl;// debug
                data_line_stream >> qq[0] >> qq[1] >> qq[2] ;
 
                // check that the data is valid
@@ -738,7 +723,8 @@ int TEM_NS::read_position_lammps_file(
                delete[] qlist[i];// TODO: is this appropriate?
                qlist[i] = NULL;  // TODO: is this necessary?
 
-               Z_contig[ i ] = Zcategories[ (*atom_type_list_iterator) -1];
+               //Z_contig[ i ] = Zcategories[(*atom_type_list_iterator)-1];
+               Z_contig[ i ] = *atom_type_list_iterator;
                atom_type_list_iterator++;
             }
          }
@@ -897,12 +883,6 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          // First line must begin with a space separated list of atomic
          //    numbers.
          size_t Z; 
-         std::vector<size_t> Zcategories;
-         if ( data_file.good() ) 
-         {
-            istringstream data_line_stream( data_line );
-            while( data_line_stream >> Z ) Zcategories.push_back( Z );
-         }
 
          if( getline( data_file, data_line) && data_file.good() )
          {
@@ -1017,16 +997,6 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                cout //<< "node " << mynode << ", "
                   << "numberofspecies : "
                   << numberofspecies << endl;
-
-            if ( numberofspecies != Zcategories.size() )
-            {
-               cerr //<< "node " << mynode << ", "   
-                  << "The first line of the input file must begin with "
-                  << "a space separated list of atomic numbers having order "
-                 << " corresponding with the lammps species enumeration"
-                 << endl;
-               return EXIT_FAILURE;
-            }
          }
          else
          {
@@ -1556,7 +1526,8 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                delete[] qlist[i];// TODO: is this appropriate?
                qlist[i] = NULL;  // TODO: is this necessary?
 
-               Z_contig[ i ] = Zcategories[ (*atom_type_list_iterator) -1];
+               //Z_contig[i] = Zcategories[ (*atom_type_list_iterator) -1];
+               Z_contig[ i ] = *atom_type_list_iterator;
                atom_type_list_iterator++;
             }
          }
@@ -2789,6 +2760,8 @@ int TEM_NS::read_parameter_file(
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,
+         string& lammps_preTEM_file_name,
+         unsigned int& lammps_TEM_steps,
          const int& mynode,
          const int& rootnode,
          MPI_Comm comm
@@ -3088,12 +3061,23 @@ int TEM_NS::read_parameter_file(
          //   flags.correlograph_everynetcdf = 1;
          //   flags.correlograph = 1;
          //}
+         else if ( ! data_descriptor.compare("lammps_pretem_file_name") )
+         {
+            data_line_stream >> lammps_preTEM_file_name;
+            flags.lammps_preTEM_file = 1;
+         }
+         else if ( ! data_descriptor.compare("lammps_tem_steps") )
+         {
+            data_line_stream >> lammps_TEM_steps;
+            flags.lammps_TEM_steps = 1;
+         }
          else
          {
             if ( mynode == rootnode )
             {
                cerr << "Error, unexpected argument in parameter file: "
                   << data_line << endl;
+               cout << "data_descriptor: " << data_descriptor << endl;
                cout << "Acceptable phrases in the parameter file:" << endl
                   << "  samples_x <integer> " << endl
                   << "  samples_y <integer> " << endl
@@ -3115,11 +3099,15 @@ int TEM_NS::read_parameter_file(
                   << "  detectorangles <inner_angle>"
                   <<    " <outer_angle [radians]>" << endl
                   << "  mtf_file <mtf filepath>" << endl
-                  << "    simulate detector modulation transfer function" << endl
-                  << "     using the values contained in the specified" << endl
-                  << "     file containing a domain on the first line" << endl
+                  << "    simulate detector modulation transfer function" 
+                  << endl
+                  << "     using the values contained in the specified" 
+                  << endl
+                  << "     file containing a domain on the first line" 
+                  << endl
                   << "      and MTF values in units of the image" << endl
-                  << "       Nyquist frequency (0.5*sample_rate) on" << endl
+                  << "       Nyquist frequency (0.5*sample_rate) on" 
+                  << endl
                   << "       the second" << endl
                   << "  mtf_sampling_rate <value [A^-1]>" << endl
                   << "    sampling rate or resolution of the modulation"
@@ -3149,6 +3137,10 @@ int TEM_NS::read_parameter_file(
                   << "  minslice <minimum slice thickness>" << endl
                   << "  images" << endl
                   << "  diffractionimages" << endl
+                  << "  lammps_preTEM_file_name <lammps setup file name>" 
+                  << endl
+                  << "  lammps_TEM_steps <MD steps per probe position>" 
+                  << endl
                   //<< "  netcdfimages" << endl
                   //<< "  netcdfvariance" << endl
                   << "  debug" << endl;
@@ -3168,7 +3160,9 @@ int TEM_NS::read_parameter_file(
    data_file.close();
    //} // rootnode
 
-   if ( flags.fem && (!( flags.d1  || flags.d2 || flags.d3 || flags.d4 || flags.gt17 || flags.rva || flags.correlograph)) )
+   if ( flags.fem && (!( flags.d1  || flags.d2 || flags.d3 
+                        || flags.d4 || flags.gt17 || flags.rva 
+                        || flags.correlograph)) )
    {
       flags.d1 = 1; // default fem mode
    }
@@ -3942,7 +3936,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
    return EXIT_SUCCESS;
 }
 
-unsigned int TEM_NS::read_cmdline_options( 
+int TEM_NS::read_cmdline_options( 
    const std::vector<string>& args,
    string& model_file_name,
    input_flags& flags,
@@ -3967,6 +3961,8 @@ unsigned int TEM_NS::read_cmdline_options(
    unsigned int& dupe_x,
    unsigned int& dupe_y,
    unsigned int& dupe_z,
+   string& lammps_preTEM_file_name,
+   unsigned int& lammps_TEM_steps,
    const int& mynode,
    const int& rootnode,
    MPI_Comm comm
@@ -4007,6 +4003,8 @@ unsigned int TEM_NS::read_cmdline_options(
                   raster_spacing,
                   azimuthal_binning_size_factor,
                   minSliceThickness,
+                  lammps_preTEM_file_name,
+                  lammps_TEM_steps,
                   mynode,
                   rootnode,
                   MPI_COMM_WORLD
@@ -4105,8 +4103,10 @@ unsigned int TEM_NS::read_cmdline_options(
       else if ( args[idx] == "--output_prefix" )
       {
          if (idx + 1 < args.size()) 
+         {
             output_prefix = string(args[idx + 1]);//=string(argv[2]);
-         flags.o = 1;
+            flags.o = 1;
+         }
          idx += 1;
       }
       else if ( args[idx] == "-m" )
@@ -4166,9 +4166,9 @@ unsigned int TEM_NS::read_cmdline_options(
       else if ( args[idx] == "--spread" )
       {
          if (idx + 1 < args.size()) 
-            istringstream( args[idx + 1] ) >> defocus_spread;
+            istringstream( args[idx +1] ) >> defocus_spread;
          if (idx + 2 < args.size()) 
-            istringstream( args[idx + 2] ) >> condenser_illumination_angle;
+            istringstream( args[idx +2] ) >> condenser_illumination_angle;
          flags.spread = 1;
          idx += 2;
       }
@@ -4323,6 +4323,26 @@ unsigned int TEM_NS::read_cmdline_options(
       //   flags.correlograph_everynetcdf = 1;
       //   flags.correlograph = 1;
       //}
+      else if ( args[idx] == "--lammps_preTEM_file_name" )
+      {
+         if (idx + 1 < args.size()) 
+         {
+            lammps_preTEM_file_name 
+               = string(args[idx + 1]);//=string(argv[2]);
+            flags.lammps_preTEM_file = 1;
+         }
+         idx += 1;
+      }
+      else if ( args[idx] == "--lammps_TEM_steps" )
+      {
+         if ( idx + 1 < args.size())
+         {
+            istringstream( args[idx + 1] ) 
+               >> lammps_TEM_steps;
+            flags.lammps_TEM_steps = 1;
+         }
+         idx += 1;
+      }
       else
       {
          if ( mynode == rootnode )
@@ -4349,7 +4369,7 @@ unsigned int TEM_NS::read_cmdline_options(
    return EXIT_SUCCESS;
 }
 
-unsigned int TEM_NS::read_mtf_file( 
+int TEM_NS::read_mtf_file( 
       input_flags& flags,
       const string& mtf_file_name,
       std::vector<double>& mtf,
@@ -4485,7 +4505,7 @@ unsigned int TEM_NS::read_mtf_file(
    return EXIT_SUCCESS;
 }
 
-unsigned int TEM_NS::check_runtime_flags(
+int TEM_NS::check_runtime_flags(
    const input_flags& flags,
    const string& args0,
    const int& mynode,
@@ -4568,6 +4588,10 @@ unsigned int TEM_NS::check_runtime_flags(
       flags.correlograph_everytxt << endl <<
       //"flags.correlograph_everynetcdf" << 
       //flags.correlograph_everynetcdf << endl <<
+      "flags.lammps_preTEM_file" << endl << 
+      flags.lammps_preTEM_file << endl << 
+      "flags.lammps_TEM_steps" << endl << 
+      flags.lammps_TEM_steps << endl << 
       "flags.debug " << 
       flags.debug 
       << endl;
@@ -4578,8 +4602,9 @@ unsigned int TEM_NS::check_runtime_flags(
          !(
             flags.o   // output file name prefix
             &&
-            flags.a   // atom position and species input file
-            &&
+            // don't require position file since lammps will handle atoms
+            //flags.a   // atom position and species input file
+            //&&
             flags.m
             //( // command line xor file input of microscope parameters
             //   // exclusive or:
@@ -4638,6 +4663,10 @@ unsigned int TEM_NS::check_runtime_flags(
                || 
                flags.alpha_max
             )
+            &&
+            !(
+             flags.lammps_preTEM_file != flags.lammps_TEM_steps
+            )
          )
       )
    {
@@ -4675,6 +4704,15 @@ unsigned int TEM_NS::check_runtime_flags(
                << " requires specifying both a file containing it"
                << " and a sampling rate by which it will be "
                << " scaled" << endl;
+         }
+         if ( flags.lammps_preTEM_file != flags.lammps_TEM_steps )
+         {
+            cout << "lammps_preTEM_file_name and lammps_TEM_steps"
+               <<   " are both required if using ms-stem-fem-md." 
+               <<   " Only one found."
+               <<   " Also you must compile the ms-stem-fem-md target,"
+               <<   " if available." 
+               << endl;
          }
          if (
                (// require specifying Cs3 if using uncorrected TEM
@@ -4714,6 +4752,7 @@ unsigned int TEM_NS::check_runtime_flags(
          }
       }
       failflag = 1;
+      //flags.fail = 1;
    }
 
    if (
@@ -4745,6 +4784,7 @@ unsigned int TEM_NS::check_runtime_flags(
             << endl;
       }
       failflag = 1;
+      //flags.fail = 1;
    }
    if ( flags.dupe && ! flags.fem && mynode == rootnode )
    {
@@ -4752,6 +4792,16 @@ unsigned int TEM_NS::check_runtime_flags(
          << " The sample will not be duplicated this time." 
          << endl;
    }
+   if ( flags.adfstem_uncorrected && flags.adfstem_corrected )
+   {
+      failflag = 1;
+      //flags.fail = 1;
+      cout << "adfstem_uncorrected and adfstem_corrected cannot"
+            << " currently be used in the same call" << endl;
+   }
+   if ( failflag == 1)
+      return EXIT_FAILURE;
+   
    return EXIT_SUCCESS;
 }
 

@@ -99,6 +99,8 @@ namespace TEM_NS
       unsigned int correlograph_variance;// = 0;
       unsigned int correlograph_everyimage;
       unsigned int correlograph_everytxt;
+      unsigned int lammps_preTEM_file;
+      unsigned int lammps_TEM_steps;
       unsigned int fail;
       //unsigned int correlograph_everynetcdf;
       input_flags()  // constructor
@@ -146,6 +148,8 @@ namespace TEM_NS
          correlograph_variance = 0;
          correlograph_everyimage = 0;
          correlograph_everytxt = 0;
+         lammps_preTEM_file = 0;
+         lammps_TEM_steps = 0;
          fail = 0;
       }
    };
@@ -173,6 +177,8 @@ namespace TEM_NS
          double& raster_spacing,
          double& azimuthal_binning_size_factor,
          double& minSliceThickness,
+         string& lammps_preTEM_file_name,
+         unsigned int& lammps_TEM_steps,
          const int& mynode,
          const int& rootnode,
          MPI_Comm comm
@@ -264,7 +270,7 @@ namespace TEM_NS
 //         double& alphamax
 //         );
 
-   unsigned int read_cmdline_options( 
+   int read_cmdline_options( 
          const std::vector<string>& args,
          string& model_file,
          input_flags& flags,
@@ -289,12 +295,14 @@ namespace TEM_NS
          unsigned int& dupe_x,
          unsigned int& dupe_y,
          unsigned int& dupe_z,
+         string& lammps_preTEM_file_name,
+         unsigned int& lammps_TEM_steps,
          const int& mynode,
          const int& rootnode,
          MPI_Comm comm
          );
 
-   unsigned int read_mtf_file( 
+   int read_mtf_file( 
          input_flags& flags,
          const string& mtf_file_name,
          std::vector<double>& mtf,
@@ -304,7 +312,7 @@ namespace TEM_NS
          MPI_Comm comm
          );
 
-   unsigned int check_runtime_flags(
+   int check_runtime_flags(
          const input_flags& flags,
          const string& args0,
          const int& mynode,
