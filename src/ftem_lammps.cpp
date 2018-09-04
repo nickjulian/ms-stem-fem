@@ -204,6 +204,7 @@ int main( int argc, char* argv[])
 
    string lammps_preTEM_file_name;
    unsigned int lammps_TEM_steps;
+   unsigned int lammps_TEM_samples;
 
    //double tmp_double;// for accepting input from operator>>() and 
    //                      pushing onto a vector<double> 
@@ -235,6 +236,7 @@ int main( int argc, char* argv[])
          dupe_z,
          lammps_preTEM_file_name,
          lammps_TEM_steps,
+         lammps_TEM_samples,
          mynode,
          rootnode,
          MPI_COMM_WORLD
@@ -1484,12 +1486,12 @@ int main( int argc, char* argv[])
    //////////////////////////////////////////////////////////////////
 
    // create dumps of each configuration sampled by TEM
-   string lammps_dump_cmd;
-   lammps_dump_cmd = "dump 2 all atom " 
-                        + to_string(lammps_TEM_steps)
-                        + " " + to_string(output_prefix) 
-                        + ".dump.gz";
-   lmp->input->one( lammps_dump_cmd.c_str() );
+   //string lammps_dump_cmd;
+   //lammps_dump_cmd = "dump 2 all atom " 
+   //                     + to_string(lammps_TEM_steps)
+   //                     + " " + to_string(output_prefix) 
+   //                     + ".dump.gz";
+   //lmp->input->one( lammps_dump_cmd.c_str() );
 
    for( std::list<double>::const_iterator 
          x_itr = x_p.begin();
@@ -1516,12 +1518,13 @@ int main( int argc, char* argv[])
          lammps_run_cmd = "run " + to_string(lammps_TEM_steps);
          //cout << "lammps_run_cmd : " << lammps_run_cmd << endl;//debug
          for ( size_t lammps_step_idx=0; 
-               lammps_step_idx < lammps_TEM_steps; 
+               lammps_step_idx < lammps_TEM_samples; 
                ++lammps_step_idx)
-         { 
+         {
             // loop over lammps runs  (closes near line 2878)
 
-            lmp->input->one( lammps_run_cmd.c_str() );
+            if ( lammps_TEM_steps > 0 )
+               lmp->input->one( lammps_run_cmd.c_str() );
 
             ////////////////////////////////////////////////////////////
             // update population and reallocate positions and Zs
@@ -1651,7 +1654,6 @@ int main( int argc, char* argv[])
                return EXIT_FAILURE;
             }
 
-            cout << "debug 1633 node " << mynode << endl;//debug
 
             // MPI_Allreduce with MPI_SUM to merge into data, ordered by atom ID
             // TODO: is ordering by atom ID necessary? 
@@ -1661,12 +1663,10 @@ int main( int argc, char* argv[])
             types_vector = (int *) types_vptr ; // because types_vptr 
                                                 // is a void*
 
-            cout << "debug 1643 node " << mynode << endl;//debug
             // use atom ID to insert each atom's values into types[]
             tag = lmp->atom->tag;
             nlocal = lmp->atom->nlocal;
 
-            cout << "debug 1648 node " << mynode << endl;//debug
             for (size_t ii = 0; ii < nlocal; ii++) 
                types_sendbuf[tag[ii]-1] = types_vector[ii];
 
@@ -1679,10 +1679,8 @@ int main( int argc, char* argv[])
                   MPI_SUM,      // op
                   lmp->world);  // comm
 
-            cout << "debug 1661 node " << mynode << endl;//debug
             lmp->memory->destroy(types_sendbuf);
 
-            cout << "debug 1664 node " << mynode << endl;//debug
             // send atom positions
             //char name_x[] = "x";
             vptr_positions = lmp->atom->extract(name_x);
@@ -1690,16 +1688,13 @@ int main( int argc, char* argv[])
             positions_sendbuf = lmp->memory->create(positions_sendbuf, 
                                  3 * lmp->atom->natoms,
                             "ms-stem-fem:positions_sendbuf");// storage
-            cout << "debug 1672 node " << mynode << endl;//debug
             offset = 0;
             for (size_t ii=0; ii < 3* lammps_population; ++ii) 
                positions_sendbuf[offset++] = 0.0;
 
-            cout << "debug 1676 node " << mynode << endl;//debug
             //double **positions_array = NULL;
             positions_array = (double **) vptr_positions;
 
-            cout << "debug 1680 node " << mynode << endl;//debug
             for (size_t ii = 0; ii < nlocal; ii++) {
               offset = 3*(tag[ii]-1);
 
@@ -1716,7 +1711,6 @@ int main( int argc, char* argv[])
               for (size_t jj = 0; jj < 3; jj++)
                 positions_sendbuf[offset++] = positions_array[ii][jj];
             }
-            cout << "debug 1686 node " << mynode << endl;//debug
 
             MPI_Allreduce(
                 //MPI_IN_PLACE, only available when all nodes are in a single group
@@ -1727,7 +1721,6 @@ int main( int argc, char* argv[])
                   MPI_SUM,
                   lmp->world);
 
-            cout << "debug 1697 node " << mynode << endl;//debug
             lmp->memory->destroy(positions_sendbuf);
 
             if ( flags.debug && (mynode == rootnode) )
@@ -3388,7 +3381,7 @@ int main( int argc, char* argv[])
                if( mynode == rootnode )
                {
                   stem_image[pixel_number_y + pixel_number_x * y_p.size()]
-                     += detected_intensity_reduced / lammps_TEM_steps;
+                     += detected_intensity_reduced / lammps_TEM_samples;
                }
             }
 
@@ -3593,9 +3586,9 @@ int main( int argc, char* argv[])
                for ( size_t j=0; j < Ny; ++j)
                {
                   psi_accumulation[j + i * Ny][0] 
-                     += psi[j + i * Ny][0] / lammps_TEM_steps;
+                     += psi[j + i * Ny][0] / lammps_TEM_samples;
                   psi_accumulation[j + i * Ny][1] 
-                     += psi[j + i * Ny][1] / lammps_TEM_steps;
+                     += psi[j + i * Ny][1] / lammps_TEM_samples;
                }
             }
 
@@ -4601,6 +4594,19 @@ int main( int argc, char* argv[])
                         * diffracted_wave_mag_sum[ii]
                      )
                   ) - 1.0;
+            }
+            // zero the direct-beam region of the 2-D variance image
+            double ksqr;
+            for ( size_t i=0; i < Nx_local; ++i)
+            {
+               for ( size_t j=0; j < Ny; ++j)
+               {
+                  ksqr = pow(kx_local[i], 2) + pow(ky[j], 2);
+                  if ( lambda_sqr * ksqr <= alpha_max_sqr )
+                  {
+                     diffracted_wave_mag_variance[ j + Ny*i] = 0.0;
+                  }
+               }
             }
             if ( flags.image_output )
             {

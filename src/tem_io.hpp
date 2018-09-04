@@ -101,6 +101,7 @@ namespace TEM_NS
       unsigned int correlograph_everytxt;
       unsigned int lammps_preTEM_file;
       unsigned int lammps_TEM_steps;
+      unsigned int lammps_TEM_samples;
       unsigned int fail;
       //unsigned int correlograph_everynetcdf;
       input_flags()  // constructor
@@ -150,6 +151,7 @@ namespace TEM_NS
          correlograph_everytxt = 0;
          lammps_preTEM_file = 0;
          lammps_TEM_steps = 0;
+         lammps_TEM_samples = 0;
          fail = 0;
       }
    };
@@ -179,6 +181,7 @@ namespace TEM_NS
          double& minSliceThickness,
          string& lammps_preTEM_file_name,
          unsigned int& lammps_TEM_steps,
+         unsigned int& lammps_TEM_samples,
          const int& mynode,
          const int& rootnode,
          MPI_Comm comm
@@ -297,6 +300,7 @@ namespace TEM_NS
          unsigned int& dupe_z,
          string& lammps_preTEM_file_name,
          unsigned int& lammps_TEM_steps,
+         unsigned int& lammps_TEM_samples,
          const int& mynode,
          const int& rootnode,
          MPI_Comm comm

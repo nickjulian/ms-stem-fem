@@ -2762,6 +2762,7 @@ int TEM_NS::read_parameter_file(
          double& minSliceThickness,
          string& lammps_preTEM_file_name,
          unsigned int& lammps_TEM_steps,
+         unsigned int& lammps_TEM_samples,
          const int& mynode,
          const int& rootnode,
          MPI_Comm comm
@@ -3071,6 +3072,11 @@ int TEM_NS::read_parameter_file(
             data_line_stream >> lammps_TEM_steps;
             flags.lammps_TEM_steps = 1;
          }
+         else if ( ! data_descriptor.compare("lammps_tem_samples") )
+         {
+            data_line_stream >> lammps_TEM_samples;
+            flags.lammps_TEM_samples = 1;
+         }
          else
          {
             if ( mynode == rootnode )
@@ -3139,7 +3145,9 @@ int TEM_NS::read_parameter_file(
                   << "  diffractionimages" << endl
                   << "  lammps_preTEM_file_name <lammps setup file name>" 
                   << endl
-                  << "  lammps_TEM_steps <MD steps per probe position>" 
+                  << "  lammps_TEM_steps <MD steps per sample>" 
+                  << endl
+                  << "  lammps_TEM_samples <number of times to sample MD per probe position>" 
                   << endl
                   //<< "  netcdfimages" << endl
                   //<< "  netcdfvariance" << endl
@@ -3963,6 +3971,7 @@ int TEM_NS::read_cmdline_options(
    unsigned int& dupe_z,
    string& lammps_preTEM_file_name,
    unsigned int& lammps_TEM_steps,
+   unsigned int& lammps_TEM_samples,
    const int& mynode,
    const int& rootnode,
    MPI_Comm comm
@@ -4005,6 +4014,7 @@ int TEM_NS::read_cmdline_options(
                   minSliceThickness,
                   lammps_preTEM_file_name,
                   lammps_TEM_steps,
+                  lammps_TEM_samples,
                   mynode,
                   rootnode,
                   MPI_COMM_WORLD
@@ -4343,6 +4353,16 @@ int TEM_NS::read_cmdline_options(
          }
          idx += 1;
       }
+      else if ( args[idx] == "--lammps_TEM_samples" )
+      {
+         if ( idx + 1 < args.size())
+         {
+            istringstream( args[idx + 1] ) 
+               >> lammps_TEM_samples;
+            flags.lammps_TEM_samples= 1;
+         }
+         idx += 1;
+      }
       else
       {
          if ( mynode == rootnode )
@@ -4592,6 +4612,8 @@ int TEM_NS::check_runtime_flags(
       flags.lammps_preTEM_file << endl << 
       "flags.lammps_TEM_steps" << endl << 
       flags.lammps_TEM_steps << endl << 
+      "flags.lammps_TEM_samples" << endl << 
+      flags.lammps_TEM_samples<< endl << 
       "flags.debug " << 
       flags.debug 
       << endl;
@@ -4665,7 +4687,9 @@ int TEM_NS::check_runtime_flags(
             )
             &&
             !(
-             flags.lammps_preTEM_file != flags.lammps_TEM_steps
+             (flags.lammps_preTEM_file != flags.lammps_TEM_steps)
+             ||
+             ( flags.lammps_preTEM_file != flags.lammps_TEM_samples)
             )
          )
       )
@@ -4673,7 +4697,8 @@ int TEM_NS::check_runtime_flags(
       if ( mynode == rootnode )
       {
          cout << args0 << " : lacking required parameters" << endl;
-         // TODO: the following two if(){} statements duplicate tests above
+         // TODO: the following two if(){} statements duplicate tests 
+         //       above.
          //       Perhaps implement these error messages inside the above
          //       tests or vice versa.
          if (
@@ -4705,11 +4730,16 @@ int TEM_NS::check_runtime_flags(
                << " and a sampling rate by which it will be "
                << " scaled" << endl;
          }
-         if ( flags.lammps_preTEM_file != flags.lammps_TEM_steps )
+         if (
+               (flags.lammps_preTEM_file != flags.lammps_TEM_steps )
+               ||
+               (flags.lammps_preTEM_file != flags.lammps_TEM_samples)
+            )
          {
-            cout << "lammps_preTEM_file_name and lammps_TEM_steps"
-               <<   " are both required if using ms-stem-fem-md." 
-               <<   " Only one found."
+            cout << "lammps_preTEM_file_name, lammps_TEM_steps"
+               <<   " and lammps_TEM_samples "
+               <<   " are all required if using ms-stem-fem-md." 
+               <<   " Not all of them were found."
                <<   " Also you must compile the ms-stem-fem-md target,"
                <<   " if available." 
                << endl;
