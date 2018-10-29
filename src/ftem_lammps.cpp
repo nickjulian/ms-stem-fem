@@ -589,10 +589,10 @@ int main( int argc, char* argv[])
       //transform( (*itr).begin(), (*itr).end(),
       //      (*itr).begin(), (int(*)(int))tolower );
       element_name = *itr;
-      cout << "element_name : " << element_name << endl;
+      //cout << "element_name : " << element_name << endl;
       transform( element_name.begin(), element_name.end(), 
                  element_name.begin(), (int(*)(int))tolower );
-      cout << "element_name (lower case) : " << element_name << endl;
+      //cout << "element_name (lower case) : " << element_name << endl;
 
       Z_vector.push_back(
             atom_element_abbrev_to_Z( element_name )
@@ -1488,7 +1488,7 @@ int main( int argc, char* argv[])
    // create dumps of each configuration sampled by TEM
    //string lammps_dump_cmd;
    //lammps_dump_cmd = "dump 2 all atom " 
-   //                     + to_string(lammps_TEM_steps)
+   //                     + to_string(lammps_TEM_samples)
    //                     + " " + to_string(output_prefix) 
    //                     + ".dump.gz";
    //lmp->input->one( lammps_dump_cmd.c_str() );
