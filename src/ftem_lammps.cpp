@@ -511,9 +511,11 @@ int main( int argc, char* argv[])
    size_t found_pair_style;
    size_t found_pair_style_sw;
    size_t found_pair_style_tersoff;
+   size_t found_pair_style_eam;
 
    bool tersoff_flag = false;
    bool sw_flag = false;
+   bool eam_flag = false;
    for ( std::list< string >::iterator 
          lammps_preTEM_cmd_itr = lammps_preTEM_commands.begin(); 
          lammps_preTEM_cmd_itr != lammps_preTEM_commands.end(); 
@@ -536,6 +538,14 @@ int main( int argc, char* argv[])
          {
             tersoff_flag = true;
          }
+
+         found_pair_style_eam
+            = (*lammps_preTEM_cmd_itr).find("eam");
+
+         if ( found_pair_style_eam != string::npos ) 
+         {
+            eam_flag = true;
+         }
       }
       
       found_pair_coeff = (*lammps_preTEM_cmd_itr).find("pair_coeff");
@@ -550,7 +560,7 @@ int main( int argc, char* argv[])
                (*lammps_preTEM_cmd_itr).substr(found_pair_coeff)
                );
          string tmp_str;
-         if ( tersoff_flag || sw_flag )
+         if ( tersoff_flag || sw_flag || eam_flag )
          {
             pair_coeff_line >> tmp_str >> tmp_str >> tmp_str; 
             pair_coeff_line >> tmp_str;   // file name
@@ -564,7 +574,7 @@ int main( int argc, char* argv[])
          {
             if (lmp->comm->me == rootnode)
               lmp->error->warning(FLERR,
-                    "Error in reading lammps_preTEM_file_name : only tersoff and stillinger-weber pair_coeff commands currently allowed");
+                    "Error in reading lammps_preTEM_file_name : only tersoff, stillinger-weber, and eam pair_coeff commands currently allowed");
          }
          //if ( flags.debug )
          //   for ( size_t ii=0; ii < element_name_list.size(); ++ii)

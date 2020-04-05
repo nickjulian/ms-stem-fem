@@ -613,6 +613,7 @@ int TEM_NS::variance_1D_STEM(
             << outFilePrefix << endl;
       }
    //}
+   return EXIT_SUCCESS;
 }
 
 // TODO: rewrite variance_2D_STEM() to work within revised adfstem()
