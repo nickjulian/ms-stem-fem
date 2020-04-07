@@ -39,7 +39,7 @@ $(MSSTEMFEM):	$(OBJS)
 
 
 $(MSSTEMFEMMD):	$(OBJS)
-	$(CXX) -g $(ROOT)/src/ftem_lammps.cpp $(OBJS) $(CXXFLAGS) $(LIBS) $(LIBS_LMP)  -o $(MSSTEMFEM)
+	$(CXX) -g $(ROOT)/src/ftem_lammps.cpp $(OBJS) $(CXXFLAGS) $(LIBS) $(LIBS_LMP)  -o $(MSSTEMFEMMD)
 
 #$(CXX) -g $(ROOT)/src/tem.cpp $(OBJS) $(CXXFLAGS) $(LIBS) -o $(MSSTEMFEM)
 
