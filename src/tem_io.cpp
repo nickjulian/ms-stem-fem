@@ -416,92 +416,92 @@ int TEM_NS::read_position_lammps_file(
          }
 
          // double double double xy xz yz // tilt factors for triclinic system
-         double tiltxy, tiltxz, tiltyz;
-         if( getline( data_file, data_line) && data_file.good() )
-         {
-            // skip lines containing only whitespace
-            size_t first = data_line.find_first_not_of(" \t" );
-            while( first == std::string::npos ) // npos : max size of a string
-            {
-               getline( data_file, data_line);
-               first = data_line.find_first_not_of(" \t" );
-            }
+         //double tiltxy, tiltxz, tiltyz;
+         //if( getline( data_file, data_line) && data_file.good() )
+         //{
+         //   // skip lines containing only whitespace
+         //   size_t first = data_line.find_first_not_of(" \t" );
+         //   while( first == std::string::npos ) // npos : max size of a string
+         //   {
+         //      getline( data_file, data_line);
+         //      first = data_line.find_first_not_of(" \t" );
+         //   }
 
-            string data_descriptor1, data_descriptor2, data_descriptor3; 
-            istringstream data_line_stream( data_line );
-            data_line_stream >> tiltxy >> tiltxz >> tiltyz
-               >> data_descriptor1 >> data_descriptor2 >> data_descriptor3;
+         //   string data_descriptor1, data_descriptor2, data_descriptor3; 
+         //   istringstream data_line_stream( data_line );
+         //   data_line_stream >> tiltxy >> tiltxz >> tiltyz
+         //      >> data_descriptor1 >> data_descriptor2 >> data_descriptor3;
 
-            if ( data_descriptor1.empty() 
-                  || data_descriptor2.empty() 
-                  || data_descriptor3.empty() 
-                  )
-            {
-               cerr << "node " << mynode << ", "
-                  << "Error reading position data file;" 
-                  << " current line should be : "<< endl
-                  << "<double> <double> <double> xy xz yz"
-                  << endl;
-            }
-            // transform characters to lower case
-            // TODO: why can't I use std::tolower, but I can use tolower?
-            // TODO: the following will only work with ASCII input, not UTF. 
-            //       For Unicode support, use toLower from the ICU library.
-            transform( data_descriptor1.begin(), data_descriptor1.end(), 
-                           data_descriptor1.begin(), (int(*)(int))tolower );
-                           //data_descriptor1.begin(), tolower );
-            transform( data_descriptor2.begin(), data_descriptor2.end(), 
-                           data_descriptor2.begin(), (int(*)(int))tolower );
-                           //data_descriptor2.begin(), tolower );
-            transform( data_descriptor3.begin(), data_descriptor3.end(), 
-                           data_descriptor3.begin(), (int(*)(int))tolower );
-                           //data_descriptor3.begin(), tolower );
-            
-            if (  
-                    ( data_descriptor1.compare("xy") ) 
-                    || ( data_descriptor2.compare("xz") ) 
-                    || ( data_descriptor3.compare("yz") ) 
-               )
-            {
-               cerr << "node " << mynode << ", "
-                     << "Error reading position data file; " 
-                     << "tiltxy, tiltxz, tiltyz, data_descriptor1, "//debug
-                     << " data_descriptor2, data_descriptor3 : "// debug
-                  << tiltxy << ", " << tiltxz << ", " // debug
-                  << tiltyz << ", "// debug
-                     << data_descriptor1 // debug
-                     << ", " << data_descriptor2 // debug
-                     << ", " << data_descriptor3 // debug
-                     << endl
-                     << " current line should be : "<< endl
-                     << "<double> <double> <double> xy xz yz"
-                     << endl
-                     << "data_descriptor1.compar('xy') : " 
-                     <<  data_descriptor1.compare("xy")  
-                     << endl
-                     << "data_descriptor2.compar('xz') : " 
-                     <<  data_descriptor2.compare("xz")  
-                     << endl
-                     << "data_descriptor3.compar('yz') : " 
-                     <<  data_descriptor3.compare("yz")  
-                     << endl;
-               return EXIT_FAILURE;
-            }
-            if ( input_flag_debug )
-               cout << "node " << mynode << ", "
-                     << "tiltxy, tiltxz, tiltyz: "
-                     << tiltxy
-                     << ", " << tiltxz
-                     << ", " << tiltyz << endl;
-         }
-         else
-         {
-            cerr << "node " << mynode << ", "
-               << "Error reading position data file; data_line : "
-               << data_line << endl;
-            cerr << "data_file.good() : " << data_file.good();
-            return EXIT_FAILURE;
-         }
+         //   if ( data_descriptor1.empty() 
+         //         || data_descriptor2.empty() 
+         //         || data_descriptor3.empty() 
+         //         )
+         //   {
+         //      cerr << "node " << mynode << ", "
+         //         << "Error reading position data file;" 
+         //         << " current line should be : "<< endl
+         //         << "<double> <double> <double> xy xz yz"
+         //         << endl;
+         //   }
+         //   // transform characters to lower case
+         //   // TODO: why can't I use std::tolower, but I can use tolower?
+         //   // TODO: the following will only work with ASCII input, not UTF. 
+         //   //       For Unicode support, use toLower from the ICU library.
+         //   transform( data_descriptor1.begin(), data_descriptor1.end(), 
+         //                  data_descriptor1.begin(), (int(*)(int))tolower );
+         //                  //data_descriptor1.begin(), tolower );
+         //   transform( data_descriptor2.begin(), data_descriptor2.end(), 
+         //                  data_descriptor2.begin(), (int(*)(int))tolower );
+         //                  //data_descriptor2.begin(), tolower );
+         //   transform( data_descriptor3.begin(), data_descriptor3.end(), 
+         //                  data_descriptor3.begin(), (int(*)(int))tolower );
+         //                  //data_descriptor3.begin(), tolower );
+         //   
+         //   if (  
+         //           ( data_descriptor1.compare("xy") ) 
+         //           || ( data_descriptor2.compare("xz") ) 
+         //           || ( data_descriptor3.compare("yz") ) 
+         //      )
+         //   {
+         //      cerr << "node " << mynode << ", "
+         //            << "Error reading position data file; " 
+         //            << "tiltxy, tiltxz, tiltyz, data_descriptor1, "//debug
+         //            << " data_descriptor2, data_descriptor3 : "// debug
+         //         << tiltxy << ", " << tiltxz << ", " // debug
+         //         << tiltyz << ", "// debug
+         //            << data_descriptor1 // debug
+         //            << ", " << data_descriptor2 // debug
+         //            << ", " << data_descriptor3 // debug
+         //            << endl
+         //            << " current line should be : "<< endl
+         //            << "<double> <double> <double> xy xz yz"
+         //            << endl
+         //            << "data_descriptor1.compar('xy') : " 
+         //            <<  data_descriptor1.compare("xy")  
+         //            << endl
+         //            << "data_descriptor2.compar('xz') : " 
+         //            <<  data_descriptor2.compare("xz")  
+         //            << endl
+         //            << "data_descriptor3.compar('yz') : " 
+         //            <<  data_descriptor3.compare("yz")  
+         //            << endl;
+         //      return EXIT_FAILURE;
+         //   }
+         //   if ( input_flag_debug )
+         //      cout << "node " << mynode << ", "
+         //            << "tiltxy, tiltxz, tiltyz: "
+         //            << tiltxy
+         //            << ", " << tiltxz
+         //            << ", " << tiltyz << endl;
+         //}
+         //else
+         //{
+         //   cerr << "node " << mynode << ", "
+         //      << "Error reading position data file; data_line : "
+         //      << data_line << endl;
+         //   cerr << "data_file.good() : " << data_file.good();
+         //   return EXIT_FAILURE;
+         //}
 
          // check that boundary values are valid
          if ( xupper <= xlower ) 
@@ -522,15 +522,15 @@ int TEM_NS::read_position_lammps_file(
                << "Error reading position data file; zhi <= zlo" << endl;
             return EXIT_FAILURE;
          }
-         if ( tiltxy != 0.0 || tiltxz != 0.0 || tiltyz != 0.0 )
-         {
-            cerr << "node " << mynode << ", "
-               << "Error reading position data file; xy, xz, yz, != 0.0" 
-               << endl
-               << "Cannot handle triclinic boundaries at the moment"
-               << endl;
-            return EXIT_FAILURE;
-         }
+         //if ( tiltxy != 0.0 || tiltxz != 0.0 || tiltyz != 0.0 )
+         //{
+         //   cerr << "node " << mynode << ", "
+         //      << "Error reading position data file; xy, xz, yz, != 0.0" 
+         //      << endl
+         //      << "Cannot handle triclinic boundaries at the moment"
+         //      << endl;
+         //   return EXIT_FAILURE;
+         //}
 
          // Assign boundaries to output variables
          xperiod = xupper - xlower;
@@ -1233,92 +1233,92 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          }
 
          // double double double xy xz yz // tilt factors for triclinic system
-         double tiltxy, tiltxz, tiltyz;
-         if( getline( data_file, data_line) && data_file.good() )
-         {
-            // skip lines containing only whitespace
-            size_t first = data_line.find_first_not_of(" \t" );
-            while( first == std::string::npos ) // npos : max size of a string
-            {
-               getline( data_file, data_line);
-               first = data_line.find_first_not_of(" \t" );
-            }
+         //double tiltxy, tiltxz, tiltyz;
+         //if( getline( data_file, data_line) && data_file.good() )
+         //{
+         //   // skip lines containing only whitespace
+         //   size_t first = data_line.find_first_not_of(" \t" );
+         //   while( first == std::string::npos ) // npos : max size of a string
+         //   {
+         //      getline( data_file, data_line);
+         //      first = data_line.find_first_not_of(" \t" );
+         //   }
 
-            string data_descriptor1, data_descriptor2, data_descriptor3; 
-            istringstream data_line_stream( data_line );
-            data_line_stream >> tiltxy >> tiltxz >> tiltyz
-               >> data_descriptor1 >> data_descriptor2 >> data_descriptor3;
+         //   string data_descriptor1, data_descriptor2, data_descriptor3; 
+         //   istringstream data_line_stream( data_line );
+         //   data_line_stream >> tiltxy >> tiltxz >> tiltyz
+         //      >> data_descriptor1 >> data_descriptor2 >> data_descriptor3;
 
-            if ( data_descriptor1.empty() 
-                  || data_descriptor2.empty() 
-                  || data_descriptor3.empty() 
-                  )
-            {
-               cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file;" 
-                  << " current line should be : "<< endl
-                  << "<double> <double> <double> xy xz yz"
-                  << endl;
-            }
-            // transform characters to lower case
-            // TODO: why can't I use std::tolower, but I can use tolower?
-            // TODO: the following will only work with ASCII input, not UTF. 
-            //       For Unicode support, use toLower from the ICU library.
-            transform( data_descriptor1.begin(), data_descriptor1.end(), 
-                           data_descriptor1.begin(), (int(*)(int))tolower );
-                           //data_descriptor1.begin(), tolower );
-            transform( data_descriptor2.begin(), data_descriptor2.end(), 
-                           data_descriptor2.begin(), (int(*)(int))tolower );
-                           //data_descriptor2.begin(), tolower );
-            transform( data_descriptor3.begin(), data_descriptor3.end(), 
-                           data_descriptor3.begin(), (int(*)(int))tolower );
-                           //data_descriptor3.begin(), tolower );
-            
-            if (  
-                    ( data_descriptor1.compare("xy") ) 
-                    || ( data_descriptor2.compare("xz") ) 
-                    || ( data_descriptor3.compare("yz") ) 
-               )
-            {
-               cerr //<< "node " << mynode << ", "
-                     << "Error reading position data file; " 
-                     << "tiltxy, tiltxz, tiltyz, data_descriptor1, "//debug
-                     << " data_descriptor2, data_descriptor3 : "// debug
-                  << tiltxy << ", " << tiltxz << ", " // debug
-                  << tiltyz << ", "// debug
-                     << data_descriptor1 // debug
-                     << ", " << data_descriptor2 // debug
-                     << ", " << data_descriptor3 // debug
-                     << endl
-                     << " current line should be : "<< endl
-                     << "<double> <double> <double> xy xz yz"
-                     << endl
-                     << "data_descriptor1.compar('xy') : " 
-                     <<  data_descriptor1.compare("xy")  
-                     << endl
-                     << "data_descriptor2.compar('xz') : " 
-                     <<  data_descriptor2.compare("xz")  
-                     << endl
-                     << "data_descriptor3.compar('yz') : " 
-                     <<  data_descriptor3.compare("yz")  
-                     << endl;
-               return EXIT_FAILURE;
-            }
-            if ( input_flag_debug )
-               cout //<< "node " << mynode << ", "
-                     << "tiltxy, tiltxz, tiltyz: "
-                     << tiltxy
-                     << ", " << tiltxz
-                     << ", " << tiltyz << endl;
-         }
-         else
-         {
-            cerr //<< "node " << mynode << ", "
-               << "Error reading position data file; data_line : "
-               << data_line << endl;
-            cerr << "data_file.good() : " << data_file.good();
-            return EXIT_FAILURE;
-         }
+         //   if ( data_descriptor1.empty() 
+         //         || data_descriptor2.empty() 
+         //         || data_descriptor3.empty() 
+         //         )
+         //   {
+         //      cerr //<< "node " << mynode << ", "
+         //         << "Error reading position data file;" 
+         //         << " current line should be : "<< endl
+         //         << "<double> <double> <double> xy xz yz"
+         //         << endl;
+         //   }
+         //   // transform characters to lower case
+         //   // TODO: why can't I use std::tolower, but I can use tolower?
+         //   // TODO: the following will only work with ASCII input, not UTF. 
+         //   //       For Unicode support, use toLower from the ICU library.
+         //   transform( data_descriptor1.begin(), data_descriptor1.end(), 
+         //                  data_descriptor1.begin(), (int(*)(int))tolower );
+         //                  //data_descriptor1.begin(), tolower );
+         //   transform( data_descriptor2.begin(), data_descriptor2.end(), 
+         //                  data_descriptor2.begin(), (int(*)(int))tolower );
+         //                  //data_descriptor2.begin(), tolower );
+         //   transform( data_descriptor3.begin(), data_descriptor3.end(), 
+         //                  data_descriptor3.begin(), (int(*)(int))tolower );
+         //                  //data_descriptor3.begin(), tolower );
+         //   
+         //   if (  
+         //           ( data_descriptor1.compare("xy") ) 
+         //           || ( data_descriptor2.compare("xz") ) 
+         //           || ( data_descriptor3.compare("yz") ) 
+         //      )
+         //   {
+         //      cerr //<< "node " << mynode << ", "
+         //            << "Error reading position data file; " 
+         //            << "tiltxy, tiltxz, tiltyz, data_descriptor1, "//debug
+         //            << " data_descriptor2, data_descriptor3 : "// debug
+         //         << tiltxy << ", " << tiltxz << ", " // debug
+         //         << tiltyz << ", "// debug
+         //            << data_descriptor1 // debug
+         //            << ", " << data_descriptor2 // debug
+         //            << ", " << data_descriptor3 // debug
+         //            << endl
+         //            << " current line should be : "<< endl
+         //            << "<double> <double> <double> xy xz yz"
+         //            << endl
+         //            << "data_descriptor1.compar('xy') : " 
+         //            <<  data_descriptor1.compare("xy")  
+         //            << endl
+         //            << "data_descriptor2.compar('xz') : " 
+         //            <<  data_descriptor2.compare("xz")  
+         //            << endl
+         //            << "data_descriptor3.compar('yz') : " 
+         //            <<  data_descriptor3.compare("yz")  
+         //            << endl;
+         //      return EXIT_FAILURE;
+         //   }
+         //   if ( input_flag_debug )
+         //      cout //<< "node " << mynode << ", "
+         //            << "tiltxy, tiltxz, tiltyz: "
+         //            << tiltxy
+         //            << ", " << tiltxz
+         //            << ", " << tiltyz << endl;
+         //}
+         //else
+         //{
+         //   cerr //<< "node " << mynode << ", "
+         //      << "Error reading position data file; data_line : "
+         //      << data_line << endl;
+         //   cerr << "data_file.good() : " << data_file.good();
+         //   return EXIT_FAILURE;
+         //}
 
          // check that boundary values are valid
          if ( xupper <= xlower ) 
@@ -1339,15 +1339,15 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                << "Error reading position data file; zhi <= zlo" << endl;
             return EXIT_FAILURE;
          }
-         if ( tiltxy != 0.0 || tiltxz != 0.0 || tiltyz != 0.0 )
-         {
-            cerr //<< "node " << mynode << ", "
-               << "Error reading position data file; xy, xz, yz, != 0.0" 
-               << endl
-               << "Cannot handle triclinic boundaries at the moment"
-               << endl;
-            return EXIT_FAILURE;
-         }
+         //if ( tiltxy != 0.0 || tiltxz != 0.0 || tiltyz != 0.0 )
+         //{
+         //   cerr //<< "node " << mynode << ", "
+         //      << "Error reading position data file; xy, xz, yz, != 0.0" 
+         //      << endl
+         //      << "Cannot handle triclinic boundaries at the moment"
+         //      << endl;
+         //   return EXIT_FAILURE;
+         //}
 
          // Assign boundaries to output variables
          xperiod = xupper - xlower;
