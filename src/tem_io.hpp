@@ -102,6 +102,7 @@ namespace TEM_NS
       unsigned int lammps_preTEM_file;
       unsigned int lammps_TEM_steps;
       unsigned int lammps_TEM_samples;
+      unsigned int wisdomFile;
       unsigned int fail;
       //unsigned int correlograph_everynetcdf;
       input_flags()  // constructor
@@ -152,6 +153,7 @@ namespace TEM_NS
          lammps_preTEM_file = 0;
          lammps_TEM_steps = 0;
          lammps_TEM_samples = 0;
+         wisdomFile = 0;
          fail = 0;
       }
    };
@@ -317,7 +319,7 @@ namespace TEM_NS
          );
 
    int check_runtime_flags(
-         const input_flags& flags,
+         input_flags& flags,
          const string& args0,
          const int& mynode,
          const int& rootnode

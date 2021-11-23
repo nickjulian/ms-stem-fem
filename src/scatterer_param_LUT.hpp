@@ -80,8 +80,8 @@ class scatterer_param_LUT
          //    the scatterers
          // close the file containing params
          //paramFile.close();
-         for (size_t i = 0; i < 103; i++)
-         {
+         //for (size_t i = 0; i < 103; i++)
+         //{
             // fitted parameters taken from the book by Kirkland (2010)
             //# a: Ang^-1 , b: Ang^-2, c: Ang, d: Ang^2
             //# chisq is a figure of merit indicating the quality of fit,
@@ -1556,7 +1556,7 @@ class scatterer_param_LUT
             (get_paramPtr(103))->d[1] = 1.41279737e+001;
             (get_paramPtr(103))->c[2] = 3.79258137e-001;
             (get_paramPtr(103))->d[2] = 3.89973484e-001;
-         }
+         //}
       }
 
    private:

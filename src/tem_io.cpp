@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------
-    MS-STEM-FEM - Multislice Scanning & Fluctuation Transmission Electron 
+    MS-STEM-FEM - Multislice Scanning & Fluctuation Transmission Electron
     Microscopy Simulator
     Copyright (C) 2017 Nicholas Huebner Julian <njulian@ucla.edu>
 
@@ -33,18 +33,18 @@ using std::istringstream;
 using std::setw;
 using std::setprecision;
 
-int TEM_NS::read_position_lammps_file( 
+int TEM_NS::read_position_lammps_file(
       const string& filename,  // only valid on root node
       // If the upper and lower boundaries in the file are equal to
-      // the periodic bounds, then Nx, Ny, Nz are not needed. 
-      // However, if the boundaries are the greatest and least 
+      // the periodic bounds, then Nx, Ny, Nz are not needed.
+      // However, if the boundaries are the greatest and least
       // values contained in the discretized domain, then Nx, Ny, Nz
-      // might be needed so that an extra delta_x = (xhi - xlo)/Nx 
+      // might be needed so that an extra delta_x = (xhi - xlo)/Nx
       // may be added.
       double*& qq_contig,
       unsigned int*& Z_contig,
       unsigned int& total_population,
-      double& xlo, double& ylo, double& zlo, 
+      double& xlo, double& ylo, double& zlo,
       double& xperiod, double& yperiod, double& zperiod,
       const unsigned int& input_flag_debug,
       const int& mynode,
@@ -52,18 +52,18 @@ int TEM_NS::read_position_lammps_file(
       MPI_Comm comm
       )
 {
-   // Precondition: 
+   // Precondition:
    // - input is expected to be the same format as a lammps position
-   //  input file, with an Atoms section and an enumerated list of 
+   //  input file, with an Atoms section and an enumerated list of
    //  atoms types and coordinates
    // - qq_contig and Z_contig have not been allocated.
-   
+
    // Postcondition:
-   // - qq_contig and Z_contig have been allocated, and its memory 
+   // - qq_contig and Z_contig have been allocated, and its memory
    //    must be deleted elsewhere
-   // - qq_contig[] and Z_contig[] all reside in contiguous regions 
+   // - qq_contig[] and Z_contig[] all reside in contiguous regions
    //    of memory for MPI
-   
+
    if ( mynode == rootnode )
    {
       // declared_population 'atoms'
@@ -76,11 +76,11 @@ int TEM_NS::read_position_lammps_file(
          //char data_line[256];// 256 is an arbitrary line length limit
          string data_line;
          getline(data_file, data_line); // first line
-         
+
          // First line must begin with a space separated list of atomic
          //    numbers.
-         size_t Z; 
-         // TODO: implement method to read & assign these Zs to 
+         size_t Z;
+         // TODO: implement method to read & assign these Zs to
          //        corresponding elements of atom_type_list
 
          if( getline( data_file, data_line) && data_file.good() )
@@ -88,7 +88,7 @@ int TEM_NS::read_position_lammps_file(
 
             // skip lines containing only whitespace
             size_t first = data_line.find_first_not_of(" \t" );
-            while( first == std::string::npos ) 
+            while( first == std::string::npos )
                                        // npos : max size of a string
             {
                getline( data_file, data_line);
@@ -98,20 +98,20 @@ int TEM_NS::read_position_lammps_file(
             istringstream data_line_stream( data_line );
             data_line_stream >> declared_population;
 
-            string data_descriptor; 
+            string data_descriptor;
             data_line_stream >> data_descriptor;
             // TODO: why can't I use std::tolower, but I can use tolower?
-            transform( data_descriptor.begin(), data_descriptor.end(), 
+            transform( data_descriptor.begin(), data_descriptor.end(),
                        data_descriptor.begin(), (int(*)(int))tolower );
-            // TODO: this will only work with ASCII input, not UTF. 
-            //       For Unicode support, use toLower from the ICU 
+            // TODO: this will only work with ASCII input, not UTF.
+            //       For Unicode support, use toLower from the ICU
             //       library.
-            
-            if ( (! declared_population) 
+
+            if ( (! declared_population)
                   || ( data_descriptor.compare("atoms") ) )
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   //<< "declared_population, data_descriptor : "//debug
                   //<< declared_population  // debug
                   //<< ", " << data_descriptor  // debug
@@ -149,38 +149,38 @@ int TEM_NS::read_position_lammps_file(
             istringstream data_line_stream( data_line );
             data_line_stream >> numberofspecies;
 
-            string data_descriptor1, data_descriptor2; 
+            string data_descriptor1, data_descriptor2;
             data_line_stream >> data_descriptor1 >> data_descriptor2;
             if ( data_descriptor1.empty() || data_descriptor2.empty() )
             {
                cerr << "node " << mynode << ", "
                   << "Error reading position data file; "
-                  << "text following number of species must be 'atom types'" 
+                  << "text following number of species must be 'atom types'"
                   << endl;
             }
             // transform characters to lower case
-            // TODO: why can't I use std::tolower, but I can use 
+            // TODO: why can't I use std::tolower, but I can use
             //       tolower?
             // TODO: the following will only work with ASCII input, not
-            //       UTF. 
-            //       For Unicode support, use toLower from the ICU 
+            //       UTF.
+            //       For Unicode support, use toLower from the ICU
             //       library.
-            transform( data_descriptor1.begin(), 
-                        data_descriptor1.end(), 
-                           data_descriptor1.begin(), 
+            transform( data_descriptor1.begin(),
+                        data_descriptor1.end(),
+                           data_descriptor1.begin(),
                            (int(*)(int))tolower );
-            transform( data_descriptor2.begin(), 
-                        data_descriptor2.end(), 
-                           data_descriptor2.begin(), 
+            transform( data_descriptor2.begin(),
+                        data_descriptor2.end(),
+                           data_descriptor2.begin(),
                            (int(*)(int))tolower );
-            
+
             if (  (! numberofspecies )
-                    || ( data_descriptor1.compare("atom") ) 
-                    || ( data_descriptor2.compare("types") ) 
+                    || ( data_descriptor1.compare("atom") )
+                    || ( data_descriptor2.compare("types") )
                )
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   << "numberofspecies, data_descriptor1, " // debug
                   << " data_descriptor2 : " // debug
                   << numberofspecies  // debug
@@ -199,7 +199,7 @@ int TEM_NS::read_position_lammps_file(
          }
          else
          {
-            cerr << "node " << mynode << ", "   
+            cerr << "node " << mynode << ", "
                << "Error reading position data file; data_line : "
                << data_line << endl;
             cerr << "data_file.good() : " << data_file.good();
@@ -218,32 +218,32 @@ int TEM_NS::read_position_lammps_file(
                first = data_line.find_first_not_of(" \t" );
             }
 
-            string data_descriptor1, data_descriptor2; 
+            string data_descriptor1, data_descriptor2;
             istringstream data_line_stream( data_line );
-            data_line_stream >> xlower >> xupper 
+            data_line_stream >> xlower >> xupper
                >> data_descriptor1 >> data_descriptor2;
 
             if ( data_descriptor1.empty() || data_descriptor2.empty() )
             {
-               cerr << "Error reading position data file;" 
+               cerr << "Error reading position data file;"
                   << " current line should be : "<< endl;
                cerr << "<double> <double> xlo xhi"
                   << endl;
             }
             // transform characters to lower case
             // TODO: why can't I use std::tolower, but I can use tolower?
-            // TODO: the following will only work with ASCII input, not UTF. 
+            // TODO: the following will only work with ASCII input, not UTF.
             //       For Unicode support, use toLower from the ICU library.
-            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
                            data_descriptor1.begin(), (int(*)(int))tolower );
                            //data_descriptor1.begin(), tolower );
-            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
                            data_descriptor2.begin(), (int(*)(int))tolower );
                            //data_descriptor2.begin(), tolower );
-            
+
             if (
-                  ( data_descriptor1.compare("xlo") ) 
-                  || ( data_descriptor2.compare("xhi") ) 
+                  ( data_descriptor1.compare("xlo") )
+                  || ( data_descriptor2.compare("xhi") )
                )
             {
                cerr << "node " << mynode << ", "   // debug
@@ -282,15 +282,15 @@ int TEM_NS::read_position_lammps_file(
                first = data_line.find_first_not_of(" \t" );
             }
 
-            string data_descriptor1, data_descriptor2; 
+            string data_descriptor1, data_descriptor2;
             istringstream data_line_stream( data_line );
-            data_line_stream >> ylower >> yupper 
+            data_line_stream >> ylower >> yupper
                >> data_descriptor1 >> data_descriptor2;
 
             if ( data_descriptor1.empty() || data_descriptor2.empty() )
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file;" 
+                  << "Error reading position data file;"
                   << " current line should be : "<< endl;
                cerr << "<double> <double> ylo yhi"
                   << endl;
@@ -300,20 +300,20 @@ int TEM_NS::read_position_lammps_file(
             // TODO: why can't I use std::tolower, but I can use tolower?
             // TODO: the following will only work with ASCII input, not UTF
             //       For Unicode support, use toLower from the ICU library.
-            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
                            data_descriptor1.begin(), (int(*)(int))tolower);
                            //data_descriptor1.begin(), tolower );
-            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
                            data_descriptor2.begin(), (int(*)(int))tolower);
                            //data_descriptor2.begin(), tolower );
-            
-            if (  
-                    ( data_descriptor1.compare("ylo") ) 
-                    || ( data_descriptor2.compare("yhi") ) 
+
+            if (
+                    ( data_descriptor1.compare("ylo") )
+                    || ( data_descriptor2.compare("yhi") )
                )
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   << "ylower, yupper, data_descriptor1, "// debug
                   << " data_descriptor2 : "// debug
                   << ylower << ", " << yupper // debug
@@ -348,43 +348,43 @@ int TEM_NS::read_position_lammps_file(
                first = data_line.find_first_not_of(" \t" );
             }
 
-            string data_descriptor1, data_descriptor2; 
+            string data_descriptor1, data_descriptor2;
             istringstream data_line_stream( data_line );
-            data_line_stream >> zlower >> zupper 
+            data_line_stream >> zlower >> zupper
                >> data_descriptor1 >> data_descriptor2;
 
             if ( data_descriptor1.empty() || data_descriptor2.empty() )
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file;" 
+                  << "Error reading position data file;"
                   << " current line should be : "<< endl;
                cerr << "<double> <double> zlo zhi"
                   << endl;
             }
             // transform characters to lower case
             // TODO: why can't I use std::tolower, but I can use tolower?
-            // TODO: the following will only work with ASCII input, not UTF. 
+            // TODO: the following will only work with ASCII input, not UTF.
             //       For Unicode support, use toLower from the ICU library.
-            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
                            data_descriptor1.begin(), (int(*)(int))tolower );
                            //data_descriptor1.begin(), tolower );
-            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
                            data_descriptor2.begin(), (int(*)(int))tolower );
                            //data_descriptor2.begin(), tolower );
-            
-            if (  
-                    ( data_descriptor1.compare("zlo") ) 
-                    || ( data_descriptor2.compare("zhi") ) 
+
+            if (
+                    ( data_descriptor1.compare("zlo") )
+                    || ( data_descriptor2.compare("zhi") )
                )
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   << "zlower, zupper, data_descriptor1, " // debug
                   << " data_descriptor2 : " // debug
                   << zlower << ", " << zupper  // debug
                   << ", " << data_descriptor1  // debug
                   << ", " << data_descriptor2  // debug
-                  << endl; 
+                  << endl;
                return EXIT_FAILURE;
             }
             if ( input_flag_debug )
@@ -413,44 +413,44 @@ int TEM_NS::read_position_lammps_file(
          //      first = data_line.find_first_not_of(" \t" );
          //   }
 
-         //   string data_descriptor1, data_descriptor2, data_descriptor3; 
+         //   string data_descriptor1, data_descriptor2, data_descriptor3;
          //   istringstream data_line_stream( data_line );
          //   data_line_stream >> tiltxy >> tiltxz >> tiltyz
          //      >> data_descriptor1 >> data_descriptor2 >> data_descriptor3;
 
-         //   if ( data_descriptor1.empty() 
-         //         || data_descriptor2.empty() 
-         //         || data_descriptor3.empty() 
+         //   if ( data_descriptor1.empty()
+         //         || data_descriptor2.empty()
+         //         || data_descriptor3.empty()
          //         )
          //   {
          //      cerr << "node " << mynode << ", "
-         //         << "Error reading position data file;" 
+         //         << "Error reading position data file;"
          //         << " current line should be : "<< endl
          //         << "<double> <double> <double> xy xz yz"
          //         << endl;
          //   }
          //   // transform characters to lower case
          //   // TODO: why can't I use std::tolower, but I can use tolower?
-         //   // TODO: the following will only work with ASCII input, not UTF. 
+         //   // TODO: the following will only work with ASCII input, not UTF.
          //   //       For Unicode support, use toLower from the ICU library.
-         //   transform( data_descriptor1.begin(), data_descriptor1.end(), 
+         //   transform( data_descriptor1.begin(), data_descriptor1.end(),
          //                  data_descriptor1.begin(), (int(*)(int))tolower );
          //                  //data_descriptor1.begin(), tolower );
-         //   transform( data_descriptor2.begin(), data_descriptor2.end(), 
+         //   transform( data_descriptor2.begin(), data_descriptor2.end(),
          //                  data_descriptor2.begin(), (int(*)(int))tolower );
          //                  //data_descriptor2.begin(), tolower );
-         //   transform( data_descriptor3.begin(), data_descriptor3.end(), 
+         //   transform( data_descriptor3.begin(), data_descriptor3.end(),
          //                  data_descriptor3.begin(), (int(*)(int))tolower );
          //                  //data_descriptor3.begin(), tolower );
-         //   
-         //   if (  
-         //           ( data_descriptor1.compare("xy") ) 
-         //           || ( data_descriptor2.compare("xz") ) 
-         //           || ( data_descriptor3.compare("yz") ) 
+         //
+         //   if (
+         //           ( data_descriptor1.compare("xy") )
+         //           || ( data_descriptor2.compare("xz") )
+         //           || ( data_descriptor3.compare("yz") )
          //      )
          //   {
          //      cerr << "node " << mynode << ", "
-         //            << "Error reading position data file; " 
+         //            << "Error reading position data file; "
          //            << "tiltxy, tiltxz, tiltyz, data_descriptor1, "//debug
          //            << " data_descriptor2, data_descriptor3 : "// debug
          //         << tiltxy << ", " << tiltxz << ", " // debug
@@ -462,14 +462,14 @@ int TEM_NS::read_position_lammps_file(
          //            << " current line should be : "<< endl
          //            << "<double> <double> <double> xy xz yz"
          //            << endl
-         //            << "data_descriptor1.compar('xy') : " 
-         //            <<  data_descriptor1.compare("xy")  
+         //            << "data_descriptor1.compar('xy') : "
+         //            <<  data_descriptor1.compare("xy")
          //            << endl
-         //            << "data_descriptor2.compar('xz') : " 
-         //            <<  data_descriptor2.compare("xz")  
+         //            << "data_descriptor2.compar('xz') : "
+         //            <<  data_descriptor2.compare("xz")
          //            << endl
-         //            << "data_descriptor3.compar('yz') : " 
-         //            <<  data_descriptor3.compare("yz")  
+         //            << "data_descriptor3.compar('yz') : "
+         //            <<  data_descriptor3.compare("yz")
          //            << endl;
          //      return EXIT_FAILURE;
          //   }
@@ -490,19 +490,19 @@ int TEM_NS::read_position_lammps_file(
          //}
 
          // check that boundary values are valid
-         if ( xupper <= xlower ) 
+         if ( xupper <= xlower )
          {
             cerr << "node " << mynode << ", "
                << "Error reading position data file; xhi <= xlo" << endl;
             return EXIT_FAILURE;
          }
-         if ( yupper <= ylower ) 
+         if ( yupper <= ylower )
          {
             cerr << "node " << mynode << ", "
                << "Error reading position data file; yhi <= ylo" << endl;
             return EXIT_FAILURE;
          }
-         if ( zupper <= zlower ) 
+         if ( zupper <= zlower )
          {
             cerr << "node " << mynode << ", "
                << "Error reading position data file; zhi <= zlo" << endl;
@@ -511,7 +511,7 @@ int TEM_NS::read_position_lammps_file(
          //if ( tiltxy != 0.0 || tiltxz != 0.0 || tiltyz != 0.0 )
          //{
          //   cerr << "node " << mynode << ", "
-         //      << "Error reading position data file; xy, xz, yz, != 0.0" 
+         //      << "Error reading position data file; xy, xz, yz, != 0.0"
          //      << endl
          //      << "Cannot handle triclinic boundaries at the moment"
          //      << endl;
@@ -531,7 +531,7 @@ int TEM_NS::read_position_lammps_file(
          xlo = 0.0;
          ylo = 0.0;
          zlo = 0.0;
-         
+
          if ( mynode == rootnode && input_flag_debug )
             cout << " From input file: (xperiod, xlower, xupper): ("
                << xlower << ", " << xupper << ")"
@@ -545,7 +545,7 @@ int TEM_NS::read_position_lammps_file(
             // skip lines containing only whitespace
             size_t first = data_line.find_first_not_of(" \t" );
             // std::string::npos : max size of a string
-            while( first == std::string::npos ) 
+            while( first == std::string::npos )
             {
                getline( data_file, data_line);
                first = data_line.find_first_not_of(" \t" );
@@ -555,10 +555,10 @@ int TEM_NS::read_position_lammps_file(
             // TODO: why can't I use std::tolower, but I can use tolower?
             // TODO: the following will only work with ASCII input, not UTF
             //       For Unicode support, use toLower from the ICU library.
-            string section_name; 
+            string section_name;
             istringstream data_line_stream( data_line );
             data_line_stream >> section_name;
-            transform( section_name.begin(), section_name.end(), 
+            transform( section_name.begin(), section_name.end(),
                            section_name.begin(), (int(*)(int))tolower );
 
             // If neither atoms nor masses, exit
@@ -566,7 +566,7 @@ int TEM_NS::read_position_lammps_file(
                   && (section_name.compare("masses")) )
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file;" 
+                  << "Error reading position data file;"
                   << " current line should be either "
                   << "Atoms or Masses"
                   << endl;
@@ -576,20 +576,20 @@ int TEM_NS::read_position_lammps_file(
             // Optional 'Mass' section is skipped
             if ( ! section_name.compare("masses") )
             {
-               cout << "skipping section " // debug
-                  << section_name << endl; // debug
+               //cout << "skipping section " // debug
+               //   << section_name << endl; // debug
                // read and discard lines until reaching Atoms section
                while( getline( data_file, data_line) && data_file.good() )
                {
                   first = data_line.find_first_not_of(" \t" );
-                  while( first == std::string::npos ) 
+                  while( first == std::string::npos )
                   {
                      getline( data_file, data_line);
                      first = data_line.find_first_not_of(" \t" );
                   }
                   data_line_stream = istringstream( data_line );
                   data_line_stream >> section_name;
-                  transform( section_name.begin(), section_name.end(), 
+                  transform( section_name.begin(), section_name.end(),
                              section_name.begin(), (int(*)(int))tolower);
                   if ( ! section_name.compare("atoms") ) break;
                }
@@ -601,7 +601,7 @@ int TEM_NS::read_position_lammps_file(
             //   //{
             //   //   getline( data_file, data_line);
             //   //   first = data_line.find_first_not_of(" \t" );
-            //   //   while( first == std::string::npos ) 
+            //   //   while( first == std::string::npos )
             //   //   {
             //   //      getline( data_file, data_line);
             //   //      first = data_line.find_first_not_of(" \t" );
@@ -617,7 +617,7 @@ int TEM_NS::read_position_lammps_file(
             //   //   // skip lines containing only whitespace
             //   //   first = data_line.find_first_not_of(" \t" );
             //   //   while( (first == std::string::npos)
-            //   //            && data_file.good() 
+            //   //            && data_file.good()
             //   //            && section_name.compare("atoms") )
             //   //   {
             //   //      getline( data_file, data_line);
@@ -631,7 +631,7 @@ int TEM_NS::read_position_lammps_file(
             if ( section_name.empty() )
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file;" 
+                  << "Error reading position data file;"
                   << " current line should be either "
                   << "Atoms or Masses"
                   << endl;
@@ -640,7 +640,7 @@ int TEM_NS::read_position_lammps_file(
             if ( section_name.compare("atoms") )
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   << " section_name : " // debug
                   << section_name //debug
                   << endl
@@ -662,7 +662,7 @@ int TEM_NS::read_position_lammps_file(
 
          // read types and positions of individual atoms
 
-         size_t atom_number, atom_type; 
+         size_t atom_number, atom_type;
          size_t number_of_read_atoms = 0;
          double* qq;
          std::list<size_t> atom_number_list;
@@ -687,7 +687,7 @@ int TEM_NS::read_position_lammps_file(
                {
                   getline( data_file, data_line);
                   first = data_line.find_first_not_of(" \t" );
-               } 
+               }
 
                qq = new double[3];
                // grab data from the current line
@@ -709,15 +709,15 @@ int TEM_NS::read_position_lammps_file(
                   )
                {
                   cerr << "node " << mynode << ", "
-                     << "Error reading position data file;" 
+                     << "Error reading position data file;"
                      << " on line with atom number : " << atom_number << endl
                      << " Check that atom number, type, and position are "
                      << "within appropriate boundaries." << endl;
                   return EXIT_FAILURE;
                   // TODO: clean allocated lists before returning failure
                }
-               
-               // Determine minimum positions so that all they may be 
+
+               // Determine minimum positions so that all they may be
                //  shifted to be all positive.
                if ( qq[0] < xmin ) xmin = qq[0];
                if ( qq[1] < ymin ) ymin = qq[1];
@@ -727,15 +727,15 @@ int TEM_NS::read_position_lammps_file(
                qlist.push_back(qq);
                atom_number_list.push_back(atom_number);
                atom_type_list.push_back(atom_type );
-               
+
                number_of_read_atoms++;
             }
             else
             {
                cerr << "node " << mynode << ", "
-                  << "Error reading position data file;" 
-                  << " atoms read : " 
-                  << number_of_read_atoms  
+                  << "Error reading position data file;"
+                  << " atoms read : "
+                  << number_of_read_atoms
                   << ", declared population : "
                   << declared_population
                   << endl
@@ -746,17 +746,19 @@ int TEM_NS::read_position_lammps_file(
                return EXIT_FAILURE;
             }
          }
-         
-         // Ensure that atom types (1 2 ...) match numberofspecies, and 
+
+         // Ensure that atom types (1 2 ...) match numberofspecies, and
          //  that all atoms have unique indices (atom_number_list).
 
          std::list<size_t> atom_type_list_uniqued( atom_type_list );
          atom_type_list_uniqued.sort();
          atom_type_list_uniqued.unique();
 
-         std::list<size_t> atom_number_list_uniqued( atom_number_list );
-         atom_number_list_uniqued.sort();
-         atom_number_list_uniqued.unique();
+         // NOTE: atom IDs don't appear to be unique on large
+         //        lammps systems
+         //std::list<size_t> atom_number_list_uniqued( atom_number_list );
+         //atom_number_list_uniqued.sort();
+         //atom_number_list_uniqued.unique();
 
          ////////////////////////////////////////////////////////////////
          // shift all atoms so that all coordinates are positive
@@ -778,25 +780,25 @@ int TEM_NS::read_position_lammps_file(
             qlist[i][2] = qlist[i][2] - zlower;
          }
 
-         // Sequential pointers in qlist[] are contiguous, but the qq[] 
+         // Sequential pointers in qlist[] are contiguous, but the qq[]
          //  arrays they point to are not contiguous to each other.
-         // Here we transfer values from the qq[] arrays to a contiguous 
-         //  array so that MPI may properly broadcast them between nodes 
+         // Here we transfer values from the qq[] arrays to a contiguous
+         //  array so that MPI may properly broadcast them between nodes
          //  with ease.
-         
+
          //std::vector<double*> qlist_contig;   // not needed
          size_t common_size = qlist.size();
 
 
-         if ( 
-               declared_population == common_size 
-               && atom_type_list_uniqued.size() == numberofspecies 
-               && atom_number_list_uniqued.size() == common_size 
+         if (
+               declared_population == common_size
+               && atom_type_list_uniqued.size() == numberofspecies
+               //&& atom_number_list_uniqued.size() == common_size
             )
          {
             total_population = common_size;
 
-            std::list<size_t>::iterator 
+            std::list<size_t>::iterator
                atom_type_list_iterator = atom_type_list.begin();
 
             qq_contig = new double[ 3 * common_size ]; // 3-D
@@ -820,12 +822,12 @@ int TEM_NS::read_position_lammps_file(
          {
             cerr << "node " << mynode << ", "
                << "Error reading position file" << endl
-               << "   declared_population : " << declared_population 
+               << "   declared_population : " << declared_population
                << endl
-               << "   positions read : " << qlist.size() << endl
-               << "   unique atom ID numbers : " 
-               << atom_number_list_uniqued.size() << endl;
-            for ( size_t i=0; i<qlist.size(); i++) 
+               << "   positions read : " << qlist.size() << endl;
+               //<< "   unique atom ID numbers : "
+               //<< atom_number_list_uniqued.size() << endl;
+            for ( size_t i=0; i<qlist.size(); i++)
             {
                delete[] qlist[i];
                qlist.pop_back();
@@ -842,36 +844,36 @@ int TEM_NS::read_position_lammps_file(
 //         cout << "xlo xhi : " << xlower << " " << xupper << endl;
 //         cout << "ylo yhi : " << ylower << " " << yupper << endl;
 //         cout << "zlo zhi : " << zlower << " " << zupper << endl;
-//         cout << "tiltxy tiltxz tiltyz : " 
+//         cout << "tiltxy tiltxz tiltyz : "
 //            << tiltxy << " " << tiltxz << " " << tiltyz << endl;
-//         cout << "xperiod, yperiod, zperiod : " 
+//         cout << "xperiod, yperiod, zperiod : "
 //            << xperiod << ", " << yperiod << ", " << zperiod << endl;
 //         cout << "Atoms" << endl;
 //
 //
-//         std::list<size_t>::iterator 
+//         std::list<size_t>::iterator
 //            atom_number_list_iterator = atom_number_list.begin();
-//         std::list<size_t>::iterator 
+//         std::list<size_t>::iterator
 //            atom_type_list_iterator = atom_type_list.begin();
-//         //std::vector<scatterer>::iterator 
+//         //std::vector<scatterer>::iterator
 //         //   myScatterers_iterator = myScatterers.begin();
 //         cout << "Atom number, atom type, atomic number, position q" << endl;
 //         int precision = 7;
 //         int width = precision + 2;
 //         for( size_t i=0; i< total_population; i++)
 //         {
-//            cout 
-//               << std::setw(width) << std::setprecision(precision) 
-//               << *atom_number_list_iterator 
-//               << std::setw(width) << std::setprecision(precision) 
-//               << *atom_type_list_iterator 
-//               << std::setw(width) << std::setprecision(precision) 
+//            cout
+//               << std::setw(width) << std::setprecision(precision)
+//               << *atom_number_list_iterator
+//               << std::setw(width) << std::setprecision(precision)
+//               << *atom_type_list_iterator
+//               << std::setw(width) << std::setprecision(precision)
 //               << Z_contig[ i ]
-//               << std::setw(width) << std::setprecision(precision) 
-//               << qq_contig[ 3 * i ] 
-//               << std::setw(width) << std::setprecision(precision) 
+//               << std::setw(width) << std::setprecision(precision)
+//               << qq_contig[ 3 * i ]
+//               << std::setw(width) << std::setprecision(precision)
 //               << qq_contig[ 3 * i + 1]
-//               << std::setw(width) << std::setprecision(precision) 
+//               << std::setw(width) << std::setprecision(precision)
 //               << qq_contig[ 3 * i + 2]
 //               << endl;
 //               atom_type_list_iterator++;
@@ -886,7 +888,7 @@ int TEM_NS::read_position_lammps_file(
          for ( size_t i = 0; i < qlist.size(); i++)
          {
             //delete[] qlist.back(); // taken care of in previous loops
-            //                      
+            //
             qlist.pop_back();
             // qq to be dealt with above after copying to qq_contig
             // qlist_contig.pop_back();
@@ -894,12 +896,12 @@ int TEM_NS::read_position_lammps_file(
          }
          for ( size_t i = 0; i < atom_type_list.size(); i++)
             atom_type_list.pop_back();
-         for ( size_t i = 0; i < atom_number_list.size(); i++) 
-            atom_number_list.pop_back(); 
+         for ( size_t i = 0; i < atom_number_list.size(); i++)
+            atom_number_list.pop_back();
          // end clean up
          ///////////////////////////////////////////////////////////////
       }
-      else 
+      else
       {
          cerr << "node " << mynode << ", "
             << "Error opening position file" << endl;
@@ -909,7 +911,7 @@ int TEM_NS::read_position_lammps_file(
 
       data_file.close();
    } // end of the rootnode block
- 
+
    // Broadcast results to the remaining nodes
    MPI_Bcast( &total_population, 1, MPI_UNSIGNED, rootnode, comm);
 
@@ -927,34 +929,34 @@ int TEM_NS::read_position_lammps_file(
 }
 
 
-int TEM_NS::read_position_lammps_file_nonmpi( 
+int TEM_NS::read_position_lammps_file_nonmpi(
       const string& filename,  // only valid on root node
       // If the upper and lower boundaries in the file are equal to
-      // the periodic bounds, then Nx, Ny, Nz are not needed. 
-      // However, if the boundaries are the greatest and least 
+      // the periodic bounds, then Nx, Ny, Nz are not needed.
+      // However, if the boundaries are the greatest and least
       // values contained in the discretized domain, then Nx, Ny, Nz
-      // might be needed so that an extra delta_x = (xhi - xlo)/Nx 
+      // might be needed so that an extra delta_x = (xhi - xlo)/Nx
       // may be added.
       double*& qq_contig,
       unsigned int*& Z_contig,
       unsigned int& total_population,
-      double& xlo, double& ylo, double& zlo, 
+      double& xlo, double& ylo, double& zlo,
       double& xperiod, double& yperiod, double& zperiod,
       const unsigned int& input_flag_debug
       )
 {
-   // Precondition: 
+   // Precondition:
    // - input is expected to be the same format as a lammps position
-   //  input file, with an Atoms section and an enumerated list of 
+   //  input file, with an Atoms section and an enumerated list of
    //  atoms types and coordinates
    // - qq_contig and Z_contig have not been allocated.
-   
+
    // Postcondition:
-   // - qq_contig and Z_contig have been allocated, and its memory 
+   // - qq_contig and Z_contig have been allocated, and its memory
    //    must be deleted elsewhere
-   // - qq_contig[] and Z_contig[] all reside in contiguous regions 
+   // - qq_contig[] and Z_contig[] all reside in contiguous regions
    //    of memory for MPI
-   
+
    if ( 1 )
    {
       // declared_population 'atoms'
@@ -967,17 +969,17 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          //char data_line[256];// 256 is an arbitrary line length limit
          string data_line;
          getline(data_file, data_line); // first line
-         
+
          // First line must begin with a space separated list of atomic
          //    numbers.
-         size_t Z; 
+         size_t Z;
 
          if( getline( data_file, data_line) && data_file.good() )
          {
 
             // skip lines containing only whitespace
             size_t first = data_line.find_first_not_of(" \t" );
-            while( first == std::string::npos ) 
+            while( first == std::string::npos )
                                        // npos : max size of a string
             {
                getline( data_file, data_line);
@@ -987,20 +989,20 @@ int TEM_NS::read_position_lammps_file_nonmpi(
             istringstream data_line_stream( data_line );
             data_line_stream >> declared_population;
 
-            string data_descriptor; 
+            string data_descriptor;
             data_line_stream >> data_descriptor;
             // TODO: why can't I use std::tolower, but I can use tolower?
-            transform( data_descriptor.begin(), data_descriptor.end(), 
+            transform( data_descriptor.begin(), data_descriptor.end(),
                        data_descriptor.begin(), (int(*)(int))tolower );
-            // TODO: this will only work with ASCII input, not UTF. 
-            //       For Unicode support, use toLower from the ICU 
+            // TODO: this will only work with ASCII input, not UTF.
+            //       For Unicode support, use toLower from the ICU
             //       library.
-            
-            if ( (! declared_population) 
+
+            if ( (! declared_population)
                   || ( data_descriptor.compare("atoms") ) )
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   //<< "declared_population, data_descriptor : "//debug
                   //<< declared_population  // debug
                   //<< ", " << data_descriptor  // debug
@@ -1038,38 +1040,38 @@ int TEM_NS::read_position_lammps_file_nonmpi(
             istringstream data_line_stream( data_line );
             data_line_stream >> numberofspecies;
 
-            string data_descriptor1, data_descriptor2; 
+            string data_descriptor1, data_descriptor2;
             data_line_stream >> data_descriptor1 >> data_descriptor2;
             if ( data_descriptor1.empty() || data_descriptor2.empty() )
             {
                cerr //<< "node " << mynode << ", "
                   << "Error reading position data file; "
-                  << "text following number of species must be 'atom types'" 
+                  << "text following number of species must be 'atom types'"
                   << endl;
             }
             // transform characters to lower case
-            // TODO: why can't I use std::tolower, but I can use 
+            // TODO: why can't I use std::tolower, but I can use
             //       tolower?
             // TODO: the following will only work with ASCII input, not
-            //       UTF. 
-            //       For Unicode support, use toLower from the ICU 
+            //       UTF.
+            //       For Unicode support, use toLower from the ICU
             //       library.
-            transform( data_descriptor1.begin(), 
-                        data_descriptor1.end(), 
-                           data_descriptor1.begin(), 
+            transform( data_descriptor1.begin(),
+                        data_descriptor1.end(),
+                           data_descriptor1.begin(),
                            (int(*)(int))tolower );
-            transform( data_descriptor2.begin(), 
-                        data_descriptor2.end(), 
-                           data_descriptor2.begin(), 
+            transform( data_descriptor2.begin(),
+                        data_descriptor2.end(),
+                           data_descriptor2.begin(),
                            (int(*)(int))tolower );
-            
+
             if (  (! numberofspecies )
-                    || ( data_descriptor1.compare("atom") ) 
-                    || ( data_descriptor2.compare("types") ) 
+                    || ( data_descriptor1.compare("atom") )
+                    || ( data_descriptor2.compare("types") )
                )
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   << "numberofspecies, data_descriptor1, " // debug
                   << " data_descriptor2 : " // debug
                   << numberofspecies  // debug
@@ -1088,7 +1090,7 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          }
          else
          {
-            cerr //<< "node " << mynode << ", "   
+            cerr //<< "node " << mynode << ", "
                << "Error reading position data file; data_line : "
                << data_line << endl;
             cerr << "data_file.good() : " << data_file.good();
@@ -1107,32 +1109,32 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                first = data_line.find_first_not_of(" \t" );
             }
 
-            string data_descriptor1, data_descriptor2; 
+            string data_descriptor1, data_descriptor2;
             istringstream data_line_stream( data_line );
-            data_line_stream >> xlower >> xupper 
+            data_line_stream >> xlower >> xupper
                >> data_descriptor1 >> data_descriptor2;
 
             if ( data_descriptor1.empty() || data_descriptor2.empty() )
             {
-               cerr << "Error reading position data file;" 
+               cerr << "Error reading position data file;"
                   << " current line should be : "<< endl;
                cerr << "<double> <double> xlo xhi"
                   << endl;
             }
             // transform characters to lower case
             // TODO: why can't I use std::tolower, but I can use tolower?
-            // TODO: the following will only work with ASCII input, not UTF. 
+            // TODO: the following will only work with ASCII input, not UTF.
             //       For Unicode support, use toLower from the ICU library.
-            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
                            data_descriptor1.begin(), (int(*)(int))tolower );
                            //data_descriptor1.begin(), tolower );
-            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
                            data_descriptor2.begin(), (int(*)(int))tolower );
                            //data_descriptor2.begin(), tolower );
-            
+
             if (
-                  ( data_descriptor1.compare("xlo") ) 
-                  || ( data_descriptor2.compare("xhi") ) 
+                  ( data_descriptor1.compare("xlo") )
+                  || ( data_descriptor2.compare("xhi") )
                )
             {
                cerr //<< "node " << mynode << ", "   // debug
@@ -1171,15 +1173,15 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                first = data_line.find_first_not_of(" \t" );
             }
 
-            string data_descriptor1, data_descriptor2; 
+            string data_descriptor1, data_descriptor2;
             istringstream data_line_stream( data_line );
-            data_line_stream >> ylower >> yupper 
+            data_line_stream >> ylower >> yupper
                >> data_descriptor1 >> data_descriptor2;
 
             if ( data_descriptor1.empty() || data_descriptor2.empty() )
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file;" 
+                  << "Error reading position data file;"
                   << " current line should be : "<< endl;
                cerr << "<double> <double> ylo yhi"
                   << endl;
@@ -1189,20 +1191,20 @@ int TEM_NS::read_position_lammps_file_nonmpi(
             // TODO: why can't I use std::tolower, but I can use tolower?
             // TODO: the following will only work with ASCII input, not UTF
             //       For Unicode support, use toLower from the ICU library.
-            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
                            data_descriptor1.begin(), (int(*)(int))tolower);
                            //data_descriptor1.begin(), tolower );
-            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
                            data_descriptor2.begin(), (int(*)(int))tolower);
                            //data_descriptor2.begin(), tolower );
-            
-            if (  
-                    ( data_descriptor1.compare("ylo") ) 
-                    || ( data_descriptor2.compare("yhi") ) 
+
+            if (
+                    ( data_descriptor1.compare("ylo") )
+                    || ( data_descriptor2.compare("yhi") )
                )
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   << "ylower, yupper, data_descriptor1, "// debug
                   << " data_descriptor2 : "// debug
                   << ylower << ", " << yupper // debug
@@ -1237,43 +1239,43 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                first = data_line.find_first_not_of(" \t" );
             }
 
-            string data_descriptor1, data_descriptor2; 
+            string data_descriptor1, data_descriptor2;
             istringstream data_line_stream( data_line );
-            data_line_stream >> zlower >> zupper 
+            data_line_stream >> zlower >> zupper
                >> data_descriptor1 >> data_descriptor2;
 
             if ( data_descriptor1.empty() || data_descriptor2.empty() )
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file;" 
+                  << "Error reading position data file;"
                   << " current line should be : "<< endl;
                cerr << "<double> <double> zlo zhi"
                   << endl;
             }
             // transform characters to lower case
             // TODO: why can't I use std::tolower, but I can use tolower?
-            // TODO: the following will only work with ASCII input, not UTF. 
+            // TODO: the following will only work with ASCII input, not UTF.
             //       For Unicode support, use toLower from the ICU library.
-            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
                            data_descriptor1.begin(), (int(*)(int))tolower );
                            //data_descriptor1.begin(), tolower );
-            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
                            data_descriptor2.begin(), (int(*)(int))tolower );
                            //data_descriptor2.begin(), tolower );
-            
-            if (  
-                    ( data_descriptor1.compare("zlo") ) 
-                    || ( data_descriptor2.compare("zhi") ) 
+
+            if (
+                    ( data_descriptor1.compare("zlo") )
+                    || ( data_descriptor2.compare("zhi") )
                )
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   << "zlower, zupper, data_descriptor1, " // debug
                   << " data_descriptor2 : " // debug
                   << zlower << ", " << zupper  // debug
                   << ", " << data_descriptor1  // debug
                   << ", " << data_descriptor2  // debug
-                  << endl; 
+                  << endl;
                return EXIT_FAILURE;
             }
             if ( input_flag_debug )
@@ -1302,44 +1304,44 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                first = data_line.find_first_not_of(" \t" );
             }
 
-            string data_descriptor1, data_descriptor2, data_descriptor3; 
+            string data_descriptor1, data_descriptor2, data_descriptor3;
             istringstream data_line_stream( data_line );
             data_line_stream >> tiltxy >> tiltxz >> tiltyz
                >> data_descriptor1 >> data_descriptor2 >> data_descriptor3;
 
-            if ( data_descriptor1.empty() 
-                  || data_descriptor2.empty() 
-                  || data_descriptor3.empty() 
+            if ( data_descriptor1.empty()
+                  || data_descriptor2.empty()
+                  || data_descriptor3.empty()
                   )
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file;" 
+                  << "Error reading position data file;"
                   << " current line should be : "<< endl
                   << "<double> <double> <double> xy xz yz"
                   << endl;
             }
             // transform characters to lower case
             // TODO: why can't I use std::tolower, but I can use tolower?
-            // TODO: the following will only work with ASCII input, not UTF. 
+            // TODO: the following will only work with ASCII input, not UTF.
             //       For Unicode support, use toLower from the ICU library.
-            transform( data_descriptor1.begin(), data_descriptor1.end(), 
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
                            data_descriptor1.begin(), (int(*)(int))tolower );
                            //data_descriptor1.begin(), tolower );
-            transform( data_descriptor2.begin(), data_descriptor2.end(), 
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
                            data_descriptor2.begin(), (int(*)(int))tolower );
                            //data_descriptor2.begin(), tolower );
-            transform( data_descriptor3.begin(), data_descriptor3.end(), 
+            transform( data_descriptor3.begin(), data_descriptor3.end(),
                            data_descriptor3.begin(), (int(*)(int))tolower );
                            //data_descriptor3.begin(), tolower );
-            
-            if (  
-                    ( data_descriptor1.compare("xy") ) 
-                    || ( data_descriptor2.compare("xz") ) 
-                    || ( data_descriptor3.compare("yz") ) 
+
+            if (
+                    ( data_descriptor1.compare("xy") )
+                    || ( data_descriptor2.compare("xz") )
+                    || ( data_descriptor3.compare("yz") )
                )
             {
                cerr //<< "node " << mynode << ", "
-                     << "Error reading position data file; " 
+                     << "Error reading position data file; "
                      << "tiltxy, tiltxz, tiltyz, data_descriptor1, "//debug
                      << " data_descriptor2, data_descriptor3 : "// debug
                   << tiltxy << ", " << tiltxz << ", " // debug
@@ -1351,14 +1353,14 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                      << " current line should be : "<< endl
                      << "<double> <double> <double> xy xz yz"
                      << endl
-                     << "data_descriptor1.compar('xy') : " 
-                     <<  data_descriptor1.compare("xy")  
+                     << "data_descriptor1.compar('xy') : "
+                     <<  data_descriptor1.compare("xy")
                      << endl
-                     << "data_descriptor2.compar('xz') : " 
-                     <<  data_descriptor2.compare("xz")  
+                     << "data_descriptor2.compar('xz') : "
+                     <<  data_descriptor2.compare("xz")
                      << endl
-                     << "data_descriptor3.compar('yz') : " 
-                     <<  data_descriptor3.compare("yz")  
+                     << "data_descriptor3.compar('yz') : "
+                     <<  data_descriptor3.compare("yz")
                      << endl;
                return EXIT_FAILURE;
             }
@@ -1379,19 +1381,19 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          }
 
          // check that boundary values are valid
-         if ( xupper <= xlower ) 
+         if ( xupper <= xlower )
          {
             cerr //<< "node " << mynode << ", "
                << "Error reading position data file; xhi <= xlo" << endl;
             return EXIT_FAILURE;
          }
-         if ( yupper <= ylower ) 
+         if ( yupper <= ylower )
          {
             cerr //<< "node " << mynode << ", "
                << "Error reading position data file; yhi <= ylo" << endl;
             return EXIT_FAILURE;
          }
-         if ( zupper <= zlower ) 
+         if ( zupper <= zlower )
          {
             cerr //<< "node " << mynode << ", "
                << "Error reading position data file; zhi <= zlo" << endl;
@@ -1400,7 +1402,7 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          if ( tiltxy != 0.0 || tiltxz != 0.0 || tiltyz != 0.0 )
          {
             cerr //<< "node " << mynode << ", "
-               << "Error reading position data file; xy, xz, yz, != 0.0" 
+               << "Error reading position data file; xy, xz, yz, != 0.0"
                << endl
                << "Cannot handle triclinic boundaries at the moment"
                << endl;
@@ -1414,8 +1416,8 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          xlo = xlower;
          ylo = ylower;
          zlo = zlower;
-         
-         if ( //mynode == rootnode && 
+
+         if ( //mynode == rootnode &&
                input_flag_debug )
             cout << " From input file: (xperiod, xlower, xupper): ("
                << xlower << ", " << xupper << ")"
@@ -1424,26 +1426,26 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                << endl;
 
          // 'Atoms'
-         
+
          if( getline( data_file, data_line) && data_file.good() )
          {
             // skip lines containing only whitespace
             size_t first = data_line.find_first_not_of(" \t" );
             // std::string::npos : max size of a string
-            while( first == std::string::npos ) 
+            while( first == std::string::npos )
             {
                getline( data_file, data_line);
                first = data_line.find_first_not_of(" \t" );
             }
 
-            string section_name; 
+            string section_name;
             istringstream data_line_stream( data_line );
             data_line_stream >> section_name;
 
             if ( section_name.empty() )
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file;" 
+                  << "Error reading position data file;"
                   << " current line should be : "<< endl
                   << "Atoms"
                   << endl;
@@ -1452,12 +1454,12 @@ int TEM_NS::read_position_lammps_file_nonmpi(
             // TODO: why can't I use std::tolower, but I can use tolower?
             // TODO: the following will only work with ASCII input, not UTF
             //       For Unicode support, use toLower from the ICU library.
-            transform( section_name.begin(), section_name.end(), 
+            transform( section_name.begin(), section_name.end(),
                            section_name.begin(), (int(*)(int))tolower );
             if ( section_name.compare("atoms") )
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file; " 
+                  << "Error reading position data file; "
                   << " section_name : " // debug
                   << section_name //debug
                   << endl
@@ -1479,7 +1481,7 @@ int TEM_NS::read_position_lammps_file_nonmpi(
 
          // read types and positions of individual atoms
 
-         size_t atom_number, atom_type; 
+         size_t atom_number, atom_type;
          size_t number_of_read_atoms = 0;
          double* qq;
          std::list<size_t> atom_number_list;
@@ -1504,7 +1506,7 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                {
                   getline( data_file, data_line);
                   first = data_line.find_first_not_of(" \t" );
-               } 
+               }
 
                qq = new double[3];
                // grab data from the current line
@@ -1522,15 +1524,15 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                   )
                {
                   cerr //<< "node " << mynode << ", "
-                     << "Error reading position data file;" 
+                     << "Error reading position data file;"
                      << " on line with atom number : " << atom_number << endl
                      << " Check that atom number, type, and position are "
                      << "within appropriate boundaries." << endl;
                   return EXIT_FAILURE;
                   // TODO: clean allocated lists before returning failure
                }
-               
-               // Determine minimum positions so that all they may be 
+
+               // Determine minimum positions so that all they may be
                //  shifted to be all positive.
                if ( qq[0] < xmin ) xmin = qq[0];
                if ( qq[1] < ymin ) ymin = qq[1];
@@ -1540,15 +1542,15 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                qlist.push_back(qq);
                atom_number_list.push_back(atom_number);
                atom_type_list.push_back(atom_type );
-               
+
                number_of_read_atoms++;
             }
             else
             {
                cerr //<< "node " << mynode << ", "
-                  << "Error reading position data file;" 
-                  << " atoms read : " 
-                  << number_of_read_atoms  
+                  << "Error reading position data file;"
+                  << " atoms read : "
+                  << number_of_read_atoms
                   << ", declared population : "
                   << declared_population
                   << endl
@@ -1559,17 +1561,19 @@ int TEM_NS::read_position_lammps_file_nonmpi(
                return EXIT_FAILURE;
             }
          }
-         
-         // Ensure that atom types (1 2 ...) match numberofspecies, and 
+
+         // Ensure that atom types (1 2 ...) match numberofspecies, and
          //  that all atoms have unique indices (atom_number_list).
 
          std::list<size_t> atom_type_list_uniqued( atom_type_list );
          atom_type_list_uniqued.sort();
          atom_type_list_uniqued.unique();
 
-         std::list<size_t> atom_number_list_uniqued( atom_number_list );
-         atom_number_list_uniqued.sort();
-         atom_number_list_uniqued.unique();
+         // NOTE: atom IDs don't appear to be unique on large
+         //        lammps systems
+         //std::list<size_t> atom_number_list_uniqued( atom_number_list );
+         //atom_number_list_uniqued.sort();
+         //atom_number_list_uniqued.unique();
 
          ////////////////////////////////////////////////////////////////
          // shift all atoms so that all coordinates are positive
@@ -1581,25 +1585,25 @@ int TEM_NS::read_position_lammps_file_nonmpi(
             qlist[i][2] = qlist[i][2] - zmin;
          }
 
-         // Sequential pointers in qlist[] are contiguous, but the qq[] 
+         // Sequential pointers in qlist[] are contiguous, but the qq[]
          //  arrays they point to are not contiguous to each other.
-         // Here we transfer values from the qq[] arrays to a contiguous 
-         //  array so that MPI may properly broadcast them between nodes 
+         // Here we transfer values from the qq[] arrays to a contiguous
+         //  array so that MPI may properly broadcast them between nodes
          //  with ease.
-         
+
          //std::vector<double*> qlist_contig;   // not needed
          size_t common_size = qlist.size();
 
 
-         if ( 
-               declared_population == common_size 
-               && atom_type_list_uniqued.size() == numberofspecies 
-               && atom_number_list_uniqued.size() == common_size 
+         if (
+               declared_population == common_size
+               && atom_type_list_uniqued.size() == numberofspecies
+               //&& atom_number_list_uniqued.size() == common_size
             )
          {
             total_population = common_size;
 
-            std::list<size_t>::iterator 
+            std::list<size_t>::iterator
                atom_type_list_iterator = atom_type_list.begin();
 
             qq_contig = new double[ 3 * common_size ]; // 3-D
@@ -1623,12 +1627,12 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          {
             cerr //<< "node " << mynode << ", "
                << "Error reading position file" << endl
-               << "   declared_population : " << declared_population 
+               << "   declared_population : " << declared_population
                << endl
-               << "   positions read : " << qlist.size() << endl
-               << "   unique atom ID numbers : " 
-               << atom_number_list_uniqued.size() << endl;
-            for ( size_t i=0; i<qlist.size(); i++) 
+               << "   positions read : " << qlist.size() << endl;
+               //<< "   unique atom ID numbers : "
+               //<< atom_number_list_uniqued.size() << endl;
+            for ( size_t i=0; i<qlist.size(); i++)
             {
                delete[] qlist[i];
                qlist.pop_back();
@@ -1641,7 +1645,7 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          for ( size_t i = 0; i < qlist.size(); i++)
          {
             //delete[] qlist.back(); // taken care of in previous loops
-            //                      
+            //
             qlist.pop_back();
             // qq to be dealt with above after copying to qq_contig
             // qlist_contig.pop_back();
@@ -1649,12 +1653,12 @@ int TEM_NS::read_position_lammps_file_nonmpi(
          }
          for ( size_t i = 0; i < atom_type_list.size(); i++)
             atom_type_list.pop_back();
-         for ( size_t i = 0; i < atom_number_list.size(); i++) 
-            atom_number_list.pop_back(); 
+         for ( size_t i = 0; i < atom_number_list.size(); i++)
+            atom_number_list.pop_back();
          // end clean up
          ///////////////////////////////////////////////////////////////
       }
-      else 
+      else
       {
          cerr //<< "node " << mynode << ", "
             << "Error opening position file" << endl;
@@ -1664,7 +1668,7 @@ int TEM_NS::read_position_lammps_file_nonmpi(
 
       data_file.close();
    } // end of the rootnode block
- 
+
    // Broadcast results to the remaining nodes
    //MPI_Bcast( &total_population, 1, MPI_UNSIGNED, rootnode, comm);
 
@@ -1687,16 +1691,16 @@ int TEM_NS::read_position_lammps_file_nonmpi(
 int TEM_NS::create_position_lammps_file_011diamond(
       const string& filename,
       const double& xmin, const double& ymin, const double& zmin,
-      const size_t& unit_cells_x, 
-      const size_t& unit_cells_y, 
-      const size_t& unit_cells_z, 
+      const size_t& unit_cells_x,
+      const size_t& unit_cells_y,
+      const size_t& unit_cells_z,
       const int& Nx, const int& Ny, const int& Nz,
       const size_t& Z,
       const double& lattice_constant
       )
 {
-   std::ofstream data_file; 
-   data_file.open( filename.c_str(), 
+   std::ofstream data_file;
+   data_file.open( filename.c_str(),
          std::ofstream::out  | std::ofstream::app );
    if ( ! data_file.good() )
    {
@@ -1757,63 +1761,63 @@ int TEM_NS::create_position_lammps_file_011diamond(
       ///////////////////////////////////////////////////////////////////
       int precision = 7;
       int width = precision + 2;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
          << Z << " Z list" << endl << endl;
 
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << total_population 
+         << total_population
          <<  setw(width) << setprecision(precision)
          << "atoms" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << "1" 
+         << "1"
          <<  setw(width) << setprecision(precision)
          << " atom types" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << xmin 
+         << xmin
          <<  setw(width) << setprecision(precision)
-         << xperiod + xmin 
+         << xperiod + xmin
          <<  setw(width) << setprecision(precision)
          << " xlo xhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << ymin 
+         << ymin
          <<  setw(width) << setprecision(precision)
-         << yperiod + ymin 
+         << yperiod + ymin
          <<  setw(width) << setprecision(precision)
          << " ylo yhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << zmin 
+         << zmin
          <<  setw(width) << setprecision(precision)
-         << zperiod + zmin 
+         << zperiod + zmin
          <<  setw(width) << setprecision(precision)
          << " zlo zhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
          << " xy xz yz" << endl << endl;
       data_file << " Atoms" << endl << endl;
 
       for ( unsigned int i=0; i < total_population; i++)
       {
-         data_file 
+         data_file
             <<  setw(width) << setprecision(precision)
-            << i+1 
+            << i+1
             <<  setw(width) << setprecision(precision)
-            << 1 
+            << 1
             <<  setw(width) << setprecision(precision)
-            << q[3 * i] 
+            << q[3 * i]
             <<  setw(width) << setprecision(precision)
-            << q[3 * i + 1] 
+            << q[3 * i + 1]
             <<  setw(width) << setprecision(precision)
             << q[3 * i + 2] << endl;
       }
@@ -1828,7 +1832,7 @@ int TEM_NS::create_position_lammps_file_011diamond(
       delete[] y;
       delete[] z;
    }
-   else 
+   else
    {
       cerr << "Error opening position file: " << filename << endl;
       data_file.close();
@@ -1843,16 +1847,16 @@ int TEM_NS::create_position_lammps_file_011diamond(
 int TEM_NS::create_position_lammps_file_001diamond(
       const string& filename,
       const double& xmin, const double& ymin, const double& zmin,
-      const size_t& unit_cells_x, 
-      const size_t& unit_cells_y, 
-      const size_t& unit_cells_z, 
+      const size_t& unit_cells_x,
+      const size_t& unit_cells_y,
+      const size_t& unit_cells_z,
       const int& Nx, const int& Ny, const int& Nz,
       const size_t& Z,
       const double& lattice_constant
       )
 {
-   std::ofstream data_file; 
-   data_file.open( filename.c_str(), 
+   std::ofstream data_file;
+   data_file.open( filename.c_str(),
          std::ofstream::out  | std::ofstream::app );
    if ( ! data_file.good() )
    {
@@ -1916,63 +1920,63 @@ int TEM_NS::create_position_lammps_file_001diamond(
       ///////////////////////////////////////////////////////////////////
       int precision = 7;
       int width = precision + 2;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
          << Z << " Z list" << endl << endl;
 
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << total_population 
+         << total_population
          <<  setw(width) << setprecision(precision)
          << "atoms" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << "1" 
+         << "1"
          <<  setw(width) << setprecision(precision)
          << " atom types" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << xmin 
+         << xmin
          <<  setw(width) << setprecision(precision)
-         << xperiod + xmin 
+         << xperiod + xmin
          <<  setw(width) << setprecision(precision)
          << " xlo xhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << ymin 
+         << ymin
          <<  setw(width) << setprecision(precision)
-         << yperiod + ymin 
+         << yperiod + ymin
          <<  setw(width) << setprecision(precision)
          << " ylo yhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << zmin 
+         << zmin
          <<  setw(width) << setprecision(precision)
-         << zperiod + zmin 
+         << zperiod + zmin
          <<  setw(width) << setprecision(precision)
          << " zlo zhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
          << " xy xz yz" << endl << endl;
       data_file << " Atoms" << endl << endl;
 
       for ( unsigned int i=0; i < total_population; i++)
       {
-         data_file 
+         data_file
             <<  setw(width) << setprecision(precision)
-            << i+1 
+            << i+1
             <<  setw(width) << setprecision(precision)
-            << 1 
+            << 1
             <<  setw(width) << setprecision(precision)
-            << q[ 3 * i] 
+            << q[ 3 * i]
             <<  setw(width) << setprecision(precision)
-            << q[ 3 * i + 1] 
+            << q[ 3 * i + 1]
             <<  setw(width) << setprecision(precision)
             << q[ 3 * i + 2] << endl;
       }
@@ -1987,7 +1991,7 @@ int TEM_NS::create_position_lammps_file_001diamond(
       delete[] y;
       delete[] z;
    }
-   else 
+   else
    {
       cerr << "Error opening position file: " << filename << endl;
       data_file.close();
@@ -2002,9 +2006,9 @@ int TEM_NS::create_position_lammps_file_001diamond(
 int TEM_NS::create_position_lammps_file_111diamond(
       const string& filename,
       const double& xmin, const double& ymin, const double& zmin,
-      const size_t& unit_cells_x, 
-      const size_t& unit_cells_y, 
-      const size_t& unit_cells_z, 
+      const size_t& unit_cells_x,
+      const size_t& unit_cells_y,
+      const size_t& unit_cells_z,
       const int& Nx, const int& Ny, const int& Nz,
       const size_t& Z,
       const double& lattice_constant
@@ -2013,10 +2017,10 @@ int TEM_NS::create_position_lammps_file_111diamond(
    // Initially treat it as though it's a 001 oriented crystal, using
    //  the positions_3D_lattice_diamond_111() function which will create
    //  the positions as though it were 001 oriented, but will also rotate
-   //  the positions into a 111 orientation while enforcing periodic 
+   //  the positions into a 111 orientation while enforcing periodic
    //  boundary conditions.
-   std::ofstream data_file; 
-   data_file.open( filename.c_str(), 
+   std::ofstream data_file;
+   data_file.open( filename.c_str(),
          std::ofstream::out  | std::ofstream::app );
    if ( ! data_file.good() )
    {
@@ -2113,48 +2117,48 @@ int TEM_NS::create_position_lammps_file_111diamond(
       ///////////////////////////////////////////////////////////////////
       int precision = 7;
       int width = precision + 6;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
          << Z << " Z list" << endl << endl;
 
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << total_population 
+         << total_population
          <<  setw(width) << setprecision(precision)
          << "atoms" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << "1" 
+         << "1"
          <<  setw(width) << setprecision(precision)
          << " atom types" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << xmin 
+         << xmin
          <<  setw(width) << setprecision(precision)
-         << xperiod + xmin 
+         << xperiod + xmin
          <<  setw(width) << setprecision(precision)
          << " xlo xhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << ymin 
+         << ymin
          <<  setw(width) << setprecision(precision)
-         << yperiod + ymin 
+         << yperiod + ymin
          <<  setw(width) << setprecision(precision)
          << " ylo yhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << zmin 
+         << zmin
          <<  setw(width) << setprecision(precision)
-         << zperiod + zmin 
+         << zperiod + zmin
          <<  setw(width) << setprecision(precision)
          << " zlo zhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
          << " xy xz yz" << endl << endl;
       data_file << " Atoms" << endl << endl;
@@ -2162,7 +2166,7 @@ int TEM_NS::create_position_lammps_file_111diamond(
       size_t atom_number=1;
       for ( q_itr = q.begin(); q_itr != q.end(); ++q_itr)
       {
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << atom_number
             << setw(width) << setprecision(precision)
@@ -2170,11 +2174,11 @@ int TEM_NS::create_position_lammps_file_111diamond(
             << setw(width) << setprecision(precision)
             << *q_itr;
          ++q_itr;
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << *q_itr;
          ++q_itr;
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << *q_itr
             << endl;
@@ -2191,7 +2195,7 @@ int TEM_NS::create_position_lammps_file_111diamond(
       //delete[] y;
       //delete[] z;
    }
-   else 
+   else
    {
       cerr << "Error opening position file: " << filename << endl;
       data_file.close();
@@ -2207,9 +2211,9 @@ int TEM_NS::create_position_lammps_file_111diamond(
 int TEM_NS::create_position_lammps_file_111zincblende(
       const string& filename,
       const double& xmin, const double& ymin, const double& zmin,
-      const size_t& unit_cells_x, 
-      const size_t& unit_cells_y, 
-      const size_t& unit_cells_z, 
+      const size_t& unit_cells_x,
+      const size_t& unit_cells_y,
+      const size_t& unit_cells_z,
       const int& Nx, const int& Ny, const int& Nz,
       const size_t& Z1,
       const size_t& Z2,
@@ -2219,10 +2223,10 @@ int TEM_NS::create_position_lammps_file_111zincblende(
    // Initially treat it as though it's a 001 oriented crystal, using
    //  the positions_3D_lattice_diamond_111() function which will create
    //  the positions as though it were 001 oriented, but will also rotate
-   //  the positions into a 111 orientation while enforcing periodic 
+   //  the positions into a 111 orientation while enforcing periodic
    //  boundary conditions.
-   std::ofstream data_file; 
-   data_file.open( filename.c_str(), 
+   std::ofstream data_file;
+   data_file.open( filename.c_str(),
          std::ofstream::out  | std::ofstream::app );
    if ( ! data_file.good() )
    {
@@ -2324,48 +2328,48 @@ int TEM_NS::create_position_lammps_file_111zincblende(
       ///////////////////////////////////////////////////////////////////
       int precision = 7;
       int width = precision + 6;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
          << Z1 << " " << Z2 << " Z list" << endl << endl;
 
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << total_population 
+         << total_population
          <<  setw(width) << setprecision(precision)
          << "atoms" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << "2" 
+         << "2"
          <<  setw(width) << setprecision(precision)
          << " atom types" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << xmin 
+         << xmin
          <<  setw(width) << setprecision(precision)
-         << xperiod + xmin 
+         << xperiod + xmin
          <<  setw(width) << setprecision(precision)
          << " xlo xhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << ymin 
+         << ymin
          <<  setw(width) << setprecision(precision)
-         << yperiod + ymin 
+         << yperiod + ymin
          <<  setw(width) << setprecision(precision)
          << " ylo yhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << zmin 
+         << zmin
          <<  setw(width) << setprecision(precision)
-         << zperiod + zmin 
+         << zperiod + zmin
          <<  setw(width) << setprecision(precision)
          << " zlo zhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
          << " xy xz yz" << endl << endl;
       data_file << " Atoms" << endl << endl;
@@ -2374,7 +2378,7 @@ int TEM_NS::create_position_lammps_file_111zincblende(
       Z_itr = Z.begin();
       for ( q_itr = q.begin(); q_itr != q.end(); ++q_itr)
       {
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << atom_number
             << setw(width) << setprecision(precision)
@@ -2382,11 +2386,11 @@ int TEM_NS::create_position_lammps_file_111zincblende(
             << setw(width) << setprecision(precision)
             << *q_itr;
          ++q_itr;
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << *q_itr;
          ++q_itr;
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << *q_itr
             << endl;
@@ -2404,7 +2408,7 @@ int TEM_NS::create_position_lammps_file_111zincblende(
       //delete[] y;
       //delete[] z;
    }
-   else 
+   else
    {
       cerr << "Error opening position file: " << filename << endl;
       data_file.close();
@@ -2419,17 +2423,17 @@ int TEM_NS::create_position_lammps_file_111zincblende(
 int TEM_NS::create_position_lammps_file_011zincblende(
       const string& filename,
       const double& xmin, const double& ymin, const double& zmin,
-      const size_t& unit_cells_x, 
-      const size_t& unit_cells_y, 
-      const size_t& unit_cells_z, 
+      const size_t& unit_cells_x,
+      const size_t& unit_cells_y,
+      const size_t& unit_cells_z,
       const int& Nx, const int& Ny, const int& Nz,
       const size_t& Z1,
       const size_t& Z2,
       const double& lattice_constant
       )
 {
-   std::ofstream data_file; 
-   data_file.open( filename.c_str(), 
+   std::ofstream data_file;
+   data_file.open( filename.c_str(),
          std::ofstream::out  | std::ofstream::app );
    if ( ! data_file.good() )
    {
@@ -2530,48 +2534,48 @@ int TEM_NS::create_position_lammps_file_011zincblende(
       ///////////////////////////////////////////////////////////////////
       int precision = 7;
       int width = precision + 6;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
          << Z1 << " " << Z2 << " Z list" << endl << endl;
 
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << total_population 
+         << total_population
          <<  setw(width) << setprecision(precision)
          << "atoms" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << "2" 
+         << "2"
          <<  setw(width) << setprecision(precision)
          << " atom types" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << xmin 
+         << xmin
          <<  setw(width) << setprecision(precision)
-         << xperiod + xmin 
+         << xperiod + xmin
          <<  setw(width) << setprecision(precision)
          << " xlo xhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << ymin 
+         << ymin
          <<  setw(width) << setprecision(precision)
-         << yperiod + ymin 
+         << yperiod + ymin
          <<  setw(width) << setprecision(precision)
          << " ylo yhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << zmin 
+         << zmin
          <<  setw(width) << setprecision(precision)
-         << zperiod + zmin 
+         << zperiod + zmin
          <<  setw(width) << setprecision(precision)
          << " zlo zhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
          << " xy xz yz" << endl << endl;
       data_file << " Atoms" << endl << endl;
@@ -2580,7 +2584,7 @@ int TEM_NS::create_position_lammps_file_011zincblende(
       Z_itr = Z.begin();
       for ( q_itr = q.begin(); q_itr != q.end(); ++q_itr)
       {
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << atom_number
             << setw(width) << setprecision(precision)
@@ -2588,11 +2592,11 @@ int TEM_NS::create_position_lammps_file_011zincblende(
             << setw(width) << setprecision(precision)
             << *q_itr;
          ++q_itr;
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << *q_itr;
          ++q_itr;
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << *q_itr
             << endl;
@@ -2610,7 +2614,7 @@ int TEM_NS::create_position_lammps_file_011zincblende(
       //delete[] y;
       //delete[] z;
    }
-   else 
+   else
    {
       cerr << "Error opening position file: " << filename << endl;
       data_file.close();
@@ -2626,9 +2630,9 @@ int TEM_NS::create_position_lammps_file_011zincblende(
 int TEM_NS::create_position_lammps_file_001zincblende(
       const string& filename,
       const double& xmin, const double& ymin, const double& zmin,
-      const size_t& unit_cells_x, 
-      const size_t& unit_cells_y, 
-      const size_t& unit_cells_z, 
+      const size_t& unit_cells_x,
+      const size_t& unit_cells_y,
+      const size_t& unit_cells_z,
       const int& Nx, const int& Ny, const int& Nz,
       const size_t& Z1,
       const size_t& Z2,
@@ -2638,10 +2642,10 @@ int TEM_NS::create_position_lammps_file_001zincblende(
    // Initially treat it as though it's a 001 oriented crystal, using
    //  the positions_3D_lattice_diamond_111() function which will create
    //  the positions as though it were 001 oriented, but will also rotate
-   //  the positions into a 111 orientation while enforcing periodic 
+   //  the positions into a 111 orientation while enforcing periodic
    //  boundary conditions.
-   std::ofstream data_file; 
-   data_file.open( filename.c_str(), 
+   std::ofstream data_file;
+   data_file.open( filename.c_str(),
          std::ofstream::out  | std::ofstream::app );
    if ( ! data_file.good() )
    {
@@ -2734,48 +2738,48 @@ int TEM_NS::create_position_lammps_file_001zincblende(
       ///////////////////////////////////////////////////////////////////
       int precision = 7;
       int width = precision + 6;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
          << Z1 << " " << Z2 << " Z list" << endl << endl;
 
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << total_population 
+         << total_population
          <<  setw(width) << setprecision(precision)
          << "atoms" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << "2" 
+         << "2"
          <<  setw(width) << setprecision(precision)
          << " atom types" << endl << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << xmin 
+         << xmin
          <<  setw(width) << setprecision(precision)
-         << xperiod + xmin 
+         << xperiod + xmin
          <<  setw(width) << setprecision(precision)
          << " xlo xhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << ymin 
+         << ymin
          <<  setw(width) << setprecision(precision)
-         << yperiod + ymin 
+         << yperiod + ymin
          <<  setw(width) << setprecision(precision)
          << " ylo yhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << zmin 
+         << zmin
          <<  setw(width) << setprecision(precision)
-         << zperiod + zmin 
+         << zperiod + zmin
          <<  setw(width) << setprecision(precision)
          << " zlo zhi" << endl;
-      data_file 
+      data_file
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
-         << 0.0 
+         << 0.0
          <<  setw(width) << setprecision(precision)
          << " xy xz yz" << endl << endl;
       data_file << " Atoms" << endl << endl;
@@ -2784,7 +2788,7 @@ int TEM_NS::create_position_lammps_file_001zincblende(
       Z_itr = Z.begin();
       for ( q_itr = q.begin(); q_itr != q.end(); ++q_itr)
       {
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << atom_number
             << setw(width) << setprecision(precision)
@@ -2792,11 +2796,11 @@ int TEM_NS::create_position_lammps_file_001zincblende(
             << setw(width) << setprecision(precision)
             << *q_itr;
          ++q_itr;
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << *q_itr;
          ++q_itr;
-         data_file 
+         data_file
             << setw(width) << setprecision(precision)
             << *q_itr
             << endl;
@@ -2814,7 +2818,7 @@ int TEM_NS::create_position_lammps_file_001zincblende(
       //delete[] y;
       //delete[] z;
    }
-   else 
+   else
    {
       cerr << "Error opening position file: " << filename << endl;
       data_file.close();
@@ -2827,7 +2831,7 @@ int TEM_NS::create_position_lammps_file_001zincblende(
 }
 
 int TEM_NS::read_parameter_file(
-         const string& parameter_filename, 
+         const string& parameter_filename,
          string& model_file,
          input_flags& flags,
          string& output_prefix,
@@ -2862,7 +2866,7 @@ int TEM_NS::read_parameter_file(
    //if ( mynode == rootnode )
    //{  // NOTE:
    //    If only root node is allowed to access the file, then
-   //    root node will have to find a way to Bcast the strings it 
+   //    root node will have to find a way to Bcast the strings it
    //    reads for output_prefix and model_file. Unfortunately, I've
    //    not yet found a way to do Bcast strings without assuming that
    //    they're ASCII. If they happen to be UTF, then I don't know
@@ -2883,15 +2887,15 @@ int TEM_NS::read_parameter_file(
          }
 
          istringstream data_line_stream( data_line );
-         string data_descriptor; 
+         string data_descriptor;
          data_line_stream >> data_descriptor;
          // Transform ASCII characters to lower case.
          //    TODO: find another solution for transforming case
          //    Supposedly this won't work for UTF. ?!
-         //    For Unicode support, I've heard that I should use 
+         //    For Unicode support, I've heard that I should use
          //    toLower from the ICU library.
          //    Should they even be transformed to lower case?
-         transform( data_descriptor.begin(), data_descriptor.end(), 
+         transform( data_descriptor.begin(), data_descriptor.end(),
                     data_descriptor.begin(), (int(*)(int))tolower );
 
          if ( ! data_descriptor.compare("debug") )
@@ -2995,7 +2999,7 @@ int TEM_NS::read_parameter_file(
             {
                if ( mynode == rootnode )
                {
-                  cout << "Error, could not read MTF file : " 
+                  cout << "Error, could not read MTF file : "
                      << mtf_file_name << endl;
                }
                flags.fail = 1 ;
@@ -3022,7 +3026,7 @@ int TEM_NS::read_parameter_file(
                flags.mtf_resolution = 0;
             else
                flags.mtf_resolution = 1;
-            //if ( mtf_resolutions.size() 
+            //if ( mtf_resolutions.size()
             //      == mtf_resolutions.max_size())
             //{
             //   cout << "maximum number of MTF sample rates"
@@ -3030,7 +3034,7 @@ int TEM_NS::read_parameter_file(
             //}
             // debug
             //cout << "(debug) resolutions added to mtf_resolutions: ";
-            //for ( std::vector<double>::iterator 
+            //for ( std::vector<double>::iterator
             //      itr = mtf_resolutions.begin();
             //      itr != mtf_resolutions.end();
             //      ++itr)
@@ -3186,21 +3190,21 @@ int TEM_NS::read_parameter_file(
                   << "  scherzer_cs3" << endl
                   << "  defocus <defocus value>" << endl
                   << "  alphamax <maximum alpha>" << endl
-                  << "  spread <defocus spread>" 
+                  << "  spread <defocus spread>"
                   << " <condenser illumination angle>" << endl
                   << "  cs3 <cs3 value>" << endl
                   << "  cs5 <cs5 value>" << endl
                   << "  detectorangles <inner_angle>"
                   <<    " <outer_angle [radians]>" << endl
                   << "  mtf_file <mtf filepath>" << endl
-                  << "    simulate detector modulation transfer function" 
+                  << "    simulate detector modulation transfer function"
                   << endl
-                  << "     using the values contained in the specified" 
+                  << "     using the values contained in the specified"
                   << endl
-                  << "     file containing a domain on the first line" 
+                  << "     file containing a domain on the first line"
                   << endl
                   << "      and MTF values in units of the image" << endl
-                  << "       Nyquist frequency (0.5*sample_rate) on" 
+                  << "       Nyquist frequency (0.5*sample_rate) on"
                   << endl
                   << "       the second" << endl
                   << "  mtf_sampling_rate <value [A^-1]>" << endl
@@ -3231,11 +3235,11 @@ int TEM_NS::read_parameter_file(
                   << "  minslice <minimum slice thickness>" << endl
                   << "  images" << endl
                   << "  diffractionimages" << endl
-                  << "  lammps_preTEM_file_name <lammps setup file name>" 
+                  << "  lammps_preTEM_file_name <lammps setup file name>"
                   << endl
-                  << "  lammps_TEM_steps <MD steps per sample>" 
+                  << "  lammps_TEM_steps <MD steps per sample>"
                   << endl
-                  << "  lammps_TEM_samples <number of times to sample MD per probe position>" 
+                  << "  lammps_TEM_samples <number of times to sample MD per probe position>"
                   << endl
                   //<< "  netcdfimages" << endl
                   //<< "  netcdfvariance" << endl
@@ -3246,9 +3250,9 @@ int TEM_NS::read_parameter_file(
          }
       }
    }
-   else 
+   else
    {
-      cerr << "Error opening parameter file: " << parameter_filename 
+      cerr << "Error opening parameter file: " << parameter_filename
          << endl;
       data_file.close();
       return EXIT_FAILURE;
@@ -3256,8 +3260,8 @@ int TEM_NS::read_parameter_file(
    data_file.close();
    //} // rootnode
 
-   if ( flags.fem && (!( flags.d1  || flags.d2 || flags.d3 
-                        || flags.d4 || flags.gt17 || flags.rva 
+   if ( flags.fem && (!( flags.d1  || flags.d2 || flags.d3
+                        || flags.d4 || flags.gt17 || flags.rva
                         || flags.correlograph)) )
    {
       flags.d1 = 1; // default fem mode
@@ -3268,7 +3272,7 @@ int TEM_NS::read_parameter_file(
    //// pack the boolean values into an array and then broadcast it
    //unsigned int* flags_to_send ;
    //flags_to_send = new unsigned int[ 30 ];
-   //if ( mynode == rootnode ) 
+   //if ( mynode == rootnode )
    //{
    //   flags_to_send[0] = flags.o;
    //   flags_to_send[1] = flags.nx;
@@ -3318,7 +3322,7 @@ int TEM_NS::read_parameter_file(
    //// pack the double values into an array and then broadcast it
    //double* doubles_to_send;
    //doubles_to_send = new double[ 10 ];
-   //if ( mynode == rootnode ) 
+   //if ( mynode == rootnode )
    //{
    //   doubles_to_send[0] = VV;
    //   doubles_to_send[1] = defocus;
@@ -3334,7 +3338,7 @@ int TEM_NS::read_parameter_file(
    //MPI_Bcast( doubles_to_send, 10, MPI_DOUBLE, rootnode, comm);
 
    //// unpack the broadcast values
-   //if ( mynode != rootnode ) 
+   //if ( mynode != rootnode )
    //{
    //   VV = doubles_to_send[0];
    //   defocus = doubles_to_send[1];
@@ -3386,6 +3390,7 @@ int TEM_NS::read_parameter_file(
    //delete[] doubles_to_send;
    //delete[] N_int;
 
+   if ( flags.fail != 0) return EXIT_FAILURE;
    return EXIT_SUCCESS;
 }
 
@@ -3405,7 +3410,7 @@ int TEM_NS::read_position_xyz_file(
 {
    // Currently elements 1 through 103 are modeled.
 
-   if ( mynode == rootnode ) 
+   if ( mynode == rootnode )
    {
       ifstream data_file( filename.c_str() );
       if ( data_file.is_open() )
@@ -3414,7 +3419,7 @@ int TEM_NS::read_position_xyz_file(
          //getline(data_file, data_line);
 
          size_t declared_population;
-         
+
 
          ////////////////////////////////////////////////////////////////
          // First line of an xyz file must begin with the number of atoms
@@ -3424,7 +3429,7 @@ int TEM_NS::read_position_xyz_file(
          {
             istringstream data_line_stream( data_line );
             data_line_stream >> declared_population;
-            
+
             if ( !  declared_population )
             {
                cerr << "node " << mynode << ", "
@@ -3450,18 +3455,18 @@ int TEM_NS::read_position_xyz_file(
          }
 
          ////////////////////////////////////////////////////////////////
-         // The second line should begin with : 
+         // The second line should begin with :
          //    <xperiod> <yperiod> <zperiod>
          ////////////////////////////////////////////////////////////////
          if ( getline( data_file, data_line) && data_file.good() )
          {
             double xperiod_local, yperiod_local, zperiod_local;
             istringstream data_line_stream( data_line );
-            data_line_stream >> xperiod_local 
+            data_line_stream >> xperiod_local
                >> yperiod_local >> zperiod_local;
 
-            if ( xperiod_local > 0.0 
-                  && yperiod_local > 0.0 
+            if ( xperiod_local > 0.0
+                  && yperiod_local > 0.0
                   && zperiod_local > 0.0 )
             {
                xperiod = xperiod_local;
@@ -3475,7 +3480,7 @@ int TEM_NS::read_position_xyz_file(
                   << " second line should begin with : " << endl;
                cerr << "<xperiod> <yperiod> <zperiod>" << endl;
                cerr << "data_line : " << endl << data_line << endl;
-               cerr << "xperiod_local, yperiod_local, zperiod_local : " 
+               cerr << "xperiod_local, yperiod_local, zperiod_local : "
                   << xperiod_local << ", "
                   << yperiod_local << ", "
                   << zperiod_local << endl;
@@ -3493,7 +3498,7 @@ int TEM_NS::read_position_xyz_file(
          }
 
          ////////////////////////////////////////////////////////////////
-         // Read declared_population lines of the file to populate 
+         // Read declared_population lines of the file to populate
          //    positions and Zs
          ////////////////////////////////////////////////////////////////
          size_t atom_type;
@@ -3507,7 +3512,7 @@ int TEM_NS::read_position_xyz_file(
          double zmin = 0.0; double zmax = 0.0;
 
          if ( input_flag_debug )
-            cout << "declared population : " 
+            cout << "declared population : "
                << declared_population << endl;
 
          while ( number_of_read_atoms < declared_population )
@@ -3537,7 +3542,7 @@ int TEM_NS::read_position_xyz_file(
                      << "element " << element_name << " invalid; "
                      << "data_line : " << data_line << endl;
                    // clean up before exiting
-                  for ( size_t i=0; i < qlist.size(); i++) 
+                  for ( size_t i=0; i < qlist.size(); i++)
                      qlist.pop_back();
                   for ( size_t i=0; i < atom_type_list.size(); i++)
                      atom_type_list.pop_back();
@@ -3546,7 +3551,7 @@ int TEM_NS::read_position_xyz_file(
 
                data_line_stream >> qq[0] >> qq[1] >> qq[2] ;
 
-               // keep track of atomic position maximums and minimums for 
+               // keep track of atomic position maximums and minimums for
                //  comparison to xperiod, yperiod, and zperiod
                if ( qq[0] < xmin ) xmin = qq[0];
                if ( qq[0] > xmax ) xmax = qq[0];
@@ -3557,7 +3562,7 @@ int TEM_NS::read_position_xyz_file(
 
                qlist.push_back( qq );
                atom_type_list.push_back( atom_type );
-               
+
                number_of_read_atoms++;
 
             }
@@ -3572,7 +3577,7 @@ int TEM_NS::read_position_xyz_file(
                   << ", data_file.fail() : " << data_file.fail()
                   << ", data_file.bad() : " << data_file.bad();
                 // clean up before exiting
-               for ( size_t i=0; i < qlist.size(); i++) 
+               for ( size_t i=0; i < qlist.size(); i++)
                   qlist.pop_back();
                for ( size_t i=0; i < atom_type_list.size(); i++)
                   atom_type_list.pop_back();
@@ -3583,25 +3588,25 @@ int TEM_NS::read_position_xyz_file(
          if ( input_flag_debug )
             cout << "number of atoms read: "
                << number_of_read_atoms << endl;
-         
+
          // TODO : check that xmax - xmin <= xperiod, and similary for y & z
-         if ( xmax - xmin > xperiod 
-               || ymax - ymin > yperiod 
+         if ( xmax - xmin > xperiod
+               || ymax - ymin > yperiod
                || zmax - zmin > zperiod )
          {
             cerr << "node " << mynode << ", "
                << "Error reading position data file;"
                << " positions exceed period "
-               << endl 
-               << "xmax, xmin, xperiod : " 
+               << endl
+               << "xmax, xmin, xperiod : "
                << xmax << ", " << xmin << ", " << xperiod << endl
-               << "ymax, ymin, yperiod : " 
+               << "ymax, ymin, yperiod : "
                << ymax << ", " << ymin << ", " << yperiod << endl
-               << "zmax, zmin, zperiod : " 
+               << "zmax, zmin, zperiod : "
                << zmax << ", " << zmin << ", " << zperiod << endl;
 
             // clean up before exiting
-            for ( size_t i=0; i < qlist.size(); i++) 
+            for ( size_t i=0; i < qlist.size(); i++)
                qlist.pop_back();
             for ( size_t i=0; i < atom_type_list.size(); i++)
                atom_type_list.pop_back();
@@ -3613,7 +3618,7 @@ int TEM_NS::read_position_xyz_file(
          //xlo = xmin - ( xperiod - (xmax - xmin) )/2.0;
          //ylo = ymin - ( yperiod - (ymax - ymin) )/2.0;
          //zlo = zmin - ( zperiod - (zmax - zmin) )/2.0;
-          
+
          // Note: The above causes the stem probe to be misplaced.
          // TODO: shift everything so that the lower left corner is (0,0,0)
 
@@ -3641,20 +3646,20 @@ int TEM_NS::read_position_xyz_file(
          ////////////////////////////////////////////////////////////////
          // copy atom positions and atomic number to qq_contig & Z_contig
          ////////////////////////////////////////////////////////////////
-         if ( 
-               qlist.size() != declared_population 
+         if (
+               qlist.size() != declared_population
                ||
                qlist.size() != atom_type_list.size()
                )
          {
             cerr << "node " << mynode << ", "
                << "Error reading position data file; "
-               << "number_of_read_atoms " << number_of_read_atoms 
-              << ",  declared population " << declared_population 
+               << "number_of_read_atoms " << number_of_read_atoms
+              << ",  declared population " << declared_population
               << ",  qlist.size() " << qlist.size()
               << ",  atom_type_list.size() " << atom_type_list.size()
               << endl;
-            for ( size_t i=0; i < qlist.size(); i++) 
+            for ( size_t i=0; i < qlist.size(); i++)
                qlist.pop_back();
             for ( size_t i=0; i < atom_type_list.size(); i++)
                atom_type_list.pop_back();
@@ -3680,7 +3685,7 @@ int TEM_NS::read_position_xyz_file(
          ////////////////////////////////////////////////////////////////
          // clean up
          ////////////////////////////////////////////////////////////////
-         for ( size_t i=0; i < qlist.size(); i++) 
+         for ( size_t i=0; i < qlist.size(); i++)
             qlist.pop_back();
          for ( size_t i=0; i < atom_type_list.size(); i++)
             atom_type_list.pop_back();
@@ -3726,7 +3731,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
 {
    // Currently elements 1 through 103 are modeled.
 
-   if ( 1 )//mynode == rootnode ) 
+   if ( 1 )//mynode == rootnode )
    {
       ifstream data_file( filename.c_str() );
       if ( data_file.is_open() )
@@ -3735,7 +3740,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
          //getline(data_file, data_line);
 
          size_t declared_population;
-         
+
 
          ////////////////////////////////////////////////////////////////
          // First line of an xyz file must begin with the number of atoms
@@ -3745,7 +3750,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
          {
             istringstream data_line_stream( data_line );
             data_line_stream >> declared_population;
-            
+
             if ( !  declared_population )
             {
                cerr //<< "node " << mynode << ", "
@@ -3771,18 +3776,18 @@ int TEM_NS::read_position_xyz_file_nonmpi(
          }
 
          ////////////////////////////////////////////////////////////////
-         // The second line should begin with : 
+         // The second line should begin with :
          //    <xperiod> <yperiod> <zperiod>
          ////////////////////////////////////////////////////////////////
          if ( getline( data_file, data_line) && data_file.good() )
          {
             double xperiod_local, yperiod_local, zperiod_local;
             istringstream data_line_stream( data_line );
-            data_line_stream >> xperiod_local 
+            data_line_stream >> xperiod_local
                >> yperiod_local >> zperiod_local;
 
-            if ( xperiod_local > 0.0 
-                  && yperiod_local > 0.0 
+            if ( xperiod_local > 0.0
+                  && yperiod_local > 0.0
                   && zperiod_local > 0.0 )
             {
                xperiod = xperiod_local;
@@ -3796,7 +3801,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
                   << " second line should begin with : " << endl;
                cerr << "<xperiod> <yperiod> <zperiod>" << endl;
                cerr << "data_line : " << endl << data_line << endl;
-               cerr << "xperiod_local, yperiod_local, zperiod_local : " 
+               cerr << "xperiod_local, yperiod_local, zperiod_local : "
                   << xperiod_local << ", "
                   << yperiod_local << ", "
                   << zperiod_local << endl;
@@ -3814,7 +3819,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
          }
 
          ////////////////////////////////////////////////////////////////
-         // Read declared_population lines of the file to populate 
+         // Read declared_population lines of the file to populate
          //    positions and Zs
          ////////////////////////////////////////////////////////////////
          size_t atom_type;
@@ -3828,7 +3833,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
          double zmin = 0.0; double zmax = 0.0;
 
          if ( input_flag_debug )
-            cout << "declared population : " 
+            cout << "declared population : "
                << declared_population << endl;
 
          while ( number_of_read_atoms < declared_population )
@@ -3856,7 +3861,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
                      << "element " << element_name << " invalid; "
                      << "data_line : " << data_line << endl;
                    // clean up before exiting
-                  for ( size_t i=0; i < qlist.size(); i++) 
+                  for ( size_t i=0; i < qlist.size(); i++)
                      qlist.pop_back();
                   for ( size_t i=0; i < atom_type_list.size(); i++)
                      atom_type_list.pop_back();
@@ -3865,7 +3870,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
 
                data_line_stream >> qq[0] >> qq[1] >> qq[2] ;
 
-               // keep track of atomic position maximums and minimums for 
+               // keep track of atomic position maximums and minimums for
                //  comparison to xperiod, yperiod, and zperiod
                if ( qq[0] < xmin ) xmin = qq[0];
                if ( qq[0] > xmax ) xmax = qq[0];
@@ -3876,7 +3881,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
 
                qlist.push_back( qq );
                atom_type_list.push_back( atom_type );
-               
+
                number_of_read_atoms++;
 
             }
@@ -3891,7 +3896,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
                   << ", data_file.fail() : " << data_file.fail()
                   << ", data_file.bad() : " << data_file.bad();
                 // clean up before exiting
-               for ( size_t i=0; i < qlist.size(); i++) 
+               for ( size_t i=0; i < qlist.size(); i++)
                   qlist.pop_back();
                for ( size_t i=0; i < atom_type_list.size(); i++)
                   atom_type_list.pop_back();
@@ -3902,25 +3907,25 @@ int TEM_NS::read_position_xyz_file_nonmpi(
          if ( input_flag_debug )
             cout << "number of atoms read: "
                << number_of_read_atoms << endl;
-         
+
          // TODO : check that xmax - xmin <= xperiod, and similary for y & z
-         if ( xmax - xmin > xperiod 
-               || ymax - ymin > yperiod 
+         if ( xmax - xmin > xperiod
+               || ymax - ymin > yperiod
                || zmax - zmin > zperiod )
          {
             cerr //<< "node " << mynode << ", "
                << "Error reading position data file;"
                << " positions exceed period "
-               << endl 
-               << "xmax, xmin, xperiod : " 
+               << endl
+               << "xmax, xmin, xperiod : "
                << xmax << ", " << xmin << ", " << xperiod << endl
-               << "ymax, ymin, yperiod : " 
+               << "ymax, ymin, yperiod : "
                << ymax << ", " << ymin << ", " << yperiod << endl
-               << "zmax, zmin, zperiod : " 
+               << "zmax, zmin, zperiod : "
                << zmax << ", " << zmin << ", " << zperiod << endl;
 
             // clean up before exiting
-            for ( size_t i=0; i < qlist.size(); i++) 
+            for ( size_t i=0; i < qlist.size(); i++)
                qlist.pop_back();
             for ( size_t i=0; i < atom_type_list.size(); i++)
                atom_type_list.pop_back();
@@ -3932,7 +3937,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
          //xlo = xmin - ( xperiod - (xmax - xmin) )/2.0;
          //ylo = ymin - ( yperiod - (ymax - ymin) )/2.0;
          //zlo = zmin - ( zperiod - (zmax - zmin) )/2.0;
-          
+
          // Note: The above causes the stem probe to be misplaced.
          // TODO: shift everything so that the lower left corner is (0,0,0)
 
@@ -3960,20 +3965,20 @@ int TEM_NS::read_position_xyz_file_nonmpi(
          ////////////////////////////////////////////////////////////////
          // copy atom positions and atomic number to qq_contig & Z_contig
          ////////////////////////////////////////////////////////////////
-         if ( 
-               qlist.size() != declared_population 
+         if (
+               qlist.size() != declared_population
                ||
                qlist.size() != atom_type_list.size()
                )
          {
             cerr //<< "node " << mynode << ", "
                << "Error reading position data file; "
-               << "number_of_read_atoms " << number_of_read_atoms 
-              << ",  declared population " << declared_population 
+               << "number_of_read_atoms " << number_of_read_atoms
+              << ",  declared population " << declared_population
               << ",  qlist.size() " << qlist.size()
               << ",  atom_type_list.size() " << atom_type_list.size()
               << endl;
-            for ( size_t i=0; i < qlist.size(); i++) 
+            for ( size_t i=0; i < qlist.size(); i++)
                qlist.pop_back();
             for ( size_t i=0; i < atom_type_list.size(); i++)
                atom_type_list.pop_back();
@@ -3999,7 +4004,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
          ////////////////////////////////////////////////////////////////
          // clean up
          ////////////////////////////////////////////////////////////////
-         for ( size_t i=0; i < qlist.size(); i++) 
+         for ( size_t i=0; i < qlist.size(); i++)
             qlist.pop_back();
          for ( size_t i=0; i < atom_type_list.size(); i++)
             atom_type_list.pop_back();
@@ -4032,7 +4037,7 @@ int TEM_NS::read_position_xyz_file_nonmpi(
    return EXIT_SUCCESS;
 }
 
-int TEM_NS::read_cmdline_options( 
+int TEM_NS::read_cmdline_options(
    const std::vector<string>& args,
    string& model_file_name,
    input_flags& flags,
@@ -4065,19 +4070,19 @@ int TEM_NS::read_cmdline_options(
    MPI_Comm comm
 )
 {
-   unsigned int failflag;
+   //unsigned int failflag;
    int Nx_int;
    int Ny_int;
-   failflag = 0;
+   //failflag = 0;
    for ( size_t idx=1; idx < args.size(); idx++)
    {
       if (args[idx] == "--parameter_file")// microscope parameter file name
       {
          string parameter_file_name;
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             parameter_file_name = string(args[idx + 1]);
             //istringstream( args[idx + 1] ) >> parameter_file_name;
-         if ( 
+         if (
                read_parameter_file(
                   parameter_file_name,
                   model_file_name,
@@ -4111,13 +4116,13 @@ int TEM_NS::read_cmdline_options(
          {
             if ( mynode == rootnode )
             {
-               cout << "Error, could not read parameter file : " 
+               cout << "Error, could not read parameter file : "
                   << parameter_file_name << endl;
             }
-            failflag = 1 ;
+            flags.fail = 1 ;
          }
 
-         if ( flags.microscope_voltage && flags.nx && flags.ny ) 
+         if ( flags.microscope_voltage && flags.nx && flags.ny )
             flags.m = 1;
          else
             flags.m = 0;
@@ -4129,11 +4134,11 @@ int TEM_NS::read_cmdline_options(
       else if (args[idx] == "--mtf_file")
       {
          string mtf_file_name;
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             mtf_file_name = string(args[idx + 1]);
          if (
                read_mtf_file(
-                  flags, 
+                  flags,
                   mtf_file_name,
                   mtf,
                   mtf_domain,
@@ -4145,28 +4150,28 @@ int TEM_NS::read_cmdline_options(
          {
             if ( mynode == rootnode )
             {
-               cout << "Error, could not read MTF file : " 
+               cout << "Error, could not read MTF file : "
                   << mtf_file_name << endl;
             }
-            failflag = 1 ;
+            flags.fail = 1 ;
          }
          else flags.mtf_file = 1;
       }
       else if ( args[idx] == "--mtf_sampling_rate")
       {
          mtf_resolution = 0;
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
          {
             istringstream( args[idx + 1] ) >> mtf_resolution;
             idx += 1;
          }
-         //while (idx + 1 < args.size() 
-         //         && 
+         //while (idx + 1 < args.size()
+         //         &&
          //         (
          //            mtf_resolutions.size()
          //            < mtf_resolutions.max_size()
          //         )
-         //      ) 
+         //      )
          //{
          //   double resolution;
          //   if ( (args[idx + 1]).front() == '-')
@@ -4183,7 +4188,7 @@ int TEM_NS::read_cmdline_options(
          if ( mtf_resolution <= 0)
          {
             flags.mtf_resolution = 0;
-            cout << " Warning: attempted to use MTF sampling rate <= 0" 
+            cout << " Warning: attempted to use MTF sampling rate <= 0"
                << endl;
          }
          else
@@ -4200,7 +4205,7 @@ int TEM_NS::read_cmdline_options(
       }
       else if ( args[idx] == "--output_prefix" )
       {
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
          {
             output_prefix = string(args[idx + 1]);//=string(argv[2]);
             flags.o = 1;
@@ -4209,11 +4214,11 @@ int TEM_NS::read_cmdline_options(
       }
       else if ( args[idx] == "-m" )
       {
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             istringstream(args[idx + 1]) >> Nx_int;
-         if (idx + 2 < args.size()) 
+         if (idx + 2 < args.size())
             istringstream(args[idx + 2]) >> Ny_int;
-         //if (idx + 3 < args.size()) 
+         //if (idx + 3 < args.size())
          // istringstream(args[idx + 3]) >> Nz_int;
          if (idx + 3 < args.size()) istringstream(args[idx + 3]) >> VV;
 
@@ -4229,7 +4234,7 @@ int TEM_NS::read_cmdline_options(
          //if ( mynode == rootnode )
          //{
          //istringstream( args[idx + 1] ) >> model_file_name;
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             model_file_name = string( args[ idx + 1] );
 
          flags.a = 1;
@@ -4249,46 +4254,46 @@ int TEM_NS::read_cmdline_options(
       }
       else if ( args[idx] == "--defocus" )
       {
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             istringstream( args[idx + 1] ) >> defocus;
          flags.defocus= 1;
          idx += 1;
       }
       else if ( args[idx] == "--alphamax" )
       {
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             istringstream( args[idx + 1] ) >> alpha_max;
          flags.alpha_max = 1;
          idx += 1;
       }
       else if ( args[idx] == "--spread" )
       {
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             istringstream( args[idx +1] ) >> defocus_spread;
-         if (idx + 2 < args.size()) 
+         if (idx + 2 < args.size())
             istringstream( args[idx +2] ) >> condenser_illumination_angle;
          flags.spread = 1;
          idx += 2;
       }
       else if ( args[idx] == "--cs3" )
       {
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             istringstream( args[idx + 1] ) >> Cs3;
          flags.cs3 = 1;
          idx += 1;
       }
       else if ( args[idx] == "--cs5" )
       {
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             istringstream( args[idx + 1] ) >> Cs5;
          flags.cs5 = 1;
          idx += 1;
       }
       else if ( args[idx] == "--detectorangles" )
       {
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
             istringstream( args[idx + 1] ) >> detector_inner_angle;
-         if (idx + 2 < args.size()) 
+         if (idx + 2 < args.size())
             istringstream( args[idx + 1] ) >> detector_outer_angle;
 
          if ( detector_inner_angle > detector_outer_angle )
@@ -4364,7 +4369,7 @@ int TEM_NS::read_cmdline_options(
       }
       else if ( args[idx] == "--dupe" )
       {
-         if (idx + 3 < args.size()) 
+         if (idx + 3 < args.size())
             istringstream( args[idx + 1] ) >> dupe_x;
             istringstream( args[idx + 2] ) >> dupe_y;
             istringstream( args[idx + 3] ) >> dupe_z;
@@ -4374,14 +4379,14 @@ int TEM_NS::read_cmdline_options(
       else if ( args[idx] == "--dr" )
       {
          if ( idx + 1 < args.size())
-            istringstream( args[idx + 1] ) 
+            istringstream( args[idx + 1] )
                >> azimuthal_binning_size_factor;
          idx += 1;
       }
       else if ( args[idx] == "--minslice" )
       {
          if ( idx + 1 < args.size())
-            istringstream( args[idx + 1] ) 
+            istringstream( args[idx + 1] )
                >> minSliceThickness;
          idx += 1;
       }
@@ -4423,9 +4428,9 @@ int TEM_NS::read_cmdline_options(
       //}
       else if ( args[idx] == "--lammps_preTEM_file_name" )
       {
-         if (idx + 1 < args.size()) 
+         if (idx + 1 < args.size())
          {
-            lammps_preTEM_file_name 
+            lammps_preTEM_file_name
                = string(args[idx + 1]);//=string(argv[2]);
             flags.lammps_preTEM_file = 1;
          }
@@ -4435,7 +4440,7 @@ int TEM_NS::read_cmdline_options(
       {
          if ( idx + 1 < args.size())
          {
-            istringstream( args[idx + 1] ) 
+            istringstream( args[idx + 1] )
                >> lammps_TEM_steps;
             flags.lammps_TEM_steps = 1;
          }
@@ -4445,7 +4450,7 @@ int TEM_NS::read_cmdline_options(
       {
          if ( idx + 1 < args.size())
          {
-            istringstream( args[idx + 1] ) 
+            istringstream( args[idx + 1] )
                >> lammps_TEM_samples;
             flags.lammps_TEM_samples= 1;
          }
@@ -4457,19 +4462,19 @@ int TEM_NS::read_cmdline_options(
          {
             cerr << "Error, unexpected argument : " << args[idx] << endl;
          }
-         failflag = 1;
+         flags.fail = 1;
       }
    } // iteration over command line arguments
 
-   if ( (! flags.gt17 ) 
-         && (! flags.d1 ) && (! flags.d2 ) 
+   if ( (! flags.gt17 )
+         && (! flags.d1 ) && (! flags.d2 )
          && (! flags.d3 ) && (! flags.d4 )
          && (! flags.rva) && (! flags.correlograph) )
    {
       flags.d1 = 1; // default variance calculation mode
    }
 
-   if ( failflag ==1 )
+   if ( flags.fail != 0)
    {
       return EXIT_FAILURE;
    }
@@ -4477,7 +4482,7 @@ int TEM_NS::read_cmdline_options(
    return EXIT_SUCCESS;
 }
 
-int TEM_NS::read_mtf_file( 
+int TEM_NS::read_mtf_file(
       input_flags& flags,
       const string& mtf_file_name,
       std::vector<double>& mtf,
@@ -4487,7 +4492,7 @@ int TEM_NS::read_mtf_file(
       MPI_Comm comm
       )
 {
-   unsigned int failflag = 0;
+   //unsigned int failflag = 0;
    unsigned int mtf_size;
    unsigned int mtf_domain_size;
    // read the mtf file only at root node and broadcast the results
@@ -4537,7 +4542,7 @@ int TEM_NS::read_mtf_file(
 
          if ( mtf_domain.size() != mtf.size() )
          {
-            cout << "Error reading MTF file: " << mtf_file_name 
+            cout << "Error reading MTF file: " << mtf_file_name
                << endl;
             cout << " MTF (1st line) and MTF domain (2nd line)"
                << " do not have the same number of elements."
@@ -4547,46 +4552,46 @@ int TEM_NS::read_mtf_file(
       }
       else
       {
-         cout << "Error opening MTF file: " << mtf_file_name 
+         cout << "Error opening MTF file: " << mtf_file_name
             << endl;
          flags.fail = 1;
       }
 
       //failflag = flags.fail;
-      //MPI_Bcast( &fail, 1, MPI_UNSIGNED, rootnode, 
-      MPI_Bcast( &(flags.fail), 1, MPI_UNSIGNED, 
+      //MPI_Bcast( &fail, 1, MPI_UNSIGNED, rootnode,
+      MPI_Bcast( &(flags.fail), 1, MPI_UNSIGNED,
                    rootnode, MPI_COMM_WORLD);
-      if ( flags.fail ) return EXIT_FAILURE;
+      if ( flags.fail != 0) return EXIT_FAILURE;
 
       mtf_size = mtf.size();
       mtf_domain_size = mtf_domain.size();
-      MPI_Bcast( &mtf_size, 1, MPI_UNSIGNED, 
+      MPI_Bcast( &mtf_size, 1, MPI_UNSIGNED,
                   rootnode, MPI_COMM_WORLD);
-      MPI_Bcast( &mtf_domain_size, 1, MPI_UNSIGNED, 
+      MPI_Bcast( &mtf_domain_size, 1, MPI_UNSIGNED,
                   rootnode, MPI_COMM_WORLD);
 
-      MPI_Bcast( &mtf[0], mtf.size(), 
+      MPI_Bcast( &mtf[0], mtf.size(),
                   MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-      MPI_Bcast( &mtf_domain[0], mtf_domain.size(), 
+      MPI_Bcast( &mtf_domain[0], mtf_domain.size(),
                   MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
    }
    else
    {
-      MPI_Bcast( &(flags.fail), 1, MPI_UNSIGNED, 
+      MPI_Bcast( &(flags.fail), 1, MPI_UNSIGNED,
                   rootnode, MPI_COMM_WORLD);
       if ( flags.fail ) return EXIT_FAILURE;
 
-      MPI_Bcast( &mtf_size, 1, MPI_UNSIGNED, 
+      MPI_Bcast( &mtf_size, 1, MPI_UNSIGNED,
             rootnode, MPI_COMM_WORLD);
-      MPI_Bcast( &mtf_domain_size, 1, MPI_UNSIGNED, 
+      MPI_Bcast( &mtf_domain_size, 1, MPI_UNSIGNED,
             rootnode, MPI_COMM_WORLD);
 
       mtf.resize(mtf_size);
       mtf_domain.resize(mtf_size);
 
-      MPI_Bcast( &mtf[0], mtf.size(), 
+      MPI_Bcast( &mtf[0], mtf.size(),
                   MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
-      MPI_Bcast( &mtf_domain[0], mtf_domain.size(), 
+      MPI_Bcast( &mtf_domain[0], mtf_domain.size(),
                   MPI_DOUBLE, rootnode, MPI_COMM_WORLD);
    }
    // debug
@@ -4595,14 +4600,14 @@ int TEM_NS::read_mtf_file(
    //{
    //   cout << "MTF file contents:" << endl;
    //}
-   //for ( std::vector<double>::iterator 
+   //for ( std::vector<double>::iterator
    //         itr = mtf.begin();
    //         itr != mtf.end();
    //         ++itr)
    //{
    //   cout << "node " << mynode << ", mtf : " << *itr << endl;
    //}
-   //for ( std::vector<double>::iterator 
+   //for ( std::vector<double>::iterator
    //         itr = mtf_domain.begin();
    //         itr != mtf_domain.end();
    //         ++itr)
@@ -4614,96 +4619,98 @@ int TEM_NS::read_mtf_file(
 }
 
 int TEM_NS::check_runtime_flags(
-   const input_flags& flags,
+   input_flags& flags,
    const string& args0,
    const int& mynode,
    const int& rootnode
 )
 {
-   unsigned int failflag;
-   failflag = 0;
+   //unsigned int failflag;
+   //failflag = 0;
    // debug
    if( mynode == rootnode  && flags.debug )
    {
-      cout << 
-      "flags.m " << 
+      cout <<
+      "flags.m " <<
       flags.m << endl
-      << "flags.pf " << 
+      << "flags.pf " <<
       flags.pf << endl <<
-      "flags.o " << 
+      "flags.o " <<
       flags.o << endl <<
-      "flags.a " << 
+      "flags.a " <<
       flags.a << endl <<
-      "flags.defocus " << 
+      "flags.defocus " <<
       flags.defocus << endl <<
-      "flags.spread " << 
+      "flags.spread " <<
       flags.spread << endl <<
-      "flags.dupe " << 
+      "flags.dupe " <<
       flags.dupe << endl <<
-      "flags.image_output " << 
+      "flags.image_output " <<
       flags.image_output << endl <<
-      "flags.diffraction_output " << 
+      "flags.diffraction_output " <<
       flags.diffraction_output << endl <<
-      "flags.adfstem_corrected " << 
+      "flags.adfstem_corrected " <<
       flags.adfstem_corrected << endl <<
-      "flags.adfstem_uncorrected  " << 
+      "flags.adfstem_uncorrected  " <<
       flags.adfstem_uncorrected  << endl <<
-      "flags.bfctem_corrected  " << 
+      "flags.bfctem_corrected  " <<
       flags.bfctem_corrected  << endl <<
-      "flags.bfctem_uncorrected  " << 
+      "flags.bfctem_uncorrected  " <<
       flags.bfctem_uncorrected  << endl <<
-      "flags.fem  " << 
+      "flags.fem  " <<
       flags.fem  << endl <<
-      "flags.gt17 " << 
+      "flags.gt17 " <<
       flags.gt17  << endl <<
-      "flags.d1 " << 
+      "flags.d1 " <<
       flags.d1  << endl <<
-      "flags.d2 " << 
+      "flags.d2 " <<
       flags.d2  << endl <<
-      "flags.d3 " << 
+      "flags.d3 " <<
       flags.d3  << endl <<
-      "flags.d4 " << 
+      "flags.d4 " <<
       flags.d4  << endl <<
-      "flags.rva " << 
+      "flags.rva " <<
       flags.rva  << endl <<
-      "flags.scherzer_defocus " << 
+      "flags.scherzer_defocus " <<
       flags.scherzer_defocus << endl <<
-      "flags.scherzer_alphamax " << 
+      "flags.scherzer_alphamax " <<
       flags.scherzer_alphamax << endl <<
-      "flags.scherzer_cs3 " << 
+      "flags.scherzer_cs3 " <<
       flags.scherzer_cs3 << endl <<
-      "flags.cs3 " << 
+      "flags.cs3 " <<
       flags.cs3 << endl <<
-      "flags.cs5 " << 
+      "flags.cs5 " <<
       flags.cs5 << endl <<
-      "flags.alpha_max " << 
+      "flags.alpha_max " <<
       flags.alpha_max << endl <<
-      "flags.aberration_correction " << 
+      "flags.aberration_correction " <<
       flags.aberration_correction << endl <<
-      "flags.raster_spacing " << 
+      "flags.raster_spacing " <<
       flags.raster_spacing << endl <<
-      "flags.mtf_file" << 
+      "flags.mtf_file" <<
       flags.mtf_file << endl <<
-      "flags.mtf_resolution" << 
+      "flags.mtf_resolution" <<
       flags.mtf_resolution << endl <<
-      "flags.correlograph " << 
+      "flags.correlograph " <<
       flags.correlograph << endl <<
-      "flags.correlograph_variance" << 
+      "flags.correlograph_variance" <<
       flags.correlograph_variance << endl <<
-      "flags.correlograph_everyimage " << 
+      "flags.correlograph_everyimage " <<
       flags.correlograph_everyimage << endl <<
-      "flags.correlograph_everytxt" << 
+      "flags.correlograph_everytxt" <<
       flags.correlograph_everytxt << endl <<
-      //"flags.correlograph_everynetcdf" << 
+      //"flags.correlograph_everynetcdf" <<
       //flags.correlograph_everynetcdf << endl <<
-      "flags.lammps_preTEM_file" << endl << 
-      flags.lammps_preTEM_file << endl << 
-      "flags.lammps_TEM_steps" << endl << 
-      flags.lammps_TEM_steps << endl << 
-      "flags.lammps_TEM_samples" << endl << 
-      flags.lammps_TEM_samples<< endl << 
-      "flags.debug " << 
-      flags.debug 
+      "flags.lammps_preTEM_file" <<
+      flags.lammps_preTEM_file << endl <<
+      "flags.lammps_TEM_steps" <<
+      flags.lammps_TEM_steps << endl <<
+      "flags.lammps_TEM_samples" <<
+      flags.lammps_TEM_samples<< endl <<
+      "flags.debug " <<
+      flags.debug << endl <<
+      "flags.fail " <<
+      flags.fail
       << endl;
    }
    // end debug
@@ -4718,15 +4725,15 @@ int TEM_NS::check_runtime_flags(
             flags.m
             //( // command line xor file input of microscope parameters
             //   // exclusive or:
-            //   (! flags.m) != (! flags.pf) 
+            //   (! flags.m) != (! flags.pf)
             //)
             &&
-            // if aberration correction is used with bfctem, require 
+            // if aberration correction is used with bfctem, require
             //    flags.spread, flags.cs3, flags.cs5
             !(
                (
-                  flags.adfstem_corrected 
-                  || 
+                  flags.adfstem_corrected
+                  ||
                   flags.bfctem_corrected
                )
                &&
@@ -4734,7 +4741,7 @@ int TEM_NS::check_runtime_flags(
                   (
                      //flags.spread
                      //&&
-                                                // defocus_spread is 
+                                                // defocus_spread is
                                                 // currently only used
                                                 // in bfctem
                      flags.cs5
@@ -4754,23 +4761,23 @@ int TEM_NS::check_runtime_flags(
                   ||
                   flags.bfctem_uncorrected
                )
-               && 
+               &&
                (! flags.cs3)
             )
             &&
             !( // require simultaneous mtf sampling rate and file
-                  flags.mtf_file != flags.mtf_resolution 
+                  flags.mtf_file != flags.mtf_resolution
             )
             &&
             (
-               flags.scherzer_defocus 
-               || 
+               flags.scherzer_defocus
+               ||
                flags.defocus
             )
             &&
             (
                flags.scherzer_alphamax
-               || 
+               ||
                flags.alpha_max
             )
             &&
@@ -4785,24 +4792,24 @@ int TEM_NS::check_runtime_flags(
       if ( mynode == rootnode )
       {
          cout << args0 << " : lacking required parameters" << endl;
-         // TODO: the following two if(){} statements duplicate tests 
+         // TODO: the following two if(){} statements duplicate tests
          //       above.
          //       Perhaps implement these error messages inside the above
          //       tests or vice versa.
          if (
               (flags.adfstem_corrected || flags.bfctem_corrected)
-               && 
+               &&
                ! (
                   //flags.spread
                   //&&
-                                          // defocus_spread is 
-                                          // currently only used 
+                                          // defocus_spread is
+                                          // currently only used
                                           // in bfctem
                   (flags.cs3 || flags.scherzer_cs3)
-                  && 
+                  &&
                   flags.cs5
                )
-                
+
             )
          {
             cout << "Use of aberraction correction requires"
@@ -4810,12 +4817,12 @@ int TEM_NS::check_runtime_flags(
                << " --scherzer_cs3, then --cs3 is also required." << endl;
          }
          if ( // require simultaneous mtf sampling rate and file
-                  flags.mtf_file != flags.mtf_resolution 
+                  flags.mtf_file != flags.mtf_resolution
             )
          {
             cout << "Use of detector modulation transfer function"
                << " requires specifying both a file containing it"
-               << " and a sampling rate by which it will be "
+               << " and a sampling rate by which it will be"
                << " scaled" << endl;
          }
          if (
@@ -4826,10 +4833,10 @@ int TEM_NS::check_runtime_flags(
          {
             cout << "lammps_preTEM_file_name, lammps_TEM_steps"
                <<   " and lammps_TEM_samples "
-               <<   " are all required if using ms-stem-fem-md." 
+               <<   " are all required if using ms-stem-fem-md."
                <<   " Not all of them were found."
                <<   " Also you must compile the ms-stem-fem-md target,"
-               <<   " if available." 
+               <<   " if available."
                << endl;
          }
          if (
@@ -4838,7 +4845,7 @@ int TEM_NS::check_runtime_flags(
                   ||
                   flags.bfctem_uncorrected
                )
-               && 
+               &&
                (! flags.cs3)
             )
          {
@@ -4848,8 +4855,8 @@ int TEM_NS::check_runtime_flags(
 
          if (
                !(
-                  flags.scherzer_defocus 
-                  || 
+                  flags.scherzer_defocus
+                  ||
                   flags.defocus
                )
             )
@@ -4860,7 +4867,7 @@ int TEM_NS::check_runtime_flags(
          if (
                !(
                   flags.scherzer_alphamax
-                  || 
+                  ||
                   flags.alpha_max
                )
             )
@@ -4869,12 +4876,13 @@ int TEM_NS::check_runtime_flags(
                << " or --scherzer_alphamax" << endl;
          }
       }
-      failflag = 1;
-      //flags.fail = 1;
+      //failflag = 1;
+      flags.fail = 1;
    }
 
    if (
-         failflag == 0
+         //failflag == 0
+         flags.fail == 0
          &&
          ! flags.adfstem_uncorrected
          &&
@@ -4888,44 +4896,44 @@ int TEM_NS::check_runtime_flags(
       if ( mynode == rootnode )
       {
          cout << args0 << " : you must specify at least one of the following" << endl
-            << "   [--adfstemcorrfem] simulate fluctuation microscopy using aberration corrected adfstem mode" 
-            << endl 
-            << "   [--adfstemuncorrfem] simulate fluctuation microscopy using adfstem mode without aberration correction" 
-            << endl 
-            << "   [--adfstemcorr] simulate aberration corrected adfstem" 
-            << endl 
-            << "   [--adfstemuncorr] simulate adfstem mode without aberration correction" 
-            //<< endl 
-            //<< "   [--bfctemcorr] simulate bright field TEM with aberration correction" 
-            //<< endl 
-            //<< "   [--bfctemuncorr] simulate bright field TEM without aberration correction" 
+            << "   [--adfstemcorrfem] simulate fluctuation microscopy using aberration corrected adfstem mode"
+            << endl
+            << "   [--adfstemuncorrfem] simulate fluctuation microscopy using adfstem mode without aberration correction"
+            << endl
+            << "   [--adfstemcorr] simulate aberration corrected adfstem"
+            << endl
+            << "   [--adfstemuncorr] simulate adfstem mode without aberration correction"
+            //<< endl
+            //<< "   [--bfctemcorr] simulate bright field TEM with aberration correction"
+            //<< endl
+            //<< "   [--bfctemuncorr] simulate bright field TEM without aberration correction"
             << endl;
       }
-      failflag = 1;
-      //flags.fail = 1;
+      //failflag = 1;
+      flags.fail = 1;
    }
    if ( flags.dupe && ! flags.fem && mynode == rootnode )
    {
       cout << "Note: --dupe flag only duplicates the sample for FTEM."
-         << " The sample will not be duplicated this time." 
+         << " The sample will not be duplicated this time."
          << endl;
    }
    if ( flags.adfstem_uncorrected && flags.adfstem_corrected )
    {
-      failflag = 1;
-      //flags.fail = 1;
+      //failflag = 1;
+      flags.fail = 1;
       cout << "adfstem_uncorrected and adfstem_corrected cannot"
             << " currently be used in the same call" << endl;
    }
-   if ( failflag == 1)
+   if ( flags.fail == 1)
       return EXIT_FAILURE;
-   
+
    return EXIT_SUCCESS;
 }
 
 size_t TEM_NS::atom_element_abbrev_to_Z( const string& element_name)
 {
-   // Precondition : 
+   // Precondition :
    //    - element_name is a lower case abbreviation of an element
    //       having atomic number between 1 and 103
    if ( element_name ==  "h" ) return 1;
@@ -5134,7 +5142,7 @@ size_t TEM_NS::atom_element_abbrev_to_Z( const string& element_name)
    if ( element_name ==  "102" ) return 102;
    if ( element_name ==  "lr" ) return 103;
    if ( element_name ==  "103" ) return 103;
-   
+
    // If none of the modeled elements matched, return the invalid
    //  atomic number 0 .
    return 0;
@@ -5142,7 +5150,7 @@ size_t TEM_NS::atom_element_abbrev_to_Z( const string& element_name)
 
 string TEM_NS::atom_element_Z_to_abbrev( const size_t& element_Z)
 {
-   // Precondition : 
+   // Precondition :
    //    - element_Z is an atomic number between 1 and 103
    if ( element_Z == 1 ) return "H";
    if ( element_Z == 2 ) return "He";
@@ -5247,7 +5255,7 @@ string TEM_NS::atom_element_Z_to_abbrev( const size_t& element_Z)
    if ( element_Z == 101 ) return "Md";
    if ( element_Z == 102 ) return "No";
    if ( element_Z == 103 ) return "Lr";
-   
+
    // If none of the modeled elements matched, return the invalid
    //  atomic number 0 .
    return 0;
