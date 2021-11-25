@@ -64,6 +64,7 @@ int TEM_NS::read_position_lammps_file(
    // - qq_contig[] and Z_contig[] all reside in contiguous regions
    //    of memory for MPI
 
+   unsigned int failflag = 0;
    if ( mynode == rootnode )
    {
       // declared_population 'atoms'
@@ -906,11 +907,17 @@ int TEM_NS::read_position_lammps_file(
          cerr << "node " << mynode << ", "
             << "Error opening position file" << endl;
          data_file.close();
-         return EXIT_FAILURE;
+         failflag = 1;
       }
 
       data_file.close();
    } // end of the rootnode block
+
+   MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, MPI_COMM_WORLD );
+   if ( failflag != 0)
+   {
+      return EXIT_FAILURE;
+   }
 
    // Broadcast results to the remaining nodes
    MPI_Bcast( &total_population, 1, MPI_UNSIGNED, rootnode, comm);
@@ -3410,6 +3417,7 @@ int TEM_NS::read_position_xyz_file(
 {
    // Currently elements 1 through 103 are modeled.
 
+   unsigned int failflag = 0;
    if ( mynode == rootnode )
    {
       ifstream data_file( filename.c_str() );
@@ -3696,11 +3704,17 @@ int TEM_NS::read_position_xyz_file(
          cerr << "node " << mynode << ", "
             << "Error opening position file: " << filename << endl;
          data_file.close();
-         return EXIT_FAILURE;
+         failflag = 1;
       }
 
       data_file.close();
    }  // end of the rootnode block
+
+   MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, MPI_COMM_WORLD );
+   if ( failflag != 0)
+   {
+      return EXIT_FAILURE;
+   }
 
    // Broadcast results to the remaining nodes
    MPI_Bcast( &total_population, 1, MPI_UNSIGNED, rootnode, comm);

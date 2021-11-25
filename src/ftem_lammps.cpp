@@ -185,7 +185,7 @@ int main( int argc, char* argv[])
    //////////////////////////////////////////////////////////////////
    std::vector<string> args( argv, argv + argc );
    string model_file_name;
-   unsigned int failflag = 0;
+   //unsigned int failflag = 0;
 
    std::vector< double > mtf_1D;
    std::vector< double > mtf_domain_sqr;
@@ -226,7 +226,7 @@ int main( int argc, char* argv[])
          detector_inner_angle,
          detector_outer_angle,
          mtf_1D,
-         mtf_domain_sqr,
+         mtf_domain_sqr, // not squared until later
          mtf_resolution,
          raster_spacing,
          azimuthal_binning_size_factor,
@@ -245,23 +245,23 @@ int main( int argc, char* argv[])
    {
       if ( flags.debug && mynode == rootnode) 
          cerr << "Failed to read command line arguments" << endl;
-      failflag = 1 ;
+      //failflag = 1 ;
       flags.fail = 1;
    }
 
-   MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, MPI_COMM_WORLD );
-   if ( failflag ) 
-   {
-      if ( mynode == rootnode)
-      {
-         cout << "Exiting ms-stem-fem"
-            << endl;
-         PRINT_USAGE // macro defined above
-      }
-      fftw_mpi_cleanup();
-      MPI_Finalize();
-      return EXIT_FAILURE;
-   }
+   //MPI_Bcast( &flags.fail, 1, MPI_UNSIGNED, rootnode, MPI_COMM_WORLD );
+   //if ( flags.fail) 
+   //{
+   //   if ( mynode == rootnode)
+   //   {
+   //      cout << "Exiting ms-stem-fem"
+   //         << endl;
+   //      PRINT_USAGE // macro defined above
+   //   }
+   //   fftw_mpi_cleanup();
+   //   MPI_Finalize();
+   //   return EXIT_FAILURE;
+   //}
 
    NxNy = Nx * Ny;
    NxNy_sqr = NxNy * NxNy;
@@ -285,67 +285,67 @@ int main( int argc, char* argv[])
 
    // Read model file
    unsigned int read_xyz_flag = 0;
-   if ( flags.a )
+   //if ( flags.a )
+   //{
+   if ( model_file_name.substr( 
+            model_file_name.find_last_of(".") + 1 
+            ) == "xyz" )
    {
-      if ( model_file_name.substr( 
-               model_file_name.find_last_of(".") + 1 
-               ) == "xyz" )
+      if ( mynode == rootnode && flags.debug)
       {
-         if ( mynode == rootnode && flags.debug)
-         {
-            cout << "Reading xyz format file: "
-              << model_file_name  << endl; // debug
-         }
-         if ( 
-               read_position_xyz_file(
-                  model_file_name,   // only valid on root node
-                  q, // will be allocated within this call
-                  Z_array, // will be allocated within this call
-                  initial_population,
-                  xmin, ymin, zmin,
-                  xperiod, yperiod, zperiod,
-                  flags.debug,
-                  mynode, rootnode, MPI_COMM_WORLD
-                  )
-            )
-         {
-            if ( mynode == rootnode )
-            {
-               cerr << "Error, file could not be read : " 
-                  << model_file_name << endl;
-            }
-            failflag = 1 ;
-         }
+         cout << "Reading xyz format file: "
+           << model_file_name  << endl; // debug
       }
-      else
+      if ( 
+            read_position_xyz_file(
+               model_file_name,   // only valid on root node
+               q, // will be allocated within this call
+               Z_array, // will be allocated within this call
+               initial_population,
+               xmin, ymin, zmin,
+               xperiod, yperiod, zperiod,
+               flags.debug,
+               mynode, rootnode, MPI_COMM_WORLD
+               )
+         )
       {
-         if ( mynode == rootnode && flags.debug )
+         if ( mynode == rootnode )
          {
-            cout << "Reading lammps format file: "
-              << model_file_name  << endl; // debug
+            cerr << "Error, file could not be read : " 
+               << model_file_name << endl;
          }
-         if(  
-               read_position_lammps_file(
-                  model_file_name,   // only valid on root node
-                  q,       // will be allocated within this call
-                  Z_array, // will be allocated within this call
-                  initial_population,
-                  xmin, ymin, zmin,
-                  xperiod, yperiod, zperiod,
-                  flags.debug,
-                  mynode, rootnode, MPI_COMM_WORLD
-                  )
-           )
-         {
-            if ( mynode == rootnode )
-            {
-               cerr << "Error, file could not be read : " 
-                  << model_file_name << endl;
-            }
-            failflag = 1 ;
-         }
+         flags.fail = 1;
       }
    }
+   else
+   {
+      if ( mynode == rootnode && flags.debug )
+      {
+         cout << "Reading lammps format file: "
+           << model_file_name  << endl; // debug
+      }
+      if(  
+            read_position_lammps_file(
+               model_file_name,   // only valid on root node
+               q,       // will be allocated within this call
+               Z_array, // will be allocated within this call
+               initial_population,
+               xmin, ymin, zmin,
+               xperiod, yperiod, zperiod,
+               flags.debug,
+               mynode, rootnode, MPI_COMM_WORLD
+               )
+        )
+      {
+         if ( mynode == rootnode )
+         {
+            cerr << "Error, file could not be read : " 
+               << model_file_name << endl;
+         }
+         flags.fail = 1;
+      }
+   }
+   cout << "node: " << mynode << ",2, flags.fail: " << flags.fail << endl;
 
    if ( 
          flags.bfctem_corrected 
@@ -354,30 +354,26 @@ int main( int argc, char* argv[])
    {
       cout << "Error, bfctem() has not yet been integrated into"
             << " this version of the program." << endl;
-      failflag = 1;
       flags.fail = 1;
    }
 
 
-   if ( 
-         check_runtime_flags(
-            flags,
-            args[0],
-            mynode,
-            rootnode
-            ) == EXIT_FAILURE )
+   if ( check_runtime_flags(
+         flags,
+         args[0],
+         mynode,
+         rootnode
+         ) == EXIT_FAILURE)
    {
-      failflag = 1; 
       flags.fail = 1;
    }
 
-   MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, MPI_COMM_WORLD );
-   if ( failflag ) 
+   MPI_Bcast( &flags.fail, 1, MPI_UNSIGNED, rootnode, MPI_COMM_WORLD );
+   if ( flags.fail != 0)
    {
       if ( mynode == rootnode)
       {
-         cout << "Exiting ms-stem-fem"
-            << endl;
+         cout << "Exiting ms-stem-fem due to failure." << endl;
          PRINT_USAGE // macro defined above
       }
       fftw_mpi_cleanup();
@@ -873,18 +869,21 @@ int main( int argc, char* argv[])
          + TEM_NS::to_string(totalnodes)
          + "nodes";
    
-   int flag_wisdomFile = 1;
+   flags.wisdomFile = 1;
    if ( mynode == rootnode )
    {
-      flag_wisdomFile = 
+      flags.wisdomFile =
          fftw_import_wisdom_from_filename( wisdom_file_name.c_str() );
          // returns 0 (== false) on failure
-      if ( ! flag_wisdomFile && flags.debug )
+      if ( ! flags.wisdomFile && flags.debug )
       {
          cout << "Could not open wisdom file: " << wisdom_file_name
             << " , will create it after execution ..." << endl;
       }
    }
+
+   MPI_Bcast( &flags.wisdomFile, 1, MPI_UNSIGNED, rootnode, 
+         MPI_COMM_WORLD );
 
    //////////////////////////////////////////////////////////////////
    // allocate domains and domain related variables
@@ -1972,13 +1971,13 @@ int main( int argc, char* argv[])
                   {
                      if (mynode == rootnode)
                         cout << "Error: detector_inner_angle < 0" << endl;
-                     failflag = 1;
+                     flags.fail = 1;
                   }
                   if (detector_outer_angle < 0.0) 
                   {
                      if (mynode == rootnode)
                         cout << "Error: detector_outer_angle < 0" << endl;
-                     failflag = 1;
+                     flags.fail = 1;
                   }
                   if (detector_inner_angle > bwcutoff_t * lambda)
                   {
@@ -1991,7 +1990,7 @@ int main( int argc, char* argv[])
                           << " bandwidth limit: " << bwcutoff_t * lambda 
                           << endl;
                      }
-                     failflag = 1;
+                     flags.fail = 1;
                   }
                } // end adfstem
 
@@ -2148,7 +2147,7 @@ int main( int argc, char* argv[])
                //update_domain_y = false;
             } // end update domains
 
-            if ( failflag == 1)
+            if ( flags.fail == 1)
             {
                // TODO: update this
                // clean up all allocated memory and exit
@@ -3682,7 +3681,7 @@ int main( int argc, char* argv[])
          if ( flags.fem )
          {
             if ( (mynode == rootnode) && flags.debug )
-               cout << "calculating and accumulating FTEM quanitites ..." 
+               cout << "calculating and accumulating FTEM quantities ..." 
                   << endl;
             if ( flags.d1 || flags.d2 || flags.correlograph )
             {
@@ -3975,7 +3974,7 @@ int main( int argc, char* argv[])
    if ( flags.fem )
    {
       if ((mynode == rootnode) && flags.debug)
-         cout << "calculating post-raster FTEM quanitites ..." 
+         cout << "calculating post-raster FTEM quantities ..." 
             << endl;
       if ( flags.d1 )
       {
@@ -4992,18 +4991,17 @@ int main( int argc, char* argv[])
    delete[] psi_mag_displacements;
 
    // Save wisdom to a file if it wasn't successfully opened above
-   if ( mynode == rootnode )
+   if ( ! flags.wisdomFile )
    {
-      if ( ! flag_wisdomFile )
+      fftw_mpi_gather_wisdom( MPI_COMM_WORLD); // gathers to rank 0 proc
+      if ( mynode == rootnode)
       {
-         if ( flags.debug )
-            cout << "Exporting wisdom to file: " 
+         if ( flags.debug)
+            cout << "Exporting wisdom to file: "
                << wisdom_file_name << endl;
-         if ( 
-               ! fftw_export_wisdom_to_filename( 
-                  wisdom_file_name.c_str()
-                  )
-            )
+
+         if ( ! fftw_export_wisdom_to_filename(
+                wisdom_file_name.c_str()))
          {
             cerr << "Error - could not export wisdom to file: "
               << wisdom_file_name << endl;

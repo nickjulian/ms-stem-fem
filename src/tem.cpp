@@ -384,7 +384,7 @@ int main( int argc, char* argv[])
    }
 
    MPI_Bcast( &flags.fail, 1, MPI_UNSIGNED, rootnode, MPI_COMM_WORLD );
-   if ( flags.fail) 
+   if ( flags.fail != 0)
    {
       fftw_mpi_cleanup();
       MPI_Finalize();
@@ -1534,7 +1534,7 @@ int main( int argc, char* argv[])
                alpha_max,
                detector_inner_angle, detector_outer_angle,
                mtf, // modulation transfer function
-               mtf_domain, // mtf_domain_sqr
+               mtf_domain, // has been squared (=mtf_domain_sqr)
                mtf_resolution,
                lambda, 
                output_prefix + "_adfstem_uncorr",
@@ -1737,24 +1737,23 @@ int main( int argc, char* argv[])
    delete[] psi_mag_displacements;
 
    // Save wisdom to a file if it wasn't successfully opened above
-
-  if ( ! flags.wisdomFile )
-  {
-     fftw_mpi_gather_wisdom( MPI_COMM_WORLD); // gathers to rank 0 proc
-     if ( mynode == rootnode)
-     {
-        if ( flags.debug)
-           cout << "Exporting wisdom to file: "
-            << wisdom_file_name << endl;
-
-        if ( ! fftw_export_wisdom_to_filename(
-               wisdom_file_name.c_str()))
-        {
-           cerr << "Error - could not export wisdom to file: "
+   if ( ! flags.wisdomFile )
+   {
+      fftw_mpi_gather_wisdom( MPI_COMM_WORLD); // gathers to rank 0 proc
+      if ( mynode == rootnode)
+      {
+         if ( flags.debug)
+            cout << "Exporting wisdom to file: "
              << wisdom_file_name << endl;
-        }
-     }
-  }
+
+         if ( ! fftw_export_wisdom_to_filename(
+                wisdom_file_name.c_str()))
+         {
+            cerr << "Error - could not export wisdom to file: "
+              << wisdom_file_name << endl;
+         }
+      }
+   }
 
    fftw_mpi_cleanup();
    MPI_Finalize();

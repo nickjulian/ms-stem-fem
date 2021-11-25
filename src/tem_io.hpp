@@ -95,7 +95,7 @@ namespace TEM_NS
       unsigned int debug;// = 0;
       unsigned int complex_realspace_sum;// = 0;
       unsigned int correlograph;// = 0;
-      unsigned int correlograph_images;// = 0;
+      //unsigned int correlograph_images;// = 0;
       unsigned int correlograph_variance;// = 0;
       unsigned int correlograph_everyimage;
       unsigned int correlograph_everytxt;
