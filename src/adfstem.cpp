@@ -83,7 +83,6 @@ int TEM_NS::adfstem(
       const int* const Nx_displacements, // const int displacements[]
       const int* const psi_mag_strides,       // const int sendcounts[]
       const int* const psi_mag_displacements, // const int displacements[]
-      //const ptrdiff_t& probe_idx_local_start_x,
       //const int& threads_ok,
       //const int& nthreads,
       const int& mynode,      // MPI rank of local node
@@ -244,21 +243,59 @@ int TEM_NS::adfstem(
       ///////////////////////////////////////////////////////////////////
 
       mtf_2D_split =  fftw_alloc_complex( local_alloc_size_fftw );
-      pf_c2c_mtf = fftw_mpi_plan_dft_2d( // c2c in-place fft,
+      if ( flags.wisdomFile)
+      {
+         pf_c2c_mtf = fftw_mpi_plan_dft_2d( // c2c in-place fft,
                                  Nx, Ny, 
                                  mtf_2D_split, mtf_2D_split,
-                                 //comm, FFTW_FORWARD, FFTW_ESTIMATE );
-                                 //comm, FFTW_FORWARD, FFTW_PATIENT );
-                                 //comm, FFTW_FORWARD, FFTW_EXHAUSTIVE );
-                                 comm, FFTW_FORWARD, FFTW_MEASURE );
+                                 comm, 
+                                 FFTW_FORWARD, 
+                                 //FFTW_WISDOM_ONLY | 
+                                 // FFTW_EXHAUSTIVE );
+                                 // FFTW_PATIENT);
+                                 // FFTW_MEASURE );
+                                 FFTW_ESTIMATE);
+      }
+      else
+      {
+         pf_c2c_mtf = fftw_mpi_plan_dft_2d( // c2c in-place fft,
+                                 Nx, Ny, 
+                                 mtf_2D_split, mtf_2D_split,
+                                 comm, 
+                                 FFTW_FORWARD, 
+                                 //FFTW_WISDOM_ONLY | 
+                                 // FFTW_EXHAUSTIVE );
+                                 // FFTW_PATIENT);
+                                 FFTW_MEASURE );
+                                 // FFTW_ESTIMATE);
+      }
 
-      pb_c2c_mtf = fftw_mpi_plan_dft_2d( // c2c in-place fft,
+      if ( flags.wisdomFile)
+      {
+         pb_c2c_mtf = fftw_mpi_plan_dft_2d( // c2c in-place fft,
                                  Nx, Ny, 
                                  mtf_2D_split, mtf_2D_split,
-                                 //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
-                                 //comm, FFTW_BACKWARD, FFTW_PATIENT );
-                                 //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
-                                 comm, FFTW_BACKWARD, FFTW_MEASURE );
+                                 comm, 
+                                 FFTW_BACKWARD,
+                                 // FFTW_WISDOM_ONLY | 
+                                 // FFTW_EXHAUSTIVE );
+                                 // FFTW_PATIENT);
+                                 // FFTW_MEASURE );
+                                 FFTW_ESTIMATE);
+      }
+      else
+      {
+         pb_c2c_mtf = fftw_mpi_plan_dft_2d( // c2c in-place fft,
+                                 Nx, Ny, 
+                                 mtf_2D_split, mtf_2D_split,
+                                 comm, 
+                                 FFTW_BACKWARD,
+                                 // FFTW_WISDOM_ONLY | 
+                                 // FFTW_EXHAUSTIVE );
+                                 // FFTW_PATIENT);
+                                 FFTW_MEASURE );
+                                 // FFTW_ESTIMATE);
+      }
 
       // use mtf_1D, mtf_domain_sqr, and mtf_resolution to evaluate 
       //  mtf_split 
@@ -362,23 +399,23 @@ int TEM_NS::adfstem(
             Nx_local, kx_local, Ny, ky,
             bwcutoff_t
             );
-      if ( flags.debug && flags.image_output )
-      {
-         cout << "saving 2-D modulation transfer function to tiff" << endl;
+      //if ( flags.debug && flags.image_output )
+      //{
+      //   cout << "saving 2-D modulation transfer function to tiff" << endl;
 
-         debug_output_complex_fftw_operand(
-               mtf_2D_split,
-               0,
-               local_alloc_size_fftw,
-               Nx_local, Nx, Ny,
-               resolutionUnit,
-               xResolution, yResolution,
-               outFileName_prefix
-               + "_mtf_2D_realspace_bwlimited",
-               psi_mag_strides,
-               psi_mag_displacements,
-               mynode, rootnode, comm);
-      }
+      //   debug_output_complex_fftw_operand(
+      //         mtf_2D_split,
+      //         0,
+      //         local_alloc_size_fftw,
+      //         Nx_local, Nx, Ny,
+      //         resolutionUnit,
+      //         xResolution, yResolution,
+      //         outFileName_prefix
+      //         + "_mtf_2D_realspace_bwlimited",
+      //         psi_mag_strides,
+      //         psi_mag_displacements,
+      //         mynode, rootnode, comm);
+      //}
       fftw_execute( pf_c2c_mtf );
       //bw_limit(
       //      mtf_2D_split,
@@ -474,13 +511,32 @@ int TEM_NS::adfstem(
    fftw_plan pb_c2c_probe_split;
 
    // c2c in-place reverse fft
-   pb_c2c_probe_split = fftw_mpi_plan_dft_2d( 
+   if ( flags.wisdomFile)
+   {
+      pb_c2c_probe_split = fftw_mpi_plan_dft_2d( 
                            Nx, Ny,
                            init_probe, init_probe,
-                           //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
-                           //comm, FFTW_BACKWARD, FFTW_PATIENT );
-                           //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
-                           comm, FFTW_BACKWARD, FFTW_MEASURE );
+                           comm, 
+                           FFTW_BACKWARD, 
+                           // FFTW_WISDOM_ONLY | 
+                           // FFTW_EXHAUSTIVE );
+                           // FFTW_PATIENT);
+                           // FFTW_MEASURE );
+                           FFTW_ESTIMATE);
+   }
+   else
+   {
+      pb_c2c_probe_split = fftw_mpi_plan_dft_2d( 
+                           Nx, Ny,
+                           init_probe, init_probe,
+                           comm, 
+                           FFTW_BACKWARD, 
+                           // FFTW_WISDOM_ONLY | 
+                           // FFTW_EXHAUSTIVE );
+                           // FFTW_PATIENT);
+                           FFTW_MEASURE );
+                           // FFTW_ESTIMATE);
+   }
    ////////////////////////////////////////////////////////////////////
    // TODO: THE FOLLOWING IS NOT USED, CREATES BOUNDARY DISCONTINUITIES
    // //TODO: Compensate for periodic boundary conditions on the probe
@@ -689,6 +745,7 @@ int TEM_NS::adfstem(
    double* stem_probe_joined_im; 
    stem_probe_joined_im = new double[Nx * Ny];
 
+   // TODO: consider removing the following
    for ( ptrdiff_t i=0; i<Nx/2; ++i)
    {
       for ( ptrdiff_t j=0; j < Ny/2; ++j)
@@ -1342,7 +1399,7 @@ int TEM_NS::adfstem(
    // Instantiate the fftw plan for psi
    ///////////////////////////////////////////////////////////////////
    //if ( threads_ok ) fftw_plan_with_nthreads( nthreads );
-   fftw_plan pf_c2c_psi, pb_c2c_psi, pf_c2c_t, pb_c2c_t;//,pb_c2c_pap;
+   fftw_plan pf_c2c_psi, pb_c2c_psi;//, pf_c2c_t, pb_c2c_t;//,pb_c2c_pap;
 
 
    // Notes regarding the multislice method: 
@@ -1432,6 +1489,70 @@ int TEM_NS::adfstem(
    double half_delta_y = 0.5 * (yy[1] - yy[0]);
 
 
+   /////////////////////////////////////////////////////////////
+   // Create forward and reverse fftw plans for psi
+   /////////////////////////////////////////////////////////////
+   // c2c in-place forward fft
+   // If a wisdom file was read, then indicate use of a weaker patience,
+   //  so that the plan will use the stronger patience that is generated
+   //  when a wisdom file isn't read.
+   if ( flags.wisdomFile)
+   {
+      pf_c2c_psi = fftw_mpi_plan_dft_2d( // c2c in-place fft,
+                           Nx, Ny, 
+                           psi, psi, 
+                           comm, 
+                           FFTW_FORWARD, 
+                           // FFTW_WISDOM_ONLY
+                           // FFTW_EXHAUSTIVE );
+                           // FFTW_PATIENT);
+                           // FFTW_MEASURE );
+                           FFTW_ESTIMATE);
+   }
+   else
+   {
+      pf_c2c_psi = fftw_mpi_plan_dft_2d( // c2c in-place fft,
+                           Nx, Ny, 
+                           psi, psi, 
+                           comm, 
+                           FFTW_FORWARD, 
+                           // FFTW_WISDOM_ONLY
+                           // FFTW_EXHAUSTIVE );
+                           // FFTW_PATIENT);
+                           FFTW_MEASURE );
+                           // FFTW_ESTIMATE);
+   }
+
+
+   // c2c in-place reverse fft
+   if ( flags.wisdomFile)
+   {
+      pb_c2c_psi = fftw_mpi_plan_dft_2d( 
+                           Nx, Ny,
+                           psi, psi, 
+                           comm, 
+                           FFTW_BACKWARD, 
+                           // FFTW_WISDOM_ONLY | 
+                           // FFTW_EXHAUSTIVE );
+                           // FFTW_PATIENT);
+                           // FFTW_MEASURE );
+                           FFTW_ESTIMATE);
+   }
+   else
+   {
+      pb_c2c_psi = fftw_mpi_plan_dft_2d( 
+                           Nx, Ny,
+                           psi, psi, 
+                           comm, 
+                           FFTW_BACKWARD, 
+                           // FFTW_WISDOM_ONLY | 
+                           // FFTW_EXHAUSTIVE );
+                           // FFTW_PATIENT);
+                           FFTW_MEASURE );
+                           // FFTW_ESTIMATE);
+   }
+
+
    for( std::list<double>::const_iterator 
          x_itr = x_p.begin();
          x_itr != x_p.end(); 
@@ -1443,9 +1564,6 @@ int TEM_NS::adfstem(
             y_itr != y_p.end(); 
             ++y_itr )
       {
-         // TODO: Consider using the stem raster spacing to increment 
-         //       beam position instead of using x_p and y_p. 
-
          // debug
          //if ( mynode == rootnode && flags.debug)
          //{
@@ -1460,28 +1578,6 @@ int TEM_NS::adfstem(
          //}
          // end debug
          
-         /////////////////////////////////////////////////////////////
-         // Create forward and reverse fftw plans for psi
-         /////////////////////////////////////////////////////////////
-         // c2c in-place forward fft
-         pf_c2c_psi = fftw_mpi_plan_dft_2d( // c2c in-place fft,
-                                 Nx, Ny, 
-                                 psi, psi, 
-                                 //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
-                                 //comm, FFTW_BACKWARD, FFTW_PATIENT );
-                                 //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
-                                 comm, FFTW_FORWARD, FFTW_MEASURE );
-
-
-         // c2c in-place reverse fft
-         pb_c2c_psi = fftw_mpi_plan_dft_2d( 
-                                 Nx, Ny,
-                                 psi, psi, 
-                                 //comm, FFTW_BACKWARD, FFTW_ESTIMATE );
-                                 //comm, FFTW_BACKWARD, FFTW_PATIENT );
-                                 //comm, FFTW_BACKWARD, FFTW_EXHAUSTIVE );
-                                 comm, FFTW_BACKWARD, FFTW_MEASURE );
-
          //////////////////////////////////////////////////////////////
          // Translate the STEM probe in realspace 
          //////////////////////////////////////////////////////////////
@@ -1536,14 +1632,11 @@ int TEM_NS::adfstem(
          for ( size_t i=0; i < Nx_local; ++i)
          {
             // enforce periodic boundary condition, x direction
-            //if ( i + idx_local_start_x < probe_idx_shift_x )
             if ( i + local_0_start_fftw < probe_idx_shift_x )
                probe_idx_x = i + Nx + local_0_start_fftw 
                               - probe_idx_shift_x;
-               //idx_x = i + Nx + idx_local_start_x - probe_idx_shift_x;
             else
                probe_idx_x = i + local_0_start_fftw - probe_idx_shift_x;
-               //idx_x = i + idx_local_start_x - probe_idx_shift_x;
 
             for ( size_t j=0; j < Ny; ++j)
             {
@@ -1662,7 +1755,8 @@ int TEM_NS::adfstem(
          {
             //if ( mynode == rootnode && flags.debug 
             //      && flags.image_output )
-            //   cout << "saving initial probe in reciprocal space" << endl;
+            //   cout << "saving initial probe in reciprocal space" 
+            //       << endl;
 
             //if ( flags.image_output )
             //{
@@ -1728,8 +1822,8 @@ int TEM_NS::adfstem(
             //      cout << "output_psi_realspace_to_netcdf() failed" 
             //         << endl;
             //}
-            //// TODO: uncomment if evaluating the probe rather than copying
-            ////        it
+            //// TODO: uncomment if evaluating the probe rather than 
+            ////        copying it
             ////fftw_execute( pf_c2c_psi ); // debug
          }
 
@@ -2653,9 +2747,6 @@ int TEM_NS::adfstem(
                }
             } // flags.gt17 || flags.d3 || flags.d4
          } // end of flags.fem dependent block
-
-         fftw_destroy_plan( pb_c2c_psi );
-         fftw_destroy_plan( pf_c2c_psi );
 
          //if ( flags.mtf_file && flags.mtf_resolution )
          //{
@@ -3748,7 +3839,7 @@ int TEM_NS::adfstem(
    if ( mynode == rootnode && flags.debug )
             cout << "cleaning up memory ..." << endl; // debug
    //if ( mynode == rootnode )
-   //   if ( ! flag_wisdomFile )
+   //   if ( ! flags.wisdomFile )
    //   {
    //      cout << "Exporting wisdom to file: " << wisdom_filename << endl;
    //      if ( ! fftw_export_wisdom_to_filename( wisdom_filename.c_str()))
@@ -3757,6 +3848,9 @@ int TEM_NS::adfstem(
    //           << wisdom_filename << endl;
    //      }
    //   }
+
+   fftw_destroy_plan( pb_c2c_psi );
+   fftw_destroy_plan( pf_c2c_psi );
 
    if ( mynode == rootnode )
    {
@@ -3777,7 +3871,6 @@ int TEM_NS::adfstem(
 
    //fftw_destroy_plan( pb_c2c_psi );
    //fftw_destroy_plan( pf_c2c_psi );
-
    
    fftw_free( psi );
 

@@ -58,6 +58,11 @@ class scatterer_pap_LUT
    public:
       std::list< scatterer_pap* > pap_list;
       // CONSTRUCTOR
+      scatterer_pap_LUT()
+      {
+         scatterer_param_LUT myScattererParamLUT;
+      }
+
       scatterer_pap_LUT( const std::vector<unsigned int>& Z_list,
                      const double& lambda, const double& gamma, 
                      const double& ab_inv, 
