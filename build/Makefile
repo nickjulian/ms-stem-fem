@@ -22,7 +22,7 @@ LIBS_FFTW = -lfftw3_mpi -lfftw3
 #LIBS_LMP = -L$(ROOT)/<put path to lammps library here> -llammps
 LIBS_LMP = -llammps # to use this, copy all lammps header files to include/
 #LIBS = -L$(ROOT)/lib -L/usr/lib64 $(LIBS_NETCDF) $(LIBS_FFTW) -ltiff -lm 
-LIBS = -L$(ROOT)/lib -L/usr/lib64 $(LIBS_FFTW) -ltiff -lm 
+LIBS = -L$(ROOT)/lib -L/usr/lib64 $(LIBS_FFTW) -ltiff -lm -ldl
 #############################
 
 OBJS = func.o projected_atomic_potential.o write_tif.o scherzer.o bw_limit.o lenses.o tem_io.o probe_wavefunction.o adfstem.o slice.o variance.o io_txt.o 
