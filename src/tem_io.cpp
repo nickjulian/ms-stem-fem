@@ -4701,25 +4701,25 @@ int TEM_NS::check_runtime_flags(
       flags.aberration_correction << endl <<
       "flags.raster_spacing " <<
       flags.raster_spacing << endl <<
-      "flags.mtf_file" <<
+      "flags.mtf_file " <<
       flags.mtf_file << endl <<
-      "flags.mtf_resolution" <<
+      "flags.mtf_resolution " <<
       flags.mtf_resolution << endl <<
       "flags.correlograph " <<
       flags.correlograph << endl <<
-      "flags.correlograph_variance" <<
+      "flags.correlograph_variance " <<
       flags.correlograph_variance << endl <<
       "flags.correlograph_everyimage " <<
       flags.correlograph_everyimage << endl <<
-      "flags.correlograph_everytxt" <<
+      "flags.correlograph_everytxt " <<
       flags.correlograph_everytxt << endl <<
-      //"flags.correlograph_everynetcdf" <<
+      //"flags.correlograph_everynetcdf " <<
       //flags.correlograph_everynetcdf << endl <<
-      "flags.lammps_preTEM_file" <<
+      "flags.lammps_preTEM_file " <<
       flags.lammps_preTEM_file << endl <<
-      "flags.lammps_TEM_steps" <<
+      "flags.lammps_TEM_steps " <<
       flags.lammps_TEM_steps << endl <<
-      "flags.lammps_TEM_samples" <<
+      "flags.lammps_TEM_samples " <<
       flags.lammps_TEM_samples<< endl <<
       "flags.debug " <<
       flags.debug << endl <<
