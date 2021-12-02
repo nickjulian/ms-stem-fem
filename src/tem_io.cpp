@@ -580,7 +580,7 @@ int TEM_NS::read_position_lammps_data_file(
             {
                std::cerr //<< "node " << mynode << ", "
                   << "Error reading position data file;"
-                  << " current line should be either: "<< std::endl
+                  << " current line should be: "<< std::endl
                   << "Masses" //<< std::endl << " or" << endl << "Atoms"
                   << endl;
             }
@@ -887,21 +887,26 @@ int TEM_NS::read_position_lammps_data_file(
          ////////////////////////////////////////////////////////////////
          // shift all atoms so that all coordinates are positive
          ////////////////////////////////////////////////////////////////
+         //for ( size_t i=0; i < qlist.size() ; ++i )
+         //{
+         //   qlist[i][0] = qlist[i][0] - xmin;
+         //   qlist[i][1] = qlist[i][1] - ymin;
+         //   qlist[i][2] = qlist[i][2] - zmin;
+         //}
+
+         // Instead of moving lowest atom position to 0, move the lower
+         //  boundary of the system to 0 so that probe positions are
+         //  relative to the system boundary at (0,0,0)
          for ( size_t i=0; i < qlist.size() ; ++i )
          {
-            qlist[i][0] = qlist[i][0] - xmin;
-            qlist[i][1] = qlist[i][1] - ymin;
-            qlist[i][2] = qlist[i][2] - zmin;
+            qlist[i][0] = qlist[i][0] - xlower;
+            qlist[i][1] = qlist[i][1] - ylower;
+            qlist[i][2] = qlist[i][2] - zlower;
          }
+
          xlo = 0.0;
          ylo = 0.0;
          zlo = 0.0;
-         xmin = 0.0;
-         ymin = 0.0;
-         zmin = 0.0;
-         xupper = xperiod;
-         yupper = yperiod;
-         zupper = zperiod;
 
          // Sequential pointers in qlist[] are contiguous, but the qq[]
          //  arrays they point to are not contiguous to each other.
@@ -1004,17 +1009,20 @@ int TEM_NS::read_position_lammps_data_file(
 
    // Broadcast results to the remaining nodes
    MPI_Bcast( &total_population, 1, MPI_UNSIGNED, rootnode, comm);
+   MPI_Bcast( &numberOfSpecies, 1, MPI_UNSIGNED, rootnode, comm);
 
    if ( mynode != rootnode )
    {
       qq = new double[ 3 * total_population ];
       ZZ = new unsigned int[ total_population ];
+      uniqueZs = new unsigned int[ numberOfSpecies];
    }
 
    MPI_Bcast( qq, 3*total_population, MPI_DOUBLE, rootnode, comm);
 
    MPI_Bcast( ZZ, total_population, MPI_UNSIGNED, rootnode, comm);
 
+   MPI_Bcast( uniqueZs, numberOfSpecies, MPI_UNSIGNED, rootnode, comm);
 
    return EXIT_SUCCESS;
 }
@@ -1750,9 +1758,9 @@ int TEM_NS::read_position_lammps_file(
 
          if ( mynode == rootnode && input_flag_debug )
             cout << " From input file: (xperiod, xlower, xupper): ("
-               << xlower << ", " << xupper << ")"
+               << xperiod << ", " << xlower << ", " << xupper << ")"
                << "(yperiod, ylower, yupper): ("
-               << ylower << ", " << yupper << ")"
+               << yperiod << ", " << ylower << ", " << yupper << ")"
                << endl;
 
          // Find the Atoms section
@@ -2007,7 +2015,7 @@ int TEM_NS::read_position_lammps_file(
 
 
          if (
-               declared_population == common_size
+              declared_population == common_size
                && atom_type_list_uniqued.size() == numberofspecies
                //&& atom_number_list_uniqued.size() == common_size
             )

@@ -3419,6 +3419,19 @@ int TEM_NS::adfstem(
                      )
                   ) - 1.0;
             }
+            // zero the direct-beam region of the 2-D variance image
+            double ksqr;
+            for ( size_t i=0; i < Nx_local; ++i)
+            {
+               for ( size_t j=0; j < Ny; ++j)
+               {
+                  ksqr = pow(kx_local[i], 2) + pow(ky[j], 2);
+                  if ( lambda_sqr * ksqr <= alpha_max_sqr )
+                  {
+                     diffracted_wave_mag_variance[ j + Ny*i] = 0.0;
+                  }
+               }
+            }
             if ( flags.image_output )
             {
                diffraction_scale_factor = 1.0e0;
