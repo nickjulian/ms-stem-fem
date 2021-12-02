@@ -33,6 +33,1221 @@ using std::istringstream;
 using std::setw;
 using std::setprecision;
 
+int TEM_NS::read_position_lammps_data_file(
+         const string& filename,
+         double*& qq, // will be allocated
+         unsigned int*& ZZ, // will be allocated
+         unsigned int& numberOfSpecies,
+         unsigned int*& uniqueZs, // will be allocated
+         unsigned int& total_population,
+         double& xlo, double& ylo, double& zlo,
+         double& xperiod, double& yperiod, double& zperiod,
+         const unsigned int& input_flag_debug,
+         const int& mynode,
+         const int& rootnode,
+         MPI_Comm comm
+         )
+{
+   // Precondition:
+   // - input is expected to be the same format as a lammps data
+   //  input file, with an Atoms section and an enumerated list of
+   //  atoms types and coordinates
+   // - qq and ZZ have not been allocated.
+
+   // Postcondition:
+   // - qq and ZZ have been allocated, and its memory
+   //    must be deleted elsewhere
+   // - qq[] and ZZ[] all reside in contiguous regions
+   //    of memory for MPI
+
+   unsigned int failflag = 0;
+   if ( mynode == rootnode )
+   {
+      // declared_population 'atoms'
+      size_t declared_population = 0;
+
+      ifstream data_file( filename.c_str(), std::ifstream::in);
+      if ( data_file.is_open() )
+      {
+         string data_line;
+         getline(data_file, data_line); // first line
+         // First line may begin with a space separated list of atomic
+         //    numbers.
+         // Skip the first line
+
+         size_t Z;
+
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos )
+                                       // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            istringstream data_line_stream( data_line );
+            data_line_stream >> declared_population;
+
+            string data_descriptor;
+            data_line_stream >> data_descriptor;
+            // NOTE: why can't I use std::tolower, but I can use tolower?
+            transform( data_descriptor.begin(), data_descriptor.end(),
+                       data_descriptor.begin(), (int(*)(int))tolower );
+            // NOTE: this will only work with ASCII input, not UTF.
+            //       For Unicode support, use toLower from the ICU
+            //       library.
+
+            if ( (! declared_population)
+                  || ( data_descriptor.compare("atoms") ) )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  //<< "declared_population, data_descriptor : "//debug
+                  //<< declared_population  // debug
+                  //<< ", " << data_descriptor  // debug
+                  << std::endl;
+               std::cerr << " current line should be : "<< std::endl;
+               std::cerr << "<size_t> atoms " << std::endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               std::cout //<< "node " << mynode << ", "
+                  << "declared_population : "
+                  << declared_population << std::endl;
+         }
+         else
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << std::endl;
+            std::cerr << "data_file.good() : " << data_file.good();
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+
+         // numberOfSpecies 'atom types'
+         //size_t numberOfSpecies = 0;
+         numberOfSpecies = 0;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            istringstream data_line_stream( data_line );
+            data_line_stream >> numberOfSpecies;
+
+            string data_descriptor1, data_descriptor2;
+            data_line_stream >> data_descriptor1 >> data_descriptor2;
+            if ( data_descriptor1.empty() || data_descriptor2.empty() )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  << "text following number of species must be 'atom types'"
+                  << std::endl;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use
+            //       tolower?
+            // TODO: the following will only work with ASCII input, not
+            //       UTF.
+            //       For Unicode support, use toLower from the ICU
+            //       library.
+            transform( data_descriptor1.begin(),
+                        data_descriptor1.end(),
+                           data_descriptor1.begin(),
+                           (int(*)(int))tolower );
+            transform( data_descriptor2.begin(),
+                        data_descriptor2.end(),
+                           data_descriptor2.begin(),
+                           (int(*)(int))tolower );
+
+            if (  (! numberOfSpecies )
+                    || ( data_descriptor1.compare("atom") )
+                    || ( data_descriptor2.compare("types") )
+               )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  << "numberOfSpecies, data_descriptor1, " // debug
+                  << " data_descriptor2 : " // debug
+                  << numberOfSpecies  // debug
+                  << ", " << data_descriptor1  // debug
+                  << ", " << data_descriptor2  // debug
+                  << std::endl;
+               std::cerr << " current line should be : "<< std::endl;
+               std::cerr << "<double> atom types"
+                  << std::endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               std::cout //<< "node " << mynode << ", "
+                  << "numberOfSpecies : "
+                  << numberOfSpecies << std::endl;
+         }
+         else
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << std::endl;
+            std::cerr << "data_file.good() : " << data_file.good();
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+
+         // double double 'xlo xhi'
+         double xlower, xupper;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            string data_descriptor1, data_descriptor2;
+            istringstream data_line_stream( data_line );
+            data_line_stream >> xlower >> xupper
+               >> data_descriptor1 >> data_descriptor2;
+
+            if ( data_descriptor1.empty() || data_descriptor2.empty() )
+            {
+               std::cerr << "Error reading position data file;"
+                  << " current line should be : "<< std::endl;
+               std::cerr << "<double> <double> xlo xhi"
+                  << std::endl;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use tolower?
+            // TODO: the following will only work with ASCII input, not UTF.
+            //       For Unicode support, use toLower from the ICU library.
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
+                           data_descriptor1.begin(), (int(*)(int))tolower );
+                           //data_descriptor1.begin(), tolower );
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
+                           data_descriptor2.begin(), (int(*)(int))tolower );
+                           //data_descriptor2.begin(), tolower );
+
+            if (
+                  ( data_descriptor1.compare("xlo") )
+                  || ( data_descriptor2.compare("xhi") )
+               )
+            {
+               std::cerr
+                  << "Error reading position data file; "
+                  << "xlower, xupper, data_descriptor1, "
+                  << " data_descriptor2 : "
+                  << xlower << ", " << xupper
+                  << ", " << data_descriptor1
+                  << ", " << data_descriptor2
+                  << std::endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               std::cout //<< "node " << mynode << ", "
+                  << "xlower, xupper : "
+                  << xlower << ", " << xupper << std::endl;
+         }
+         else
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << std::endl;
+            std::cerr << "data_file.good() : " << data_file.good();
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+
+         // double double 'ylo yhi'
+         double ylower, yupper;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            string data_descriptor1, data_descriptor2;
+            istringstream data_line_stream( data_line );
+            data_line_stream >> ylower >> yupper
+               >> data_descriptor1 >> data_descriptor2;
+
+            if ( data_descriptor1.empty() || data_descriptor2.empty() )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;"
+                  << " current line should be : "<< std::endl;
+               std::cerr << "<double> <double> ylo yhi"
+                  << std::endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use tolower?
+            // TODO: the following will only work with ASCII input, not UTF
+            //       For Unicode support, use toLower from the ICU library.
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
+                           data_descriptor1.begin(), (int(*)(int))tolower);
+                           //data_descriptor1.begin(), tolower );
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
+                           data_descriptor2.begin(), (int(*)(int))tolower);
+                           //data_descriptor2.begin(), tolower );
+
+            if (
+                    ( data_descriptor1.compare("ylo") )
+                    || ( data_descriptor2.compare("yhi") )
+               )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  << "ylower, yupper, data_descriptor1, "// debug
+                  << " data_descriptor2 : "// debug
+                  << ylower << ", " << yupper // debug
+                  << ", " << data_descriptor1 // debug
+                  << ", " << data_descriptor2 // debug
+                  << std::endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               std::cout //<< "node " << mynode << ", "
+                  << "ylower, yupper : "
+                  << ylower << ", " << yupper << std::endl;
+         }
+         else
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << std::endl;
+            std::cerr << "data_file.good() : " << data_file.good();
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+
+         // double double 'zlo zhi'
+         double zlower, zupper;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            while( first == std::string::npos ) // npos : max size of a string
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            string data_descriptor1, data_descriptor2;
+            istringstream data_line_stream( data_line );
+            data_line_stream >> zlower >> zupper
+               >> data_descriptor1 >> data_descriptor2;
+
+            if ( data_descriptor1.empty() || data_descriptor2.empty() )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;"
+                  << " current line should be : "<< std::endl;
+               std::cerr << "<double> <double> zlo zhi"
+                  << std::endl;
+            }
+            // transform characters to lower case
+            // TODO: why can't I use std::tolower, but I can use tolower?
+            // TODO: the following will only work with ASCII input, not UTF.
+            //       For Unicode support, use toLower from the ICU library.
+            transform( data_descriptor1.begin(), data_descriptor1.end(),
+                           data_descriptor1.begin(), (int(*)(int))tolower );
+                           //data_descriptor1.begin(), tolower );
+            transform( data_descriptor2.begin(), data_descriptor2.end(),
+                           data_descriptor2.begin(), (int(*)(int))tolower );
+                           //data_descriptor2.begin(), tolower );
+
+            if (
+                    ( data_descriptor1.compare("zlo") )
+                    || ( data_descriptor2.compare("zhi") )
+               )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  << "zlower, zupper, data_descriptor1, " // debug
+                  << " data_descriptor2 : " // debug
+                  << zlower << ", " << zupper  // debug
+                  << ", " << data_descriptor1  // debug
+                  << ", " << data_descriptor2  // debug
+                  << std::endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+            if ( input_flag_debug )
+               std::cout //<< "node " << mynode << ", "
+                  << "zlower, zupper : "
+                  << zlower << ", " << zupper << std::endl;
+         }
+         else
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << std::endl;
+            std::cerr << "data_file.good() : " << data_file.good();
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+
+         //// double double double xy xz yz // tilt factors for triclinic system
+         //double tiltxy, tiltxz, tiltyz;
+         //if( getline( data_file, data_line) && data_file.good() )
+         //{
+         //   // skip lines containing only whitespace
+         //   size_t first = data_line.find_first_not_of(" \t" );
+         //   while( first == std::string::npos ) // npos : max size of a string
+         //   {
+         //      getline( data_file, data_line);
+         //      first = data_line.find_first_not_of(" \t" );
+         //   }
+
+         //   string data_descriptor1, data_descriptor2, data_descriptor3;
+         //   istringstream data_line_stream( data_line );
+         //   data_line_stream >> tiltxy >> tiltxz >> tiltyz
+         //      >> data_descriptor1 >> data_descriptor2 >> data_descriptor3;
+
+         //   if ( data_descriptor1.empty()
+         //         || data_descriptor2.empty()
+         //         || data_descriptor3.empty()
+         //         )
+         //   {
+         //      std::cerr //<< "node " << mynode << ", "
+         //         << "Error reading position data file;"
+         //         << " current line should be : "<< std::endl
+         //         << "<double> <double> <double> xy xz yz"
+         //         << std::endl;
+         //   }
+         //   // transform characters to lower case
+         //   // TODO: why can't I use std::tolower, but I can use tolower?
+         //   // TODO: the following will only work with ASCII input, not UTF.
+         //   //       For Unicode support, use toLower from the ICU library.
+         //   transform( data_descriptor1.begin(), data_descriptor1.end(),
+         //                  data_descriptor1.begin(), (int(*)(int))tolower );
+         //                  //data_descriptor1.begin(), tolower );
+         //   transform( data_descriptor2.begin(), data_descriptor2.end(),
+         //                  data_descriptor2.begin(), (int(*)(int))tolower );
+         //                  //data_descriptor2.begin(), tolower );
+         //   transform( data_descriptor3.begin(), data_descriptor3.end(),
+         //                  data_descriptor3.begin(), (int(*)(int))tolower );
+         //                  //data_descriptor3.begin(), tolower );
+         //
+         //   if (
+         //           ( data_descriptor1.compare("xy") )
+         //           || ( data_descriptor2.compare("xz") )
+         //           || ( data_descriptor3.compare("yz") )
+         //      )
+         //   {
+         //      std::cerr //<< "node " << mynode << ", "
+         //            << "Error reading position data file; "
+         //            << "tiltxy, tiltxz, tiltyz, data_descriptor1, "//debug
+         //            << " data_descriptor2, data_descriptor3 : "// debug
+         //         << tiltxy << ", " << tiltxz << ", " // debug
+         //         << tiltyz << ", "// debug
+         //            << data_descriptor1 // debug
+         //            << ", " << data_descriptor2 // debug
+         //            << ", " << data_descriptor3 // debug
+         //            << std::endl
+         //            << " current line should be : "<< std::endl
+         //            << "<double> <double> <double> xy xz yz"
+         //            << std::endl
+         //            << "data_descriptor1.compar('xy') : "
+         //            <<  data_descriptor1.compare("xy")
+         //            << std::endl
+         //            << "data_descriptor2.compar('xz') : "
+         //            <<  data_descriptor2.compare("xz")
+         //            << std::endl
+         //            << "data_descriptor3.compar('yz') : "
+         //            <<  data_descriptor3.compare("yz")
+         //            << std::endl;
+         //      return EXIT_FAILURE;
+         //   }
+         //   if ( input_flag_debug )
+         //      std::cout //<< "node " << mynode << ", "
+         //            << "tiltxy, tiltxz, tiltyz: "
+         //            << tiltxy
+         //            << ", " << tiltxz
+         //            << ", " << tiltyz << std::endl;
+         //}
+         //else
+         //{
+         //   std::cerr //<< "node " << mynode << ", "
+         //      << "Error reading position data file; data_line : "
+         //      << data_line << std::endl;
+         //   std::cerr << "data_file.good() : " << data_file.good();
+         //   return EXIT_FAILURE;
+         //}
+
+         // check that boundary values are valid
+         if ( xupper <= xlower )
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; xhi <= xlo" << std::endl;
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+         if ( yupper <= ylower )
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; yhi <= ylo" << std::endl;
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+         if ( zupper <= zlower )
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; zhi <= zlo" << std::endl;
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+         //if ( tiltxy != 0.0 || tiltxz != 0.0 || tiltyz != 0.0 )
+         //{
+         //   std::cerr //<< "node " << mynode << ", "
+         //      << "Error reading position data file; xy, xz, yz, != 0.0"
+         //      << std::endl
+         //      << "Cannot handle triclinic boundaries at the moment"
+         //      << std::endl;
+         //   failflag = 1;
+         //   MPI_Bcast( &failflag, 1, MPI_UNSIGNED,
+         //               rootnode, comm);
+         //   return EXIT_FAILURE;
+         //}
+
+         // Assign boundaries to output variables
+         xperiod = xupper - xlower;
+         yperiod = yupper - ylower;
+         zperiod = zupper - zlower;
+
+         if ( //mynode == rootnode &&
+               input_flag_debug )
+            std::cout << " From input file: (xperiod, xlower, xupper): ("
+               << xperiod << ", " << xlower << ", " << xupper << ")"
+               << " (yperiod, ylower, yupper): ("
+               << yperiod << ", " << ylower << ", " << yupper << ")"
+               << " (zperiod, zlower, zupper): ("
+               << zperiod << ", " << zlower << ", " << zupper << ")"
+               << std::endl;
+
+         // 'Masses' // or 'Atoms'
+
+         string section_name;
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            // std::string::npos : max size of a string
+            while( first == std::string::npos )
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            istringstream data_line_stream( data_line );
+            data_line_stream >> section_name;
+
+            if ( section_name.empty() )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;"
+                  << " current line should be either: "<< std::endl
+                  << "Masses" //<< std::endl << " or" << endl << "Atoms"
+                  << endl;
+            }
+            // transform characters to lower case
+            // NOTE: why can't I use std::tolower, but I can use tolower?
+            // NOTE: the following will only work with ASCII input, not UTF
+            //       For Unicode support, use toLower from the ICU library.
+            transform( section_name.begin(), section_name.end(),
+                           section_name.begin(), (int(*)(int))tolower );
+            if ( section_name.compare("masses"))
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  << " section_name : " // debug
+                  << section_name //debug
+                  << std::endl
+                  << " current line should be: "<< std::endl
+                  << "Masses" //<< std::endl << " or "
+                  //<< std::endl << "Atoms"
+                  << endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+         }
+         else
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position data file; data_line : "
+               << data_line << std::endl
+               << "data_file.good() : " << data_file.good();
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+
+         size_t atom_number, atom_type;
+         size_t number_of_read_atoms = 0;
+         double* qq_single;
+         std::list<size_t> atom_number_list;
+         std::list<size_t> atom_type_list;
+         //std::vector<size_t> Zlist;
+         std::vector<double*> qlist;
+
+         // The following assignments will be overwritten since positions
+         //  are ensured to be lower than (xupper, yupper, zupper).
+         double xmin, ymin, zmin;
+         xmin = xupper;
+         ymin = yupper;
+         zmin = zupper;
+
+         std::vector<size_t> speciesID( numberOfSpecies, 0);
+         std::vector<double> atomicMasses( numberOfSpecies, 0.0);
+
+         // uniqueZs[ii] is the Z value of speciesID[ii]
+         uniqueZs = new unsigned int[numberOfSpecies];
+
+         //if ( section_name.compare("masses"))
+         //{
+         size_t numberOfSpeciesRead = 0;
+         while( data_file.good()
+               && (numberOfSpeciesRead < numberOfSpecies))
+         {
+            if( getline( data_file, data_line) && data_file.good() )
+            {
+               // skip lines containing only whitespace
+               size_t first = data_line.find_first_not_of(" \t" );
+               while( first == std::string::npos)//npos : max string size
+               {
+                  getline( data_file, data_line);
+                  first = data_line.find_first_not_of(" \t" );
+               }
+
+               istringstream data_line_stream( data_line );
+               data_line_stream >> speciesID[ numberOfSpeciesRead];
+               data_line_stream >> atomicMasses[ numberOfSpeciesRead];
+            }
+            ++numberOfSpeciesRead;
+         }
+         if ( numberOfSpeciesRead != numberOfSpecies)
+         {
+            std::cerr
+               << "Error reading position file" << std::endl
+               << "   declared numberOfSpecies : " << numberOfSpecies
+               << std::endl
+               << "   numberOfSpeciesRead in masses section : "
+               << numberOfSpeciesRead
+               << std::endl;
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+
+         // guess values of Z using the atomic masses
+         for ( size_t ii=0; ii < numberOfSpecies; ++ii)
+         {
+            if ( guessZ( atomicMasses[ii], uniqueZs[ii])
+                  != EXIT_SUCCESS)
+            {
+               std::cerr << "Error: failed to guess atomic number of "
+                  << "element having mass " << atomicMasses[ii]
+                  << " found in lammps data style file" << std::endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+            else if ( input_flag_debug)
+            {
+               std::cout << "Guessing Z of " << uniqueZs[ii]
+                  << " corresponds to mass "
+                  << atomicMasses[ii] << " found in lammps data style "
+                  << "file" << std::endl;
+            }
+         }
+         //}
+         //else
+         //{
+         //   std::cerr
+         //      << "Error reading position data file;"
+         //      << " 'Masses' section not found" << std::endl;
+         //      failflag = 1;
+         //      MPI_Bcast( &failflag, 1, MPI_UNSIGNED,
+         //                  rootnode, comm);
+         //   return EXIT_FAILURE;
+         //}
+
+         // 'Atoms' section
+         if( getline( data_file, data_line) && data_file.good() )
+         {
+            // skip lines containing only whitespace
+            size_t first = data_line.find_first_not_of(" \t" );
+            // std::string::npos : max size of a string
+            while( first == std::string::npos )
+            {
+               getline( data_file, data_line);
+               first = data_line.find_first_not_of(" \t" );
+            }
+
+            //string section_name;
+            istringstream data_line_stream( data_line );
+            data_line_stream >> section_name;
+
+            if ( section_name.empty() )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;"
+                  << " current line should be: "
+                  << std::endl << "Atoms" << endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+            // transform characters to lower case
+            // NOTE: why can't I use std::tolower, but I can use tolower?
+            // NOTE: the following will only work with ASCII input, not UTF
+            //       For Unicode support, use toLower from the ICU library.
+            transform( section_name.begin(), section_name.end(),
+                           section_name.begin(), (int(*)(int))tolower );
+            if ( section_name.compare("atoms") )
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file; "
+                  << " section_name : " // debug
+                  << section_name //debug
+                  << std::endl
+                  << " current line should be: "<< std::endl
+                  << std::endl << "Atoms" << endl;
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+         }
+
+         while ( number_of_read_atoms < declared_population )
+         {
+            if( getline( data_file, data_line) && data_file.good() )
+            {
+               // skip lines containing only whitespace
+               size_t first = data_line.find_first_not_of(" \t" );
+               while( first == std::string::npos)//npos : max string size
+               {
+                  getline( data_file, data_line);
+                  first = data_line.find_first_not_of(" \t" );
+               }
+
+               qq_single = new double[3];
+               // grab data from the current line
+               istringstream data_line_stream( data_line );
+               data_line_stream >> atom_number >> atom_type;
+               data_line_stream >> qq_single[0] >> qq_single[1]
+                  >> qq_single[2];
+               // translate atom_type from a speciesID into Z
+               size_t idx;
+               for ( idx=0; idx < numberOfSpecies; ++idx)
+               {
+                  if ( atom_type == speciesID[idx])
+                  {
+                     atom_type = uniqueZs[idx];
+                     break;
+                  }
+               }
+               if ( idx >= numberOfSpecies)
+               {
+                  std::cerr << "Error reading model file: "
+                     << "failed to match atom type "
+                     << atom_type
+                     << " with an atomic number value for "
+                     << "atom_number " << atom_number
+                     << std::endl;
+                  for ( size_t i=0; i<qlist.size(); i++)
+                  {
+                     delete[] qlist[i];
+                     qlist.pop_back();
+                     delete[] uniqueZs;
+                  }
+                  failflag = 1;
+                  MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+                  return EXIT_FAILURE;
+               }
+
+               // check that the data is valid
+               if ( atom_number > declared_population
+                     //|| atom_type > numberOfSpecies
+                     || atom_type <= 0
+                     || qq_single[0] > xupper || qq_single[0] < xlower
+                     || qq_single[1] > yupper || qq_single[1] < ylower
+                     || qq_single[2] > zupper || qq_single[2] < zlower
+                  )
+               {
+                  std::cerr //<< "node " << mynode << ", "
+                     << "Error reading position data file;"
+                     << " on line with atom number : " << atom_number
+                     << std::endl
+                     << " Check that atom number, type, and position are "
+                     << "within appropriate boundaries." << std::endl;
+                  std::cerr << "( atom_number, declared_population, "
+                     << "atom_type, numberOfSpecies) : ("
+                     <<  atom_number << ", " << declared_population << ", "
+                     <<  atom_type << ", " << numberOfSpecies << ")"
+                     << std::endl;
+                  for ( size_t i=0; i < qlist.size(); i++)
+                  {
+                     delete[] qlist[i];
+                     qlist.pop_back();
+                     delete[] uniqueZs;
+                  }
+                  failflag = 1;
+                  MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+                  return EXIT_FAILURE;
+               }
+
+               // Determine minimum positions so that all they may be
+               //  shifted to be all positive.
+               if ( qq_single[0] < xmin ) xmin = qq_single[0];
+               if ( qq_single[1] < ymin ) ymin = qq_single[1];
+               if ( qq_single[2] < zmin ) zmin = qq_single[2];
+
+               // assign data to qlist, atom_number_list
+               qlist.push_back(qq_single);
+               atom_number_list.push_back(atom_number);
+               atom_type_list.push_back( atom_type);
+
+               number_of_read_atoms++;
+            }
+            else
+            {
+               std::cerr //<< "node " << mynode << ", "
+                  << "Error reading position data file;"
+                  << " atoms read : "
+                  << number_of_read_atoms
+                  << ", declared population : "
+                  << declared_population
+                  << std::endl
+                  << "data_file.eof() : " << data_file.eof() << std::endl
+                  << "data_file.good() : " << data_file.good() << std::endl
+                  << "data_file.fail() : " << data_file.fail() << std::endl
+                  << "data_file.bad() : " << data_file.bad() << std::endl;
+               for ( size_t i=0; i<qlist.size(); i++)
+               {
+                  delete[] qlist[i];
+                  qlist.pop_back();
+                  delete[] uniqueZs;
+               }
+               failflag = 1;
+               MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+               return EXIT_FAILURE;
+            }
+         }
+
+
+         // Ensure that atom types (1 2 ...) match numberOfSpecies, and
+         //  that all atoms have unique indices (atom_number_list).
+
+         std::list<size_t> atom_type_list_uniqued( atom_type_list );
+         atom_type_list_uniqued.sort();
+         atom_type_list_uniqued.unique();
+
+         // NOTE: atom IDs don't appear to be unique on large
+         //        lammps systems
+         //std::list<size_t> atom_number_list_uniqued( atom_number_list );
+         //atom_number_list_uniqued.sort();
+         //atom_number_list_uniqued.unique();
+
+         ////////////////////////////////////////////////////////////////
+         // shift all atoms so that all coordinates are positive
+         ////////////////////////////////////////////////////////////////
+         for ( size_t i=0; i < qlist.size() ; ++i )
+         {
+            qlist[i][0] = qlist[i][0] - xmin;
+            qlist[i][1] = qlist[i][1] - ymin;
+            qlist[i][2] = qlist[i][2] - zmin;
+         }
+         xlo = 0.0;
+         ylo = 0.0;
+         zlo = 0.0;
+         xmin = 0.0;
+         ymin = 0.0;
+         zmin = 0.0;
+         xupper = xperiod;
+         yupper = yperiod;
+         zupper = zperiod;
+
+         // Sequential pointers in qlist[] are contiguous, but the qq[]
+         //  arrays they point to are not contiguous to each other.
+         // Here we transfer values from the qq[] arrays to a contiguous
+         //  array so that MPI may properly broadcast them between nodes
+         //  with ease.
+
+         //std::vector<double*> qlist_contig;   // not needed
+         size_t common_size = qlist.size();
+
+         if ( input_flag_debug)
+         {
+            std::cout << "read " << common_size << " atoms from file "
+               << filename << std::endl;
+         }
+
+         if (
+               declared_population == common_size
+               && atom_type_list_uniqued.size() == numberOfSpecies
+               //&& atom_number_list_uniqued.size() == common_size
+            )
+         {
+            total_population = common_size;
+
+            std::list<size_t>::iterator
+               atom_type_list_iterator = atom_type_list.begin();
+
+            qq = new double[ 3 * total_population ]; // 3-D
+            ZZ = new unsigned int[ total_population ];
+
+            for (unsigned int ii=0; ii < total_population; ii++)
+            {
+               qq[ 3 * ii ]       = qlist[ii][0];
+               qq[ 3 * ii + 1 ]   = qlist[ii][1];
+               qq[ 3 * ii + 2 ]   = qlist[ii][2];
+
+               delete[] qlist[ii];// TODO: is this appropriate?
+               qlist[ii] = NULL;  // TODO: is this necessary?
+
+               ZZ[ ii ] = *atom_type_list_iterator;
+               atom_type_list_iterator++;
+            }
+         }
+         else
+         {
+            std::cerr //<< "node " << mynode << ", "
+               << "Error reading position file" << std::endl
+               << "   declared_population : " << declared_population
+               << std::endl
+               << "   positions read : " << qlist.size() << std::endl;
+               //<< "   unique atom ID numbers : "
+               //<< atom_number_list_uniqued.size() << std::endl;
+            for ( size_t i=0; i<qlist.size(); i++)
+            {
+               delete[] qlist[i];
+               qlist.pop_back();
+               delete[] uniqueZs;
+            }
+            failflag = 1;
+            MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+            return EXIT_FAILURE;
+         }
+
+         ///////////////////////////////////////////////////////////////
+         // clean up
+         for ( size_t i = 0; i < qlist.size(); i++)
+         {
+            //delete[] qlist.back(); // taken care of in previous loops
+            //
+            qlist.pop_back();
+            // qq to be dealt with above after copying to qq
+            // qlist_contig.pop_back();
+            // qq to be deleted by calling function
+         }
+         for ( size_t i = 0; i < atom_type_list.size(); i++)
+            atom_type_list.pop_back();
+         for ( size_t i = 0; i < atom_number_list.size(); i++)
+            atom_number_list.pop_back();
+         // end clean up
+         ///////////////////////////////////////////////////////////////
+      }
+      else
+      {
+         std::cerr //<< "node " << mynode << ", "
+            << "Error opening position file" << std::endl;
+         data_file.close();
+         failflag = 1;
+         MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+         return EXIT_FAILURE;
+      }
+
+      data_file.close();
+   } // end of the rootnode block
+
+   MPI_Bcast( &failflag, 1, MPI_UNSIGNED, rootnode, comm);
+   if ( failflag != 0)
+   {
+      return EXIT_FAILURE;
+   }
+
+   // Broadcast results to the remaining nodes
+   MPI_Bcast( &total_population, 1, MPI_UNSIGNED, rootnode, comm);
+
+   if ( mynode != rootnode )
+   {
+      qq = new double[ 3 * total_population ];
+      ZZ = new unsigned int[ total_population ];
+   }
+
+   MPI_Bcast( qq, 3*total_population, MPI_DOUBLE, rootnode, comm);
+
+   MPI_Bcast( ZZ, total_population, MPI_UNSIGNED, rootnode, comm);
+
+
+   return EXIT_SUCCESS;
+}
+
+int TEM_NS::guessZ( const double& mass, unsigned int& ZZ)
+{
+   if (( mass >= 0.9) && ( mass <= 1.1)) ZZ =  1; // H
+   else if (( mass >= 3.9) && ( mass <= 4.1)) ZZ =  2; // He
+   else if (( mass >= 6.9) && ( mass <= 7.0)) ZZ =  3; // Li
+   else if (( mass >= 9.0) && ( mass <= 9.1)) ZZ =  4; // Be
+   else if (( mass >= 10.8) && ( mass <= 11.0)) ZZ =  5; // B
+   else if (( mass >= 12.0) && ( mass <= 12.1)) ZZ =  6; // C
+   else if (( mass >= 14.0) && ( mass <= 14.1)) ZZ =  7; // N
+   else if (( mass >= 15.9) && ( mass <= 16.0)) ZZ =  8; // O
+   else if (( mass >= 18.9) && ( mass <= 19.0)) ZZ =  9; // F
+   else if (( mass >= 20.0) && ( mass <= 20.2)) ZZ =  10; // Ne
+   else if (( mass >= 22.9) && ( mass <= 23.0)) ZZ =  11; // Na
+   else if (( mass >= 24.0) && ( mass <= 24.4)) ZZ =  12; // Mg
+   else if (( mass >= 26.9) && ( mass <= 27.0)) ZZ =  13; // Al
+   else if (( mass >= 28.0) && ( mass <= 28.1)) ZZ =  14; // Si
+   else if (( mass >= 30.9) && ( mass <= 31.0)) ZZ =  15; // P
+   else if (( mass >= 32.0) && ( mass <= 32.1)) ZZ =  16; // S
+   else if (( mass >= 35.4) && ( mass <= 35.5)) ZZ =  17; // Cl
+   else if (( mass == 36.0)
+         || (( mass >= 39.9) && ( mass < 40.0))) ZZ =  18; // Ar 39.95
+   else if (( mass == 38.0)
+         || (( mass >= 39.0) && ( mass <= 39.1))) ZZ =  19; //  K 39.098
+   else if (( mass >= 40.0) && ( mass <= 40.1)) ZZ =  20; // Ca 40.078
+   else if (( mass >= 44.9) && ( mass <= 45.0)) ZZ =  21; // Sc
+   else if (( mass == 44.0)
+         || (( mass >= 47.8) && ( mass <= 48.0))) ZZ =  22; // Ti 47.867
+   else if (( mass == 46.0)
+         || (( mass >= 50.0) && ( mass <= 51.0))) ZZ =  23; // V 50.942
+   else if //(( mass == 48.0) ||
+         ((mass >= 51.8) && (mass <= 51.99999)) ZZ =  24;//Cr 51.996
+   else if //(( mass == 50.0) ||
+         (( mass >= 54.0) && ( mass <= 55.0)) ZZ =  25; // Mn 54.938
+   else if (( mass == 52.0)
+         || (( mass >= 55.0) && ( mass <= 55.9))) ZZ =  26; // Fe 55.845
+   else if //(( mass == 54.0) ||
+         (( mass >= 58.0) && ( mass <= 59.0)) ZZ =  27; // Co 58.933
+   else if (( mass == 56.0)
+         || (( mass >= 58.0) && ( mass <= 58.7))) ZZ =  28; // Ni 58.693
+   else if //(( mass == 58.0) ||
+         (( mass >= 63.0) && ( mass <= 63.6)) ZZ =  29; // Cu 63.546
+   else if (( mass == 60.0)
+         || (( mass >= 65.0) && ( mass <= 65.4))) ZZ =  30; // Zn 65.38
+   else if (( mass == 62.0)
+         || (( mass >= 69.0) && ( mass <= 69.8))) ZZ =  31; // Ga 69.723
+   else if (( mass == 64.0)
+         || (( mass >= 72.0) && ( mass <= 72.7))) ZZ =  32; // Ge 72.630
+   else if (( mass == 66.0)
+         || ((mass >= 75.8) && (mass <= 75.9999))) ZZ =  33;//As 75.922
+   else if (( mass == 68.0)
+         || ((mass >= 78.9) && (mass <= 78.999))) ZZ =  34;//Se 78.971
+   else if (( mass == 70.0)
+         || ((mass >= 79.0) && (mass <= 80.0))) ZZ =  35;//Br 79.904
+   else if //(( mass == 72.0) ||
+         (( mass >= 83.0) && ( mass <= 84.0)) ZZ =  36; // Kr 83.798
+   else if (( mass == 74.0)
+         || (( mass >= 85.0) && ( mass <= 85.5))) ZZ =  37; // Rb 85.468
+   else if (( mass == 76.0)
+         || (( mass >= 87.6) && ( mass <= 88.0))) ZZ =  38; // Sr 87.62
+   else if (( mass == 78.0)
+         || (( mass >= 88.9) && ( mass <= 89.0))) ZZ =  39; // Y 88.906
+   else if //(( mass == 80.0) ||
+         (( mass >= 91.0) && ( mass <= 91.3)) ZZ =  40; // Zr 91.224
+   else if (( mass == 82.0)
+         || (( mass >= 92.9) && ( mass <= 93.0))) ZZ =  41; // Nb 92.906
+   else if //(( mass == 84.0) ||
+         ((mass >= 95.9) && (mass <= 96.0)) ZZ =  42; // Mo 95.95
+   else if (( mass == 86.0)
+         || (( mass >= 96.9) && ( mass <= 97.1))) ZZ =  43; // Tc 97
+   else if //(( mass == 88.0) ||
+         ((mass >= 101.0) && (mass <= 101.1)) ZZ =  44;//Ru 101.07
+   else if (( mass == 90.0)
+         || ((mass >= 102.9) && (mass <= 103.0))) ZZ =  45;//Rh 102.91
+   else if (( mass == 92.0)
+         || ((mass >= 106.0) && (mass <= 106.5))) ZZ =  46;//Pd 106.42
+   else if (( mass == 94.0)
+         || ((mass >= 107.8) && (mass <= 108.0))) ZZ =  47; // Ag 107.87
+   else if //(( mass == 96.0) ||
+         ((mass >= 112.4) && (mass <= 112.5)) ZZ =  48; // Cd 112.41
+   else if (( mass == 98.0)
+         || ((mass >= 114.8) && (mass <= 114.9))) ZZ =  49; // In 114.82
+   else if (( mass == 100.0)
+         || ((mass >= 118.7) && (mass <= 118.8))) ZZ =  50; // Sn 118.71
+   else if (( mass == 102.0)
+         || ((mass >= 121.7) && (mass <= 121.8))) ZZ =  51; // Sb 121.76
+   else if (( mass == 104.0)
+         || ((mass >= 127.5) && (mass <= 127.7))) ZZ =  52; // Te 127.60
+   else if //(( mass == 106.0) ||
+         ((mass >= 126.8) && (mass <= 127.0)) ZZ =  53; // I 126.90
+   else if //(( mass == 108.0) ||
+         ((mass >= 131.2) && (mass <= 131.3)) ZZ =  54; // Xe 131.29
+   else if (( mass == 110.0)
+         || ((mass >= 132.9) && (mass <= 133.0))) ZZ =  55; // Cs 132.91
+   else if (( mass == 112.0)
+         || ((mass >= 137.0) && (mass <= 137.4))) ZZ =  56; // Ba 137.33
+   else if (( mass == 114.0)
+         || ((mass >= 138.9) && (mass <= 139.0))) ZZ =  57; // La 138.91
+   else if (( mass == 116.0)
+         || ((mass >= 140.0) && (mass <= 140.2))) ZZ =  58; // Ce 140.12
+   else if (( mass == 118.0)
+         || ((mass >= 140.9) && (mass <= 141.0))) ZZ =  59; // Pr 140.91
+   else if (( mass == 120.0)
+         || ((mass >= 144.2) && (mass <= 144.3))) ZZ =  60; // Nd 144.24
+   else if (( mass == 122.0)
+         || ((mass >= 144.9) && (mass <= 145.1))) ZZ =  61; // Pm 145
+   else if (( mass == 124.0)
+         || ((mass >= 150.3) && (mass <= 150.4))) ZZ =  62; // Sm 150.36
+   else if (( mass == 126.0)
+         || ((mass >= 151.9) && (mass <= 152.0))) ZZ =  63; // Eu 151.96
+   else if (( mass == 128.0)
+         || ((mass >= 157.0) && (mass <= 157.3))) ZZ =  64; // Gd 157.25
+   else if (( mass == 130.0)
+         || ((mass >= 158.9) && (mass <= 159.0))) ZZ =  65; // Tb 158.93
+   else if (( mass == 132.0)
+         || ((mass >= 162.0) && (mass <= 163.0))) ZZ =  66; // Dy 162.50
+   else if (( mass == 134.0)
+         || ((mass >= 164.9) && (mass <= 165.0))) ZZ =  67; // Ho 164.93
+   else if (( mass == 136.0)
+         || ((mass >= 167.0) && (mass <= 167.3))) ZZ =  68; // Er 167.26
+   else if (( mass == 138.0)
+         || ((mass >= 168.9) && (mass <= 168.0))) ZZ =  69; // Tm 168.93
+   else if //(( mass == 140.0) ||
+         ((mass >= 173.0) && (mass <= 173.1)) ZZ =  70; // Yb 173.05
+   else if (( mass == 142.0)
+         || ((mass >= 174.9) && (mass <= 175.0))) ZZ =  71; // Lu 174.97
+   else if //(( mass == 144.0) ||
+         ((mass >= 178.0) && (mass <= 178.5)) ZZ =  72; // Hf 178.49
+   else if (( mass == 146.0)
+         || ((mass >= 180.9) && (mass <= 181.0))) ZZ =  73; // Ta 180.95
+   else if (( mass == 148.0)
+         || ((mass >= 183.8) && (mass <= 184.0))) ZZ =  74; // W 183.84
+   else if (( mass == 150.0)
+         || ((mass >= 186.0) && (mass <= 186.3))) ZZ =  75; // Re 186.21
+   else if //(( mass == 152.0) ||
+         ((mass >= 190.0) && (mass <= 190.3)) ZZ =  76; // Os 190.23
+   else if (( mass == 154.0)
+         || ((mass >= 192.0) && (mass <= 192.3))) ZZ =  77; // Ir 192.22
+   else if (( mass == 156.0)
+         || ((mass >= 195.0) && (mass <= 195.1))) ZZ =  78; // Pt 195.08
+   else if //(( mass == 158.0) ||
+         ((mass >= 196.9) && (mass <= 197.0)) ZZ =  79; // Au 196.97
+   else if (( mass == 160.0)
+         || ((mass >= 200.5) && (mass <= 201.0))) ZZ =  80; // Hg 200.59
+   else if //(( mass == 162.0) ||
+         ((mass >= 204.0) && (mass <= 204.4)) ZZ =  81; // Tl 204.38
+   else if (( mass == 164.0)
+         || ((mass >= 207.0) && (mass <= 207.3))) ZZ =  82; // Pb 207.2
+   else if (( mass == 166.0)
+         || ((mass >= 208.9) && (mass <= 208.9999))) ZZ =  83;//Bi 208.98
+   else if (( mass == 168.0)
+         || ((mass >= 208.99991) && (mass <= 209.1))) ZZ =  84;//Po 209
+   else if (( mass == 170.0)
+         || ((mass >= 209.9) && (mass <= 210.1))) ZZ =  85; // At 210
+   else if (( mass == 172.0)
+         || ((mass >= 221.9) && (mass <= 222.1))) ZZ =  86; // Rn 222
+   else if (( mass == 174.0)
+         || ((mass >= 222.9) && (mass <= 223.1))) ZZ =  87; // Fr 223
+   else if (( mass == 176.0)
+         || ((mass >= 225.9) && (mass <= 226.1))) ZZ =  88; // Ra 226
+   else if //(( mass == 178.0) ||
+         ((mass >= 226.9) && (mass <= 227.1)) ZZ =  89; // Ac 227
+   else if (( mass == 180.0)
+         || ((mass >= 232.0) && (mass <= 232.1))) ZZ =  90; // Th 232.04
+   else if (( mass == 182.0)
+         || ((mass >= 231.0) && (mass <= 231.1))) ZZ =  91; // Pa 231.04
+   else if //(( mass == 184.0) ||
+         ((mass >= 238.0) && (mass <= 238.1)) ZZ =  92; // U 238.03
+   else if (( mass == 186.0)
+         || ((mass >= 236.9) && (mass <= 237.1))) ZZ =  93; // Np 237
+   else if (( mass == 188.0)
+         || ((mass >= 243.9) && (mass <= 244.1))) ZZ =  94; // Pu 244
+   else if //(( mass == 190.0) ||
+         ((mass >= 242.9) && (mass <= 243.1)) ZZ =  95; // Am 243
+   else if (( mass == 192.0)
+         || ((mass >= 246.9) && (mass <= 247.1))) ZZ =  96; // Cm 247
+   //else if (( mass == 194.0) ) // conflict with Cm; Bk is disallowed
+   //      || ((mass >= 246.9) && (mass <= 247.1))) ZZ =  97; // Bk 247
+   else if //(( mass == 196.0) ||
+         ((mass >= 250.9) && (mass <= 251.1)) ZZ =  98; // Cf 251
+   else if (( mass == 198.0)
+         || ((mass >= 251.9) && (mass <= 252.1))) ZZ =  99; // Es 252
+   else if //(( mass == 200.0) ||
+         ((mass >= 256.9) && (mass <= 257.1)) ZZ =  100; // Fm 257
+   else if (( mass == 202.0)
+         || ((mass >= 257.9) && (mass <= 258.1))) ZZ =  101; // Md 258
+   else if //(( mass == 204.0) ||
+         ((mass >= 258.9) && (mass <= 259.1)) ZZ =  102; // No 259
+   else if (( mass == 206.0)
+         || ((mass >= 265.9) && (mass <= 266.1))) ZZ =  103; // Lr 266
+   else if (( mass == 208.0)
+         || ((mass >= 266.9) && (mass <= 267.1))) ZZ =  104; // Rf 267
+   else if //(( mass == 210.0) ||
+         (( mass >= 267.9) && ( mass <= 268.1)) ZZ =  105; // Db 268
+   else if (( mass == 212.0)
+         || ((mass >= 268.9) && (mass <= 269.1))) ZZ =  106; // Sg 269
+   else if (( mass == 214.0)
+         || ((mass >= 269.9) && (mass <= 270.1))) ZZ =  107; // Bh 270
+   else if (( mass == 216.0)
+         || ((mass >= 268.9) && (mass <= 269.1))) ZZ =  108; // Hs 269
+   else if (( mass == 218.0)
+         || ((mass >= 277.9) && (mass <= 278.1))) ZZ =  109; // Mt 278
+   else if (( mass == 220.0)
+         || ((mass >= 280.9) && (mass <= 281.1))) ZZ =  110; // Ds 281
+   else if //(( mass == 222.0) ||
+         (( mass >= 281.9) && ( mass <= 282.1)) ZZ =  111; // Rg 282
+   else if (( mass == 224.0)
+         || ((mass >= 284.9) && (mass <= 285.1))) ZZ =  112; // Cn 285
+   else if //(( mass == 226.0) ||
+         ((mass >= 285.9) && ( mass <= 286.1)) ZZ =  113; // Nh 286
+   else if (( mass == 228.0)
+         || ((mass >= 288.9) && (mass <= 289.1))) ZZ =  114; // Fl 289
+   else if (( mass == 230.0)
+         || ((mass >= 289.9) && (mass <= 290.1))) ZZ =  115; // Mc 290
+   else if (( mass == 232.0)
+         || ((mass >= 292.9) && (mass <= 293.1))) ZZ =  116; // Lv 293
+   else if (( mass == 234.0)
+         || ((mass >= 293.9) && (mass <= 294.1))) ZZ =  117; // Ts 294
+   //else if (( mass == 236.0) // conflict with Ts; Og disallowed
+   //      || ((mass >= 293.9) && (mass <= 294.1))) ZZ =  118; // Og 294
+   else
+   {
+      std::cerr << "Error: could not guess element having mass "
+         << mass << std::endl;
+      ZZ =  0;
+      return EXIT_FAILURE;
+   }
+   return EXIT_SUCCESS;
+}
+
 int TEM_NS::read_position_lammps_file(
       const string& filename,  // only valid on root node
       // If the upper and lower boundaries in the file are equal to

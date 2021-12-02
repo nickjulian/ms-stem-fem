@@ -264,6 +264,24 @@ namespace TEM_NS
          const unsigned int& input_flag_debug
          );
 
+   int read_position_lammps_data_file(
+         const string& filename,
+         double*& qq_contig,
+         unsigned int*& Z_contig,
+         unsigned int& numberOfSpecies,
+         unsigned int*& uniqueZs,
+         unsigned int& total_population,
+         double& xlo, double& ylo, double& zlo,
+         double& xperiod, double& yperiod, double& zperiod,
+         const unsigned int& input_flag_debug,
+         const int& mynode,
+         const int& rootnode,
+         MPI_Comm comm
+         );
+
+   int guessZ( const double& mass, unsigned int& ZZ);
+
+
    //   TODO: implement function to read microscope parameters from a file
 //   int read_microscope_file(
 //         const string& filename,

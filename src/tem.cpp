@@ -161,6 +161,10 @@ int main( int argc, char* argv[])
    double* q_duped;
    unsigned int* Z_array; // couldn't use size_t because it must have an 
                           //  MPI type
+   unsigned int* uniqueZs; // same content as Z_vector
+   uniqueZs = NULL; // to ensure conditional deletion doesn't break
+   // TODO: replace Z_vector with uniqueZs regardless of model file fmt
+   unsigned int numberOfSpecies;
    unsigned int initial_population;
    unsigned int duped_population;
 
@@ -317,20 +321,22 @@ int main( int argc, char* argv[])
    {
       if ( mynode == rootnode && flags.debug )
       {
-         cout << "Reading lammps format file: "
+         cout << "Reading lammps data format file: "
            << model_file_name  << endl; // debug
       }
-      if(  
-            read_position_lammps_file(
-               model_file_name,   // only valid on root node
+      if (
+            read_position_lammps_data_file(
+               model_file_name, // only valid on root node
                q,       // will be allocated within this call
                Z_array, // will be allocated within this call
+               numberOfSpecies,
+               uniqueZs, // will be allocated within this call
                initial_population,
                xmin, ymin, zmin,
                xperiod, yperiod, zperiod,
                flags.debug,
                mynode, rootnode, MPI_COMM_WORLD
-               )
+               ) != EXIT_SUCCESS
         )
       {
          if ( mynode == rootnode )
@@ -928,6 +934,8 @@ int main( int argc, char* argv[])
    //////////////////////////////////////////////////////////////////
    // Create a vector containing a list of the unique species types Z
    //////////////////////////////////////////////////////////////////
+   // NOTE: this is only needed when the model is an xyz format file,
+   //  otherwise it duplicates uniqueZs and numberOfSpecies.
    
    std::vector<unsigned int> Z_vector;
    unsigned int Z_vector_size;
@@ -1135,6 +1143,7 @@ int main( int argc, char* argv[])
    }
 
    delete[] Z_array; // NOTE: be wary of the consequences of freeing this
+   if ( uniqueZs != NULL) delete[] uniqueZs;
 
    // debug
    //cout << "List of unique atomic species after myScatterers instantiation, node " 
