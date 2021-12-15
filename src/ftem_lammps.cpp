@@ -3712,6 +3712,25 @@ int main( int argc, char* argv[])
                   return EXIT_FAILURE;
                }
 
+               // zero direct beam region of azimuthally integrated diffraction
+               size_t number_of_phi_bins = phi_binning_boundaries.size() -1;
+               for ( size_t ii=0; ii < number_of_k_bins; ++ii)
+               {
+                  if ( lambda * k_binning_boundaries[ ii + 1] <= alpha_max)
+                  {
+                     diffracted_wave_mag_radial_intensity_local[ ii] = 0.0;
+                     if ( flags.correlograph)
+                     {
+                        for ( size_t jj=0; jj < number_of_phi_bins; ++jj)
+                        {
+                           // zero correlograph of direct beam region
+                           diffracted_wave_mag_in_radial_coords_local[
+                              jj + ii*number_of_phi_bins ] = 0.0;
+                        }
+                     }
+                  }
+               }
+
                // TODO: is the following initialization necessary?
                // No.
                //if ( mynode == rootnode )
@@ -3885,6 +3904,15 @@ int main( int argc, char* argv[])
                         k_bin_counts_local,
                         diffracted_wave_mag_sqr_radial_intensity_local
                         );
+
+                  // zero the region of the direct beam
+                  for ( size_t ii=0; ii < number_of_k_bins; ++ii)
+                  {
+                     if ( lambda * k_binning_boundaries[ ii + 1] <= alpha_max)
+                     {
+                        diffracted_wave_mag_sqr_radial_intensity_local[ ii] = 0.0;
+                     }
+                  }
 
                   MPI_Reduce(
                         diffracted_wave_mag_sqr_radial_intensity_local,
@@ -4341,6 +4369,15 @@ int main( int argc, char* argv[])
                   diffracted_wave_mag_sqr_sum_radial_intensity_local
                   );
 
+            // zero the region of the direct beam
+            for ( size_t ii=0; ii < number_of_k_bins; ++ii)
+            {
+               if ( lambda * k_binning_boundaries[ ii + 1] <= alpha_max)
+               {
+                  diffracted_wave_mag_sqr_sum_radial_intensity_local[ ii] = 0.0;
+               }
+            }
+
             MPI_Reduce(
                   k_bin_counts_local,
                   k_bin_counts_sqr_sum_aggregated,
@@ -4369,6 +4406,15 @@ int main( int argc, char* argv[])
                   k_bin_counts_local,
                   diffracted_wave_mag_sum_sqr_radial_intensity_local
                   );
+
+            // zero the region of the direct beam
+            for ( size_t ii=0; ii < number_of_k_bins; ++ii)
+            {
+               if ( lambda * k_binning_boundaries[ ii + 1] <= alpha_max)
+               {
+                  diffracted_wave_mag_sum_sqr_radial_intensity_local[ ii] = 0.0;
+               }
+            }
 
             MPI_Reduce(
                   k_bin_counts_local,
@@ -4474,6 +4520,15 @@ int main( int argc, char* argv[])
                   k_bin_counts_local,
                   diffracted_wave_mag_sum_radial_intensity_local
                   );
+
+            // zero the region of the direct beam
+            for ( size_t ii=0; ii < number_of_k_bins; ++ii)
+            {
+               if ( lambda * k_binning_boundaries[ ii + 1] <= alpha_max)
+               {
+                  diffracted_wave_mag_sum_radial_intensity_local[ ii] = 0.0;
+               }
+            }
 
             MPI_Reduce(
                   k_bin_counts_local,
@@ -4676,6 +4731,15 @@ int main( int argc, char* argv[])
                   k_bin_counts_local,
                   diffracted_wave_mag_variance_radial_intensity_local
                   );
+
+            // zero the region of the direct beam
+            for ( size_t ii=0; ii < number_of_k_bins; ++ii)
+            {
+               if ( lambda * k_binning_boundaries[ ii + 1] <= alpha_max)
+               {
+                  diffracted_wave_mag_variance_radial_intensity_local[ ii] = 0.0;
+               }
+            }
 
             MPI_Reduce(
                   diffracted_wave_mag_variance_radial_intensity_local,
