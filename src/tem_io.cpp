@@ -1811,7 +1811,7 @@ int TEM_NS::read_position_lammps_file(
                      getline( data_file, data_line);
                      first = data_line.find_first_not_of(" \t" );
                   }
-                  data_line_stream = istringstream( data_line );
+                  data_line_stream.str( data_line );
                   data_line_stream >> section_name;
                   transform( section_name.begin(), section_name.end(),
                              section_name.begin(), (int(*)(int))tolower);
@@ -1830,7 +1830,7 @@ int TEM_NS::read_position_lammps_file(
             //   //      getline( data_file, data_line);
             //   //      first = data_line.find_first_not_of(" \t" );
             //   //   }
-            //   //   data_line_stream = istringstream( data_line );
+            //   //   data_line_stream.str( data_line );
             //   //   data_line_stream >> section_name;
             //   //   if ( ! section_name.compare("atoms") ) break;
             //   //   ++ii; // don't bother checking validity of mass values
@@ -1849,7 +1849,7 @@ int TEM_NS::read_position_lammps_file(
             //   //   }
             //   //}
 
-            //   data_line_stream = istringstream( data_line );
+            //   data_line_stream.str( data_line );
             //   data_line_stream >> section_name;
             //}
             if ( section_name.empty() )

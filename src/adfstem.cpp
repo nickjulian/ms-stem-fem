@@ -2303,26 +2303,31 @@ int TEM_NS::adfstem(
             // transform psi into real-space
             fftw_execute( pb_c2c_psi );
 
-            diffraction_scale_factor = 1.0e+10;
-            output_diffraction_append(
-                  psi,
-                  diffraction_scale_factor,
-                  lambda_sqr,
-                  alpha_max_sqr,
-                  local_alloc_size_fftw,
-                  Nx_local, 
-                  kx_local,
-                  Nx, 
-                  //kx_joined, 
-                  Ny,
-                  ky,
-                  resolutionUnit_recip,
-                  xResolution_recip, yResolution_recip,
-                  outFileName_prefix + "_psi_mtf2D_recipspace",
-                  psi_mag_strides,
-                  psi_mag_displacements,
-                  mynode, rootnode, comm
-                  );
+            if ( flags.diffraction_output )
+            {
+               if ( flags.debug && mynode == rootnode )
+                  cout << "appending diffraction to tiff" << endl;//debug
+               diffraction_scale_factor = 1.0e+10;
+               output_diffraction_append(
+                     psi,
+                     diffraction_scale_factor,
+                     lambda_sqr,
+                     alpha_max_sqr,
+                     local_alloc_size_fftw,
+                     Nx_local, 
+                     kx_local,
+                     Nx, 
+                     //kx_joined, 
+                     Ny,
+                     ky,
+                     resolutionUnit_recip,
+                     xResolution_recip, yResolution_recip,
+                     outFileName_prefix + "_psi_mtf2D_recipspace",
+                     psi_mag_strides,
+                     psi_mag_displacements,
+                     mynode, rootnode, comm
+                     );
+            }
 
             
             for (size_t i=0; i < Nx_local; ++i)
